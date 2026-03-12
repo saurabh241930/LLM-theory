@@ -1,0 +1,295 @@
+import React from 'react';
+import { 
+  Database, Brain, MessageSquare, FileText, 
+  Search, Cpu, Layers, AlertTriangle, 
+  CheckCircle2, XCircle, ArrowRight, FileQuestion,
+  Braces, FileWarning, HelpCircle, Combine
+} from 'lucide-react';
+
+// --- STYLING CONSTANTS (ByteByteGo Aesthetic) ---
+const THEME = {
+  cardBg: "bg-white",
+  cardBorder: "border-slate-200",
+  titleBg: "bg-[#41d8a0]",
+  titleBorder: "border-[#2e9e73]",
+  primaryNode: "bg-[#a6f0d4] border-[#31a67a] text-slate-900",
+  secondaryNode: "bg-white border-slate-300 text-slate-700 shadow-sm",
+  dashedNode: "bg-[#f8fafc] border-slate-400 border-dashed text-slate-700",
+  errorNode: "bg-[#ffe4e6] border-[#f43f5e] text-slate-900",
+  warningNode: "bg-[#fef3c7] border-[#d97706] text-slate-900",
+  line: "#64748b"
+};
+
+// --- CORE UI COMPONENTS ---
+
+const Card = ({ title, children, tall = false }) => (
+  <div className={`relative ${THEME.cardBg} rounded-2xl shadow-sm border ${THEME.cardBorder} overflow-hidden flex flex-col items-center w-full ${tall ? 'h-[550px]' : 'h-[400px]'} mb-6 hover:shadow-md transition-shadow`}>
+    <div className={`mt-5 ${THEME.titleBg} text-slate-900 font-extrabold text-lg py-2 px-6 rounded-xl border-2 ${THEME.titleBorder} w-[85%] text-center z-20 shadow-sm tracking-tight`}>
+      {title}
+    </div>
+    <div className="absolute inset-0 top-[60px] w-full p-4 flex items-center justify-center">
+      {children}
+    </div>
+  </div>
+);
+
+const Node = ({ top, left, title, subtitle, icon: Icon, type = "primary", className = "", width = "w-[130px]" }) => {
+  const styleClass = THEME[`${type}Node`] || THEME.primaryNode;
+  return (
+    <div 
+      className={`absolute z-10 flex flex-col items-center justify-center p-2 rounded-lg border-2 ${width} text-center transition-transform hover:scale-105 ${styleClass} ${className}`}
+      style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+    >
+      {Icon && <Icon className="mb-1 opacity-80" size={18} strokeWidth={2} />}
+      <span className="text-[11px] font-bold leading-tight">{title}</span>
+      {subtitle && <span className="text-[9px] opacity-80 mt-1 leading-tight whitespace-pre-line">{subtitle}</span>}
+    </div>
+  );
+};
+
+const Label = ({ top, left, text, icon: Icon, type="default", width="w-auto" }) => (
+  <div 
+    className={`absolute z-20 flex flex-col items-center justify-center px-3 py-1.5 rounded-full text-[10px] font-bold shadow-sm border border-slate-200 ${width} ${type === 'error' ? 'bg-red-50 text-red-600 border-red-200' : type === 'success' ? 'bg-[#e6fcf5] text-[#2e9e73] border-[#31a67a]' : type === 'warning' ? 'bg-[#fef3c7] text-[#d97706] border-[#f59e0b]' : 'bg-white text-slate-700'}`}
+    style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+  >
+    {Icon && <Icon size={14} className={`mb-1 ${type === 'error' ? 'text-red-500' : type === 'warning' ? 'text-[#d97706]' : 'text-[#2e9e73]'}`} />}
+    {text}
+  </div>
+);
+
+const SvgCanvas = ({ children }) => (
+  <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+    <defs>
+       <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill={THEME.line} />
+       </marker>
+       <marker id="arrow-red" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+       </marker>
+       <marker id="arrow-green" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#31a67a" />
+       </marker>
+    </defs>
+    {children}
+  </svg>
+);
+
+const Connection = ({ x1, y1, x2, y2, dashed = false, arrow = true, color = THEME.line }) => {
+  let marker = "none";
+  if (arrow) {
+    if (color === '#ef4444') marker = "url(#arrow-red)";
+    else if (color === '#31a67a') marker = "url(#arrow-green)";
+    else marker = "url(#arrow)";
+  }
+  return (
+    <line 
+      x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} 
+      stroke={color} strokeWidth="2" strokeDasharray={dashed ? "5,5" : "none"} 
+      markerEnd={marker} 
+    />
+  );
+};
+
+// --- SPECIFIC DIAGRAM CARDS ---
+
+// Card 1: What is RAG? (Without vs With)
+const CardWhatIsRAG = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[8%] left-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Without RAG (Naive LLM)</div>
+    <div className="absolute top-[48%] left-4 text-xs font-bold text-[#31a67a] uppercase tracking-widest">With RAG (Retrieval + Gen)</div>
+    <div className="absolute top-[42%] left-[5%] right-[5%] border-t-2 border-dashed border-slate-200"></div>
+
+    <SvgCanvas>
+      {/* Top Flow */}
+      <Connection x1={20} y1={25} x2={45} y2={25} />
+      <Connection x1={45} y1={25} x2={75} y2={25} color="#ef4444" />
+      
+      {/* Bottom Flow */}
+      <Connection x1={20} y1={80} x2={35} y2={80} />
+      <Connection x1={35} y1={80} x2={45} y2={60} />
+      <Connection x1={45} y1={60} x2={60} y2={80} color="#31a67a" />
+      <Connection x1={60} y1={80} x2={80} y2={80} color="#31a67a" />
+    </SvgCanvas>
+
+    {/* Without RAG */}
+    <Node top={25} left={20} title='"Remote policy?"' icon={MessageSquare} type="secondary" width="w-[120px]" />
+    <Node top={25} left={45} title="LLM (Memory)" subtitle="No internal docs" icon={Brain} type="secondary" width="w-[120px]" />
+    <Node top={25} left={75} title="Hallucination" subtitle='"I do not know..."' icon={XCircle} type="error" width="w-[120px]" />
+
+    {/* With RAG */}
+    <Node top={80} left={20} title='"Remote policy?"' icon={MessageSquare} type="primary" width="w-[120px]" />
+    <Node top={60} left={45} title="Vector DB" subtitle="Search docs first" icon={Search} type="primary" width="w-[120px]" />
+    <Node top={80} left={60} title="LLM + Context" subtitle="Pass doc to prompt" icon={Brain} type="primary" width="w-[120px]" />
+    <Node top={80} left={80} title="Fact Answer" subtitle='"2 days per week"' icon={CheckCircle2} type="success" width="w-[120px]" />
+  </div>
+);
+
+// Card 2: The Naive RAG Pipeline
+const CardPipeline = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={15} y1={25} x2={45} y2={25} />
+      <Connection x1={45} y1={25} x2={80} y2={25} />
+      
+      <Connection x1={80} y1={25} x2={80} y2={75} />
+      
+      <Connection x1={80} y1={75} x2={45} y2={75} />
+      <Connection x1={45} y1={75} x2={15} y2={75} />
+    </SvgCanvas>
+
+    <Node top={25} left={15} title="1. User Query" subtitle='"Return policy?"' icon={FileQuestion} type="secondary" />
+    <Node top={25} left={45} title="2. Retrieve" subtitle="Search Vector DB" icon={Search} type="primary" />
+    <Node top={25} left={80} title="Top-K Chunks" subtitle="[chunk_A, chunk_B]" icon={Layers} type="dashed" />
+
+    <Node top={75} left={80} title="3. Build Prompt" subtitle="Context + Query" icon={Braces} type="secondary" />
+    <Node top={75} left={45} title="4. Generate" subtitle="LLM processes" icon={Brain} type="primary" />
+    <Node top={75} left={15} title="5. Final Answer" subtitle='"30 days from buy"' icon={MessageSquare} type="success" />
+  </div>
+);
+
+// Card 3: Offline Indexing Phase
+const CardIndexingPhase = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[5%] left-[50%] -translate-x-1/2 text-xs font-bold text-slate-400 uppercase tracking-widest bg-white px-2 z-20">Phase 1: Offline Indexing (One-Time)</div>
+    
+    <SvgCanvas>
+      <Connection x1={15} y1={50} x2={35} y2={50} />
+      <Connection x1={35} y1={50} x2={60} y2={50} />
+      <Connection x1={60} y1={50} x2={85} y2={50} />
+    </SvgCanvas>
+
+    <Node top={50} left={15} title="1. Load Docs" subtitle="10,000 documents" icon={FileText} type="secondary" width="w-[110px]" />
+    <Node top={50} left={35} title="2. Chunking" subtitle="Split (e.g. 500t)" icon={Layers} type="primary" width="w-[110px]" />
+    <Node top={50} left={60} title="3. Embed Model" subtitle="chunk -> [0.1...]" icon={Cpu} type="primary" width="w-[120px]" />
+    <Node top={50} left={85} title="4. Vector DB" subtitle="Store Index + Meta" icon={Database} type="secondary" width="w-[120px]" />
+
+    <Label top={25} left={50} text="Prepares data so it is instantly searchable later" icon={CheckCircle2} />
+  </div>
+);
+
+// Card 4: Runtime Query Phase
+const CardRuntimePhase = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[5%] left-[50%] -translate-x-1/2 text-xs font-bold text-[#31a67a] uppercase tracking-widest bg-white px-2 z-20">Phase 2: Runtime Query Processing</div>
+
+    <SvgCanvas>
+      <Connection x1={15} y1={50} x2={35} y2={50} />
+      <Connection x1={35} y1={50} x2={55} y2={50} />
+      <Connection x1={55} y1={50} x2={85} y2={50} />
+      
+      {/* DB to Prompt line */}
+      <path d="M 55% 40% Q 70% 25% 85% 40%" fill="none" stroke={THEME.line} strokeWidth="2" strokeDasharray="5,5" markerEnd="url(#arrow)" />
+    </SvgCanvas>
+
+    <Node top={50} left={15} title="User Query" subtitle='"Penalty terms?"' icon={MessageSquare} type="secondary" width="w-[110px]" />
+    <Node top={50} left={35} title="Embed Query" subtitle="query -> [0.5...]" icon={Cpu} type="primary" width="w-[110px]" />
+    <Node top={50} left={55} title="Search DB" subtitle="k=5 similar chunks" icon={Search} type="primary" width="w-[110px]" />
+    
+    <Node top={50} left={85} title="RAG Prompt" subtitle="Context + Q -> LLM" icon={Brain} type="secondary" width="w-[120px]" />
+    
+    <Label top={25} left={70} text="Retrieved Chunks injected into Context" icon={Combine} />
+  </div>
+);
+
+// Card 5: Limitations of Naive RAG
+const CardLimitations = () => (
+  <div className="relative w-full h-full flex flex-col items-center justify-center space-y-4">
+    
+    <div className="grid grid-cols-2 gap-4 w-[90%] z-10">
+      {/* Limitation 1 */}
+      <div className="bg-[#ffe4e6] border border-[#f43f5e] p-4 rounded-xl shadow-sm">
+        <div className="font-bold text-slate-800 text-sm flex items-center gap-2 mb-2">
+          <FileWarning size={16} className="text-red-500"/> Retrieval Fails Silently
+        </div>
+        <div className="text-[10px] text-slate-700 leading-tight">
+          Query: "Electronics return policy"<br/>
+          DB returns: "Clothing returns"<br/>
+          <b>Result:</b> LLM answers confidently using wrong data.
+        </div>
+      </div>
+
+      {/* Limitation 2 */}
+      <div className="bg-[#ffe4e6] border border-[#f43f5e] p-4 rounded-xl shadow-sm">
+        <div className="font-bold text-slate-800 text-sm flex items-center gap-2 mb-2">
+          <Layers size={16} className="text-red-500"/> Top-K Isn't Enough
+        </div>
+        <div className="text-[10px] text-slate-700 leading-tight">
+          Complex queries need multiple fragments. Top 5 chunks might miss crucial context required for a complete answer.
+        </div>
+      </div>
+
+      {/* Limitation 3 */}
+      <div className="bg-[#ffe4e6] border border-[#f43f5e] p-4 rounded-xl shadow-sm">
+        <div className="font-bold text-slate-800 text-sm flex items-center gap-2 mb-2">
+          <HelpCircle size={16} className="text-red-500"/> No Query Understanding
+        </div>
+        <div className="text-[10px] text-slate-700 leading-tight">
+          Query: "Compare Q3 vs Q4"<br/>
+          Vector search finds Q3, but misses Q4 entirely. Cannot do multi-hop reasoning.
+        </div>
+      </div>
+
+      {/* Limitation 4 */}
+      <div className="bg-[#ffe4e6] border border-[#f43f5e] p-4 rounded-xl shadow-sm">
+        <div className="font-bold text-slate-800 text-sm flex items-center gap-2 mb-2">
+          <AlertTriangle size={16} className="text-red-500"/> No Reranking
+        </div>
+        <div className="text-[10px] text-slate-700 leading-tight">
+          Similarity is noisy. Chunk 3 [Score: 0.88] might actually contain the exact answer, while Chunk 1 [0.95] is just keyword soup.
+        </div>
+      </div>
+    </div>
+
+    <div className="bg-slate-800 text-white px-6 py-3 rounded-lg text-xs font-bold w-[90%] text-center shadow-md">
+      Solution: Need Query Rewriting, HyDE, & Reranking ➜ <span className="text-[#41d8a0]">Move to Advanced RAG</span>
+    </div>
+  </div>
+);
+
+
+// --- MAIN APP LAYOUT ---
+export default function App() {
+  return (
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-800">
+      
+      <header className="max-w-7xl mx-auto mb-10 border-b border-slate-200 pb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+             Visual Dev Guides <span className="text-slate-400 font-normal">| Naive RAG</span>
+          </h1>
+          <p className="text-slate-500 mt-2 text-sm max-w-lg">
+            Phase 1 Theory: The simplest Retrieval-Augmented Generation pipeline. Fetch context, build prompt, generate answer.
+          </p>
+        </div>
+        <div className="bg-slate-800 text-white text-sm font-bold py-2 px-5 rounded-full shadow-md flex items-center gap-2">
+          <Search size={16} /> Retrieval Systems
+        </div>
+      </header>
+      
+      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-10">
+         <Card title="01. What is RAG?">
+           <CardWhatIsRAG />
+         </Card>
+
+         <Card title="02. The Naive RAG Pipeline">
+           <CardPipeline />
+         </Card>
+
+         <Card title="03. Step 1: Offline Indexing">
+           <CardIndexingPhase />
+         </Card>
+
+         <Card title="04. Step 2: Runtime Query">
+           <CardRuntimePhase />
+         </Card>
+      </main>
+
+      <div className="max-w-7xl mx-auto mt-6">
+        <Card title="05. Why Naive RAG Fails (Limitations)" tall={true}>
+            <CardLimitations />
+        </Card>
+      </div>
+
+    </div>
+  );
+}

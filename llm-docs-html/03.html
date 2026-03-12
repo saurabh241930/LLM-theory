@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Engineering: Compact Cheat Sheet</title>
+    <style>
+        :root {
+            /* Light Mode Palette (Consistent) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Prompt Stack */
+        .prompt-stack { display: flex; flex-direction: column; gap: 2px; width: 80%; }
+        .stack-layer {
+            background: var(--bg-card-alt); border: 1px solid #94a3b8;
+            padding: 4px; text-align: center; font-size: 0.7rem; border-radius: 2px;
+            opacity: 0; transform: translateX(-20px);
+            animation: slideIn 0.5s forwards;
+        }
+        .sl-1 { background: #dbeafe; border-color: var(--accent-primary); animation-delay: 0.1s; }
+        .sl-2 { animation-delay: 0.3s; }
+        .sl-3 { animation-delay: 0.5s; }
+        .sl-4 { animation-delay: 0.7s; background: #fce7f3; border-color: var(--accent-secondary); }
+        
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+
+        /* 2. Zero vs Few */
+        .vs-container { display: flex; width: 100%; height: 100%; gap: 4px; }
+        .vs-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .vs-col:nth-child(1) { border-right: 1px dashed #cbd5e1; }
+        .vs-title { font-size: 0.7rem; font-weight: bold; color: var(--text-secondary); margin-bottom: 4px; }
+        .vs-box { background: #fff; border: 1px solid #cbd5e1; width: 90%; padding: 4px; text-align: center; font-size: 0.65rem; margin-bottom: 2px; opacity: 0; }
+        
+        /* Zero shot animation */
+        .col-zero .vs-box { animation: fadeInUp 0.5s 0.2s forwards; }
+        /* Few shot animation */
+        .col-few .vs-box:nth-child(2) { animation: fadeInUp 0.5s 0.5s forwards; }
+        .col-few .vs-box:nth-child(3) { animation: fadeInUp 0.5s 0.7s forwards; }
+        .col-few .vs-box:nth-child(4) { animation: fadeInUp 0.5s 0.9s forwards; border-color: var(--accent-primary); background: #f0f9ff; }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 3. Chain of Thought */
+        .cot-steps { display: flex; flex-direction: column; gap: 4px; width: 100%; align-items: center; }
+        .cot-step { 
+            width: 80%; background: #f1f5f9; padding: 4px; border-radius: 4px; font-size: 0.7rem; 
+            position: relative; opacity: 0; border-left: 2px solid var(--accent-secondary);
+        }
+        .cs-1 { animation: slideRight 0.5s 0.2s forwards; }
+        .cs-2 { animation: slideRight 0.5s 0.6s forwards; }
+        .cs-3 { animation: slideRight 0.5s 1.0s forwards; background: #dcfce7; border-color: var(--accent-success); font-weight: bold;}
+        
+        @keyframes slideRight { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* 4. ReAct Loop */
+        .react-loop { width: 100px; height: 100px; position: relative; }
+        .rl-center { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 40px; height: 40px; background: var(--accent-primary); color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.6rem; z-index: 2;
+        }
+        .rl-orbit {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border: 2px dashed #cbd5e1; border-radius: 50%;
+            animation: spin 8s linear infinite;
+        }
+        .rl-planet {
+            position: absolute; top: -6px; left: 50%; width: 12px; height: 12px;
+            background: var(--accent-warning); border-radius: 50%;
+            transform: translateX(-50%);
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 5. Structured Output */
+        .json-box {
+            font-family: monospace; font-size: 0.65rem; color: #333;
+            background: #fff; border: 1px solid #cbd5e1; padding: 6px; width: 90%;
+            position: relative; overflow: hidden;
+        }
+        .jb-highlight { color: var(--accent-primary); }
+        .jb-string { color: var(--accent-success); }
+        .jb-cursor {
+            position: absolute; top: 0; left: 0; height: 100%; width: 0;
+            background: rgba(56, 189, 248, 0.2);
+            animation: scanType 2s infinite linear;
+            border-right: 2px solid var(--accent-primary);
+        }
+        @keyframes scanType { 0% { left: 0; width: 0; } 50% { left: 0; width: 100%; } 100% { left: 100%; width: 0; opacity: 0; } }
+
+        /* 6. Prompt Chaining */
+        .chain-row { display: flex; gap: 4px; width: 100%; align-items: center; }
+        .chain-node { 
+            background: var(--bg-card-alt); padding: 4px 8px; border-radius: 4px; 
+            font-size: 0.7rem; text-align: center; border: 1px solid var(--border-color);
+            position: relative;
+        }
+        .chain-connector { flex: 1; height: 2px; background: #cbd5e1; position: relative; }
+        .chain-connector::after {
+            content: ''; position: absolute; top: -2px; left: -100%; width: 100%; height: 6px; background: var(--accent-primary);
+            animation: flowRight 2s infinite linear; opacity: 0.5;
+        }
+        @keyframes flowRight { from { left: -100%; } to { left: 100%; } }
+
+        /* 7. Pitfalls */
+        .pitfall-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; }
+        .pf-card { background: #fff7ed; border: 1px solid #fdba74; padding: 4px; font-size: 0.7rem; color: #9a3412; text-align: center; border-radius: 4px; }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>03. Prompt Engineering</h1>
+            <div class="subtitle">Techniques • Reasoning • Structured Output</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>Prompt Components</h2>
+            <p>A good prompt is structured. It consists of a System Prompt, Context, Examples (Few-Shot), the Current Task, and Output Instructions.</p>
+            <div class="insight">
+                💡 Structure improves consistency and control.
+            </div>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Structure Stack</span>
+            <div class="prompt-stack">
+                <div class="stack-layer sl-1">System Prompt</div>
+                <div class="stack-layer sl-2">Context / Background</div>
+                <div class="stack-layer sl-3">Examples (Few-Shot)</div>
+                <div class="stack-layer sl-4">Current Task</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>Zero-Shot vs. Few-Shot</h2>
+            <h3>Zero-Shot</h3>
+            <p>Direct question. Fast, low token usage. Good for simple tasks.</p>
+            <h3>Few-Shot</h3>
+            <p>Provide examples (Input → Output). Teaches the model format and nuance. Higher accuracy.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Approach Comparison</span>
+            <div class="vs-container">
+                <div class="vs-col col-zero">
+                    <div class="vs-title">Zero-Shot</div>
+                    <div class="vs-box">"Classify: Good?"</div>
+                    <div class="vs-box" style="color:var(--accent-primary)">→ Positive</div>
+                </div>
+                <div class="vs-col col-few">
+                    <div class="vs-title">Few-Shot</div>
+                    <div class="vs-box">Ex 1: "Love it" → Pos</div>
+                    <div class="vs-box">Ex 2: "Bad" → Neg</div>
+                    <div class="vs-box">"Classify: Good?"</div>
+                    <div class="vs-box" style="color:var(--accent-primary)">→ Positive</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>Chain-of-Thought (CoT)</h2>
+            <p>Force the model to "think step by step". Reduces errors in logic and math by making intermediate reasoning explicit.</p>
+            <h3>Zero-Shot CoT</h3>
+            <p>Simply adding "Let's think step by step" to a zero-shot prompt boosts accuracy significantly.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Reasoning Flow</span>
+            <div class="cot-steps">
+                <div class="cot-step cs-1">Step 1: Identify variables</div>
+                <div class="cot-step cs-2">Step 2: Apply formula</div>
+                <div class="cot-step cs-3">Step 3: Final Calculation</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>ReAct (Reason + Act)</h2>
+            <p>Used for Agents. The model generates a <strong>Thought</strong>, then takes an <strong>Action</strong> (Tool), observes the result, and loops.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Thought:</strong> "I need to search the web."</li>
+                <li><strong>Action:</strong> Search("Capital of France")</li>
+                <li><strong>Observation:</strong> "Paris"</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Agent Loop</span>
+            <div class="react-loop">
+                <div class="rl-center">LLM</div>
+                <div class="rl-orbit">
+                    <div class="rl-planet"></div>
+                </div>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--accent-warning); margin-top: 4px;">
+                Continuous loop until final answer
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>Structured Output</h2>
+            <p>Constrain the model to produce specific formats (JSON, XML) to make parsing programmatic and reliable.</p>
+            <h3>JSON Mode</h3>
+            <p>API feature that guarantees valid JSON output, reducing hallucinations of syntax errors.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Formatting</span>
+            <div class="json-box">
+                <div class="jb-cursor"></div>
+                <span class="jb-highlight">{</span><br>
+                &nbsp;&nbsp;"type": <span class="jb-string">"entity"</span>,<br>
+                &nbsp;&nbsp;"name": <span class="jb-string">"John"</span>,<br>
+                &nbsp;&nbsp;"role": <span class="jb-string">"admin"</span><br>
+                <span class="jb-highlight">}</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 6 -->
+    <section class="topic-section">
+        <div>
+            <h2>Prompt Chaining</h2>
+            <p>Break complex tasks into a sequence of simpler prompts. The output of Prompt 1 becomes the input for Prompt 2.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Benefit:</strong> Easier reasoning per step.</li>
+                <li><strong>Benefit:</strong> Error recovery (restart just one step).</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Sequential Flow</span>
+            <div class="chain-row">
+                <div class="chain-node">Extract</div>
+                <div class="chain-connector"></div>
+                <div class="chain-node">Summarize</div>
+                <div class="chain-connector"></div>
+                <div class="chain-node">Format</div>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 6px;">
+                Data flows through stages
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 7 -->
+    <section class="topic-section">
+        <div>
+            <h2>Common Pitfalls</h2>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Vague Instructions:</strong> "Summarize this" → "Summarize in 3 bullets".</li>
+                <li><strong>No Examples:</strong> Hard for complex outputs like JSON without a sample.</li>
+                <li><strong>Inconsistency:</strong> Mixing formats confuses the model.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Risks</span>
+            <div class="pitfall-grid">
+                <div class="pf-card">⚠️ Vague</div>
+                <div class="pf-card">⚠️ No Examples</div>
+                <div class="pf-card">⚠️ Too Long</div>
+                <div class="pf-card">⚠️ Mixed Format</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Cheapest Lever:</strong> Improving prompts costs nothing but yields high returns.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Examples Help:</strong> Few-shot > Zero-shot for consistency.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Reasoning:</strong> "Let's think step by step" catches logic errors.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Structure:</strong> Specify format (JSON) for easy parsing.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>

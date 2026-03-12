@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fine-Tuning Techniques: Compact Cheat Sheet</title>
+    <style>
+        :root {
+            /* Light Mode Palette (Consistent) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --accent-danger: #b91c1c; /* Red */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Full vs PEFT Comparison */
+        .comp-viz { display: flex; gap: 10px; width: 100%; height: 120px; align-items: flex-end; }
+        .cv-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+        .cv-bar { width: 100%; background: #e2e8f0; border-radius: 2px; position: relative; overflow: hidden; }
+        .cv-label { font-size: 0.65rem; font-weight: bold; margin-bottom: 4px; text-align: center; }
+        .cv-fill { width: 100%; height: 100%; position: relative; }
+        
+        /* Bad (Full FT) */
+        .bad .cv-fill { background: var(--accent-danger); animation: pulseGrow 2s infinite ease-in-out; }
+        @keyframes pulseGrow { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.1); } }
+        
+        /* Good (PEFT) */
+        .good .cv-fill { background: var(--accent-success); }
+
+        /* 2. LoRA Matrix Visualization */
+        .lora-stage { width: 100%; height: 140px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .ls-weights {
+            display: flex; flex-direction: column; align-items: center; margin: 0 10px;
+            background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 4px; z-index: 2;
+        }
+        .ls-matrices {
+            display: flex; gap: 4px; align-items: center;
+            position: relative; z-index: 2;
+        }
+        .ls-box {
+            background: #fff; border: 1px solid var(--accent-primary); color: var(--accent-primary); font-weight: bold; font-size: 0.6rem; padding: 4px; border-radius: 4px;
+            opacity: 0; transform: scale(0.5); transition: 0.5s;
+        }
+        .ls-plus { font-size: 1.2rem; color: var(--text-secondary); margin: 0 4px; }
+        .ls-arrow { color: var(--accent-success); font-size: 1.2rem; transform: rotate(45deg); margin: 0 4px; }
+        .ls-equal { color: var(--text-secondary); font-size: 1rem; margin: 0 4px; }
+        
+        .ls-anim-1 { animation: popIn 0.5s 1s forwards; } /* A */
+        .ls-anim-2 { animation: popIn 0.5s 1.5s forwards; } /* B */
+        
+        @keyframes popIn { to { opacity: 1; transform: scale(1); } }
+
+        /* 3. QLoRA Quantization */
+        .quant-stage { display: flex; gap: 4px; align-items: center; justify-content: center; height: 120px; }
+        .q-block {
+            background: #e2e8f0; border: 1px solid #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.5s;
+            width: 50px; height: 80px; border-radius: 4px; position: relative;
+        }
+        .qb-val { font-weight: bold; font-size: 0.7rem; margin-bottom: 4px; }
+        .qb-visual { width: 30px; background: #94a3b8; border-radius: 2px; transition: 0.5s; }
+        
+        .qb-32 .qb-visual { height: 40px; }
+        .qb-16 .qb-visual { height: 30px; background: #64748b; }
+        .qb-8 .qb-visual { height: 20px; background: #475569; }
+        .qb-4 .qb-visual { height: 12px; background: var(--accent-success); box-shadow: 0 0 5px var(--accent-success); } /* Highlight */
+        
+        /* 4. Hardware Tree */
+        .tree-canvas { position: relative; width: 100%; height: 140px; }
+        .tree-path { fill: none; stroke: #cbd5e1; stroke-width: 1.5; stroke-dasharray: 100; stroke-dashoffset: 100; animation: drawTree 4s infinite linear; }
+        @keyframes drawTree { 0% { stroke-dashoffset: 100; } 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 0; } }
+        .tree-node { fill: #fff; stroke: var(--accent-primary); stroke-width: 1; }
+        .tree-text { font-size: 0.5rem; text-anchor: middle; fill: #333; }
+
+        /* 5. Pipeline Flow */
+        .pipe-steps { display: flex; gap: 4px; width: 100%; height: 100px; }
+        .ps-item { 
+            flex: 1; padding: 4px; background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.65rem; text-align: center; opacity: 0.3; transition: 0.3s; position: relative;
+        }
+        .ps-num { font-weight: bold; color: var(--accent-primary); margin-bottom: 2px; }
+        .ps-item.active { border-color: var(--accent-success); background: #f0fdf4; opacity: 1; font-weight: bold; color: var(--accent-success); }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body onload="initAnimations()">
+
+<div class="container">
+    <header>
+        <div>
+            <h1>13. Fine-Tuning: PEFT vs LoRA vs QLoRA</h1>
+            <div class="subtitle">Parameter Efficient Fine-Tuning • Quantization • Hardware</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>The Problem: Full Fine-Tuning</h2>
+            <p><strong>Full fine-tuning</strong> updates ALL parameters (e.g., 175B). This requires massive GPU RAM (700GB) and is prohibitively expensive ($1M+).</p>
+            <div class="insight">
+                💡 <strong>PEFT (Parameter-Efficient Fine-Tuning):</strong> Train only a tiny subset (0.001%) of parameters. 10x cheaper, 10x less memory, 90% accuracy.
+            </div>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Cost & Scale</span>
+            <div class="comp-viz">
+                <div class="cv-col bad">
+                    <div class="cv-label" style="color: var(--accent-danger);">Full Fine-Tune</div>
+                    <div class="cv-bar">
+                        <div class="cv-fill" style="background: var(--accent-danger); height: 100%;"></div>
+                    </div>
+                    <div style="font-size: 0.6rem; text-align: center; color: var(--accent-danger);">175B Params<br>$1M+</div>
+                </div>
+                <div class="cv-col good">
+                    <div class="cv-label" style="color: var(--accent-success);">PEFT (LoRA)</div>
+                    <div class="cv-bar" style="height: 10%;">
+                        <div class="cv-fill" style="background: var(--accent-success); height: 100%;"></div>
+                    </div>
+                    <div style="font-size: 0.6rem; text-align: center; color: var(--accent-success);">3.7M Params<br>$50</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>LoRA (Low-Rank Adaptation)</h2>
+            <p>Instead of updating weight matrix W, add a small perturbation ΔW = A × B.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>W:</strong> Original weights (frozen, huge).</li>
+                <li><strong>A, B:</strong> Small, trainable matrices (low-rank).</li>
+                <li><strong>Result:</strong> Trainable params drop from 175B to ~3.7M (0.01%).</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Matrix Operation</span>
+            <div class="lora-stage">
+                <div class="ls-weights">W (Frozen)</div>
+                <div class="ls-plus">+</div>
+                <div class="ls-matrices">
+                    <div class="ls-box ls-anim-1">A</div>
+                    <div style="color: var(--accent-primary);">×</div>
+                    <div class="ls-box ls-anim-2">B</div>
+                </div>
+                <div class="ls-equal">=</div>
+                <div class="ls-weights" style="background: var(--accent-primary); color: white;">Output</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>QLoRA (Quantized LoRA)</h2>
+            <p><strong>Quantization:</strong> Compress weights to lower precision (Float32 → Int4). Reduces memory from 56GB to 7GB.</p>
+            <p>Combines the small trainable LoRA matrices with a compressed base model, enabling fine-tuning on consumer GPUs (RTX 4090/3090).</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Memory Reduction</span>
+            <div class="quant-stage">
+                <div class="q-block qb-32">
+                    <div class="qb-val">Float32</div>
+                    <div class="qb-visual"></div>
+                    <div style="font-size: 0.6rem; color: #64748b;">56GB</div>
+                </div>
+                <div style="font-size: 1.2rem; color: #cbd5e1;">→</div>
+                <div class="q-block qb-4">
+                    <div class="qb-val">Int4</div>
+                    <div class="qb-visual"></div>
+                    <div style="font-size: 0.6rem; color: var(--accent-success); font-weight: bold;">7GB</div>
+                </div>
+                <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 4px;">
+                    Enables fine-tuning on <br><strong>Consumer Hardware</strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Hardware Decision Tree</h2>
+            <p>Choose your fine-tuning method based on your GPU VRAM and Budget.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>$1M Budget?</strong> (100 GPUs) → Full Fine-Tune.</li>
+                <li><strong>24GB VRAM?</strong> (RTX 4090) → LoRA (Rank 16).</li>
+                <li><strong>16GB VRAM?</strong> (RTX 4070) → QLoRA.</li>
+                <li><strong>< 16GB VRAM?</strong> → Cloud API.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Strategy Path</span>
+            <div class="tree-canvas">
+                <!-- Tree Structure -->
+                <rect x="90" y="10" width="20" height="10" rx="2" class="tree-node" />
+                <text x="100" y="18" class="tree-text">Budget?</text>
+                
+                <!-- Yes Branch -->
+                <path d="M 100 20 L 100 30 L 60 30 L 60 45" class="tree-path" style="animation-delay: 0s;" />
+                <rect x="50" y="45" width="20" height="10" rx="2" class="tree-node" style="fill:#fef3c7; stroke:#d97706" />
+                <text x="60" y="53" class="tree-text">Full FT</text>
+                
+                <!-- No Branch -->
+                <path d="M 100 20 L 100 30 L 140 30 L 140 45" class="tree-path" style="animation-delay: 1s;" />
+                <rect x="130" y="45" width="20" height="10" rx="2" class="tree-node" style="fill:#dbeafe; stroke:#0369a1" />
+                <text x="140" y="53" class="tree-text">LoRA</text>
+
+                <!-- QLoRA Branch -->
+                <path d="M 140 55 L 140 70 L 110 70" class="tree-path" style="animation-delay: 2s;" />
+                <rect x="100" y="70" width="20" height="10" rx="2" class="tree-node" style="fill:#d1fae5; stroke:#0ea5e9" />
+                <text x="110" y="78" class="tree-text">QLoRA</text>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>End-to-End Pipeline</h2>
+            <ol style="font-size: 0.8rem; padding-left: 15px;">
+                <li><strong>Setup:</strong> Hardware (RTX 4090), Dataset (500 examples).</li>
+                <li><strong>Load:</strong> Quantize base model to Int4.</li>
+                <li><strong>Train:</strong> Add LoRA adapters (Rank 16). Train for ~2 hours.</li>
+                <li><strong>Merge:</strong> Write LoRA weights into base model.</li>
+                <li><strong>Deploy:</strong> Run custom chatbot.</li>
+            </ol>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Custom Bot Flow</span>
+            <div class="pipe-steps">
+                <div class="ps-item" id="ps1"><div class="ps-num">1</div>Setup<br>Data & GPU</div>
+                <div class="ps-item" id="ps2"><div class="ps-num">2</div>Load<br>Int4 Base</div>
+                <div class="ps-item" id="ps3"><div class="ps-num">3</div>Train<br>LoRA (2hrs)</div>
+                <div class="ps-item" id="ps4"><div class="ps-num">4</div>Merge<br>Weights</div>
+                <div class="ps-item" id="ps5"><div class="ps-num">5</div>Deploy<br>Custom Bot</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>PEFT:</strong> Don't retrain all 175B. Train 3.7M instead (0.01%).</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>LoRA:</strong> Best balance of cost/accuracy for most. Adds A × B matrices.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>QLoRA:</strong> Compress base to Int4. Fits on RTX 4090/3080. Accessible.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Hardware:</strong> High Budget → Full FT. 24GB → LoRA. 16GB → QLoRA.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    function initAnimations() {
+        // 1. Pipeline Animation
+        const steps = [
+            document.getElementById('ps1'),
+            document.getElementById('ps2'),
+            document.getElementById('ps3'),
+            document.getElementById('ps4'),
+            document.getElementById('ps5')
+        ];
+        let stepIdx = 0;
+        
+        function cyclePipeline() {
+            steps.forEach(s => s.classList.remove('active'));
+            steps[stepIdx].classList.add('active');
+            stepIdx = (stepIdx + 1) % steps.length;
+        }
+        setInterval(cyclePipeline, 1000);
+        cyclePipeline();
+    }
+</script>
+
+</body>
+</html>

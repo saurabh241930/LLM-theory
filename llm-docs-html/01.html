@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embeddings & Vector Search: Compact Cheat Sheet</title>
+    <style>
+        :root {
+            /* Light Mode Palette (Wikipedia/Clean Professional) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents (Readable on Light) */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4; /* Tighter for density */
+            font-size: 13px; /* Smaller font for cheat sheet style */
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Compact Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        /* Header */
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Main Grid: Tight */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr; /* More space for text, compact diagram */
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify; /* Newspaper style alignment */
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul {
+            list-style: none;
+            padding-left: var(--space-sm);
+            margin-bottom: var(--space-sm);
+        }
+
+        li::before {
+            content: "•";
+            color: var(--accent-primary);
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+        }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Containers - Compact */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px; /* Reduced height */
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATED DIAGRAMS --- */
+
+        /* 1. Flow Animation */
+        .flow-container {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            width: 100%;
+        }
+        .flow-box {
+            background: var(--bg-card-alt);
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid var(--accent-primary);
+            font-size: 0.75rem;
+            font-weight: bold;
+            position: relative;
+            z-index: 2;
+        }
+        .flow-arrow {
+            flex: 1;
+            height: 2px;
+            background: var(--text-secondary);
+            position: relative;
+            overflow: hidden;
+        }
+        .flow-arrow::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent-primary);
+            animation: flowDash 2s infinite linear;
+        }
+        @keyframes flowDash {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        .vector-array {
+            font-family: monospace;
+            color: var(--accent-secondary);
+            font-size: 0.6rem;
+            margin-top: 2px;
+            opacity: 0;
+            animation: fadeIn 1s 1.5s forwards; /* Delayed appearance */
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* 2. Vector Map Animation */
+        .vector-map {
+            width: 140px;
+            height: 140px;
+            position: relative;
+            border: 1px dashed var(--text-secondary);
+            background: radial-gradient(circle at center, #f1f5f9 0%, #fff 70%);
+        }
+        .point {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            position: absolute;
+            transform: translate(-50%, -50%);
+        }
+        .point-cat { background: var(--accent-primary); top: 30%; left: 40%; z-index: 2; }
+        .point-feline { background: var(--accent-primary); top: 35%; left: 45%; opacity: 0; animation: popIn 0.5s 0.5s forwards; }
+        .point-dog { background: var(--accent-warning); top: 70%; left: 20%; opacity: 0.6; }
+        .point-pizza { background: var(--accent-secondary); top: 80%; left: 80%; opacity: 0.6; }
+        
+        /* Connection line animation */
+        .connector {
+            position: absolute;
+            height: 1px;
+            background: var(--accent-primary);
+            transform-origin: 0 50%;
+            top: 32.5%; left: 40%;
+            width: 0;
+            animation: connectPoints 0.5s 1s forwards;
+            z-index: 1;
+        }
+        @keyframes popIn { from { transform: translate(-50%, -50%) scale(0); } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+        @keyframes connectPoints { to { width: 15px; transform: rotate(35deg); } }
+
+        /* 3. Cosine Math SVG Animation */
+        .math-visual { width: 140px; height: 140px; }
+        .formula-box {
+            font-family: 'Times New Roman', serif;
+            background: var(--bg-card-alt);
+            padding: 4px;
+            border-radius: 4px;
+            margin-top: 4px;
+            text-align: center;
+            font-size: 0.8rem;
+            border: 1px solid var(--text-secondary);
+        }
+
+        /* 4. DB Indexing Grid Animation */
+        .grid-index { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; width: 100%; }
+        .grid-cell { aspect-ratio: 1; background: #e2e8f0; border-radius: 1px; transition: background 0.3s; }
+        
+        /* The scanning effect */
+        .grid-index:hover .grid-cluster { background: var(--accent-success); } 
+        .grid-cluster { position: relative; }
+        
+        /* Pseudo-element to simulate scanning */
+        .grid-index::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, transparent 50%, rgba(56, 189, 248, 0.2) 50%);
+            background-size: 100% 20px;
+            animation: scanGrid 2s infinite linear;
+            pointer-events: none;
+            z-index: 1;
+        }
+        @keyframes scanGrid { from { background-position: 0 0; } to { background-position: 0 200px; } }
+
+        /* 5. Tables */
+        .mini-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 4px; }
+        .mini-table th { text-align: left; color: var(--accent-primary); border-bottom: 2px solid var(--border-color); padding: 2px 4px; font-size: 0.7rem; }
+        .mini-table td { border-bottom: 1px solid #f1f5f9; padding: 3px 4px; color: var(--text-secondary); }
+        
+        /* 6. Model Pipe Animation */
+        .model-pipe { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+        .pipe-stage { padding: 6px; text-align: center; border-radius: 4px; font-size: 0.75rem; position: relative; opacity: 0; animation: dropDown 0.5s forwards; }
+        .pipe-stage:nth-child(1) { animation-delay: 0.1s; background: #cbd5e1; }
+        .pipe-stage:nth-child(2) { animation-delay: 0.6s; background: var(--accent-primary); color: white; font-weight: bold; }
+        .pipe-stage:nth-child(3) { animation-delay: 1.1s; background: var(--bg-card-alt); border: 1px dashed var(--accent-secondary); color: var(--accent-secondary); font-family: monospace;}
+        
+        @keyframes dropDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 7. RAG Pipeline */
+        .rag-steps { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+        .rag-step { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; background: #fff; padding: 3px 6px; border: 1px solid var(--border-color); border-radius: 4px; }
+        .rag-arrow { color: var(--text-secondary); font-size: 0.7rem; height: 10px; display: flex; align-items: center; justify-content: center;}
+        
+        /* 8. Pitfalls */
+        .pitfall-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+        .pitfall-card { background: #fff1f2; border: 1px solid #fda4af; padding: 4px; border-radius: 4px; font-size: 0.7rem; color: #be123c; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>01. Embeddings & Vector Search</h1>
+            <div class="subtitle">LLM Architecture • RAG • Vector Databases</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>What is an Embedding?</h2>
+            <p>Embeddings are <strong>dense numerical representations of meaning</strong>. We convert raw text into arrays of numbers where each dimension captures a semantic aspect.</p>
+            <div class="insight">
+                💡 Similar meanings result in vectors that are geometrically close in the high-dimensional vector space.
+            </div>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Text to Vector Flow</span>
+            <div class="flow-container">
+                <div class="flow-box">"The cat sat"</div>
+                <div class="flow-arrow"></div>
+                <div class="flow-box" style="border-color: var(--accent-secondary);">Model</div>
+                <div class="flow-arrow"></div>
+                <div class="flow-box">
+                    Vector
+                    <div class="vector-array">[0.2, -0.5, 0.8, ...]</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>Why Embeddings Matter</h2>
+            <h3>Traditional (Keyword)</h3>
+            <p>Matches exact strings. "Cat" misses "Feline". High precision, low recall.</p>
+            <h3>Embedding (Semantic)</h3>
+            <p>Matches based on vector proximity. "Feline" is mathematically close to "Cat". "Pizza" is far.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Semantic Clustering</span>
+            <div class="vector-map">
+                <div class="connector"></div> <!-- Animated line -->
+                <div class="point point-cat"><span style="font-size:0px">Cat</span></div>
+                <div class="point point-feline"><span style="font-size:0px">Feline</span></div>
+                <div class="point point-dog"></div>
+                <div class="point point-pizza"></div>
+                <!-- Axis -->
+                <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 1px; background: #cbd5e1;"></div>
+                <div style="position: absolute; bottom: 0; left: 0; width: 1px; height: 100%; background: #cbd5e1;"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>Cosine Similarity</h2>
+            <p>Measures the <strong>angle</strong> between vectors, not distance. Robust to document length (magnitude).</p>
+            <div class="formula-box">
+                cos(θ) = (A · B) / (||A|| × ||B||)
+            </div>
+            <ul>
+                <li><strong>1.0:</strong> Identical direction</li>
+                <li><strong>0.0:</strong> Unrelated</li>
+                <li><strong>-1.0:</strong> Opposite</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Vector Angles</span>
+            <svg class="math-visual" viewBox="0 0 100 100">
+                <line x1="0" y1="100" x2="100" y2="100" stroke="#cbd5e1" stroke-width="1" />
+                <line x1="0" y1="100" x2="0" y2="0" stroke="#cbd5e1" stroke-width="1" />
+                
+                <!-- Vector A -->
+                <line x1="0" y1="100" x2="70" y2="30" stroke="var(--accent-primary)" stroke-width="2" marker-end="url(#arrowhead)" />
+                <text x="72" y="30" fill="var(--accent-primary)" font-size="8">A</text>
+                
+                <!-- Vector B -->
+                <line x1="0" y1="100" x2="90" y2="60" stroke="var(--accent-secondary)" stroke-width="2" marker-end="url(#arrowhead)" />
+                <text x="92" y="60" fill="var(--accent-secondary)" font-size="8">B</text>
+                
+                <!-- Animated Angle Arc -->
+                <path d="M 30 70 Q 45 55 55 62" fill="none" stroke="var(--accent-warning)" stroke-width="1.5" stroke-dasharray="20" stroke-dashoffset="20">
+                    <animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.5s" repeatCount="indefinite" />
+                </path>
+                
+                <defs>
+                    <marker id="arrowhead" markerWidth="5" markerHeight="3" refX="0" refY="1.5" orient="auto">
+                        <polygon points="0 0, 5 1.5, 0 3" fill="currentColor" />
+                    </marker>
+                </defs>
+            </svg>
+            <div style="text-align: center; font-size: 0.65rem; color: var(--accent-warning);">
+                Smaller Angle = Higher Similarity
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Vector DB Indexing</h2>
+            <p>Naive search (O(n)) is too slow. Vector DBs use <strong>ANN (Approximate Nearest Neighbor)</strong> indexing:</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>HNSW:</strong> Graph-based layers.</li>
+                <li><strong>IVF:</strong> Partitions space into clusters.</li>
+            </ul>
+            <p style="color: var(--accent-success); font-weight: bold;">Result: O(log n) via spatial partitioning.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Spatial Partitioning</span>
+            <div class="grid-index">
+                <!-- Highlighted Cluster -->
+                <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                <div class="grid-cell"></div><div class="grid-cell grid-cluster"></div><div class="grid-cell grid-cluster"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                <div class="grid-cell"></div><div class="grid-cell grid-cluster"></div><div class="grid-cell grid-cluster"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+            </div>
+            <div style="width:100%; display:flex; justify-content:space-between; font-size:0.65rem; margin-top:4px;">
+                <span style="color:#94a3b8">Irrelevant</span>
+                <span style="color:var(--accent-success)">Matched Cluster</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>Popular Databases</h2>
+            <table class="mini-table">
+                <thead>
+                    <tr><th>DB</th><th>Speed</th><th>Cost</th><th>Use Case</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Pinecone</strong></td><td>Fast</td><td>$$</td><td>Managed RAG</td></tr>
+                    <tr><td><strong>pgvector</strong></td><td>Med</td><td>$</td><td>Postgres Setup</td></tr>
+                    <tr><td><strong>Chroma</strong></td><td>Local</td><td>Free</td><td>Prototyping</td></tr>
+                    <tr><td><strong>Milvus</strong></td><td>V.Fast</td><td>Free</td><td>High Volume</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="diagram-box" style="justify-content: center; gap: 5px; padding: 10px;">
+            <span class="diagram-label">Trade-off</span>
+            <div style="width: 100%; display: flex; flex-direction: column; gap: 4px;">
+                <div style="background: #e2e8f0; height: 8px; width: 90%; border-radius: 2px;"></div>
+                <div style="background: #cbd5e1; height: 8px; width: 70%; border-radius: 2px;"></div>
+                <div style="background: #94a3b8; height: 8px; width: 40%; border-radius: 2px;"></div>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 4px;">
+                Convenience vs. Control vs. Cost
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 6 -->
+    <section class="topic-section">
+        <div>
+            <h2>Embedding Models</h2>
+            <p>Convert text to vectors. Choice depends on domain and deployment.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>OpenAI:</strong> General purpose (API).</li>
+                <li><strong>SBERT:</strong> Open-source, local.</li>
+                <li><strong>BGE/Voyage:</strong> High performance/specialized.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Processing Stack</span>
+            <div class="model-pipe">
+                <div class="pipe-stage">Raw Text Input</div>
+                <div class="pipe-stage">Neural Network (Transformer)</div>
+                <div class="pipe-stage">[Vector Array]</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 7 -->
+    <section class="topic-section">
+        <div>
+            <h2>RAG Pipeline</h2>
+            <p><strong>Retrieval-Augmented Generation</strong>. Indexing (Offline) vs. Retrieval (Runtime).</p>
+            <h3>Offline</h3>
+            <p>Docs → Chunk → Embed → Store.</p>
+            <h3>Runtime</h3>
+            <p>Query → Embed → Search → LLM Context.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Flow</span>
+            <div class="rag-steps">
+                <div class="rag-step">
+                    <span>📄</span> Docs (PDF/TXT)
+                </div>
+                <div class="rag-arrow">↓ split & embed</div>
+                <div class="rag-step" style="border-color: var(--accent-primary); background: #f0f9ff;">
+                    <span>🗄️</span> Vector DB
+                </div>
+                <div class="rag-arrow">↓ semantic search</div>
+                <div class="rag-step">
+                    <span>🤖</span> LLM + Context
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 8 -->
+    <section class="topic-section">
+        <div>
+            <h2>Common Pitfalls</h2>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Wrong Model:</strong> General text fails for code/legal.</li>
+                <li><strong>Truncation:</strong> Chunks too long for model context.</li>
+                <li><strong>Drift:</strong> Old vectors in DB don't match new model.</li>
+                <li><strong>Precision:</strong> High cosine ≠ semantic truth. Use reranking.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Risks</span>
+            <div class="pitfall-grid">
+                <div class="pitfall-card"><strong>Truncation</strong><br>Too long?</div>
+                <div class="pitfall-card"><strong>Drift</strong><br>Old vectors?</div>
+                <div class="pitfall-card"><strong>Domain</strong><br>Wrong model?</div>
+                <div class="pitfall-card"><strong>Precision</strong><br>False pos?</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Semantics as Numbers:</strong> Embeddings map meaning to math.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Cosine Similarity:</strong> Measures angle, not magnitude.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Indexing:</strong> HNSW/IVF enables speed (O(log n)).</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Quality:</strong> Depends on chunking and model choice.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>

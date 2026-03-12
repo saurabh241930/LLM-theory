@@ -1,0 +1,305 @@
+import React from 'react';
+import { 
+  Database, Brain, MessageSquare, FileText, 
+  Search, Cpu, Layers, AlertTriangle, 
+  CheckCircle2, XCircle, FileQuestion,
+  Split, Combine, Sparkles, GitMerge,
+  Filter, Zap, GitBranch, ArrowRightLeft, Target,
+  HelpCircle
+} from 'lucide-react';
+
+// --- STYLING CONSTANTS (ByteByteGo Aesthetic) ---
+const THEME = {
+  cardBg: "bg-white",
+  cardBorder: "border-slate-200",
+  titleBg: "bg-[#41d8a0]",
+  titleBorder: "border-[#2e9e73]",
+  primaryNode: "bg-[#a6f0d4] border-[#31a67a] text-slate-900",
+  secondaryNode: "bg-white border-slate-300 text-slate-700 shadow-sm",
+  dashedNode: "bg-[#f8fafc] border-slate-400 border-dashed text-slate-700",
+  errorNode: "bg-[#ffe4e6] border-[#f43f5e] text-slate-900",
+  warningNode: "bg-[#fef3c7] border-[#d97706] text-slate-900",
+  line: "#64748b"
+};
+
+// --- CORE UI COMPONENTS ---
+
+const Card = ({ title, children, tall = false, xTall = false }) => (
+  <div className={`relative ${THEME.cardBg} rounded-2xl shadow-sm border ${THEME.cardBorder} overflow-hidden flex flex-col items-center w-full ${xTall ? 'h-[650px]' : tall ? 'h-[500px]' : 'h-[400px]'} mb-6 hover:shadow-md transition-shadow`}>
+    <div className={`mt-5 ${THEME.titleBg} text-slate-900 font-extrabold text-lg py-2 px-6 rounded-xl border-2 ${THEME.titleBorder} w-[85%] text-center z-20 shadow-sm tracking-tight`}>
+      {title}
+    </div>
+    <div className="absolute inset-0 top-[60px] w-full p-4 flex items-center justify-center">
+      {children}
+    </div>
+  </div>
+);
+
+const Node = ({ top, left, title, subtitle, icon: Icon, type = "primary", className = "", width = "w-[130px]" }) => {
+  const styleClass = THEME[`${type}Node`] || THEME.primaryNode;
+  return (
+    <div 
+      className={`absolute z-10 flex flex-col items-center justify-center p-2 rounded-lg border-2 ${width} text-center transition-transform hover:scale-105 ${styleClass} ${className}`}
+      style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+    >
+      {Icon && <Icon className="mb-1 opacity-80" size={18} strokeWidth={2} />}
+      <span className="text-[11px] font-bold leading-tight">{title}</span>
+      {subtitle && <span className="text-[9px] opacity-80 mt-1 leading-tight whitespace-pre-line">{subtitle}</span>}
+    </div>
+  );
+};
+
+const Label = ({ top, left, text, icon: Icon, type="default", width="w-auto" }) => (
+  <div 
+    className={`absolute z-20 flex flex-col items-center justify-center px-3 py-1.5 rounded-full text-[10px] font-bold shadow-sm border border-slate-200 ${width} ${type === 'error' ? 'bg-red-50 text-red-600 border-red-200' : type === 'success' ? 'bg-[#e6fcf5] text-[#2e9e73] border-[#31a67a]' : type === 'warning' ? 'bg-[#fef3c7] text-[#d97706] border-[#f59e0b]' : 'bg-white text-slate-700'}`}
+    style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+  >
+    {Icon && <Icon size={14} className={`mb-1 ${type === 'error' ? 'text-red-500' : type === 'warning' ? 'text-[#d97706]' : 'text-[#2e9e73]'}`} />}
+    {text}
+  </div>
+);
+
+const SvgCanvas = ({ children }) => (
+  <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+    <defs>
+       <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill={THEME.line} />
+       </marker>
+       <marker id="arrow-red" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+       </marker>
+       <marker id="arrow-green" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#31a67a" />
+       </marker>
+    </defs>
+    {children}
+  </svg>
+);
+
+const Connection = ({ x1, y1, x2, y2, dashed = false, arrow = true, color = THEME.line }) => {
+  let marker = "none";
+  if (arrow) {
+    if (color === '#ef4444') marker = "url(#arrow-red)";
+    else if (color === '#31a67a') marker = "url(#arrow-green)";
+    else marker = "url(#arrow)";
+  }
+  return (
+    <line 
+      x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} 
+      stroke={color} strokeWidth="2" strokeDasharray={dashed ? "5,5" : "none"} 
+      markerEnd={marker} 
+    />
+  );
+};
+
+// --- SPECIFIC DIAGRAM CARDS ---
+
+// Card 1: Query Rewriting
+const CardQueryRewriting = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[8%] left-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Problem: Ambiguous Query</div>
+    <div className="absolute top-[52%] left-4 text-xs font-bold text-[#31a67a] uppercase tracking-widest">Solution: LLM Rewriting</div>
+    <div className="absolute top-[48%] left-[5%] right-[5%] border-t-2 border-dashed border-slate-200"></div>
+
+    <SvgCanvas>
+      {/* Top Flow */}
+      <Connection x1={20} y1={25} x2={45} y2={25} />
+      <Connection x1={45} y1={25} x2={75} y2={25} color="#ef4444" />
+      
+      {/* Bottom Flow */}
+      <Connection x1={15} y1={75} x2={35} y2={75} />
+      <Connection x1={35} y1={75} x2={60} y2={75} />
+      <Connection x1={60} y1={75} x2={85} y2={75} color="#31a67a" />
+    </SvgCanvas>
+
+    {/* Bad Path */}
+    <Node top={25} left={20} title='"What is the timeline?"' icon={FileQuestion} type="secondary" width="w-[130px]" />
+    <Node top={25} left={45} title="Vector Search" subtitle="Generic embedding" icon={Search} type="secondary" width="w-[120px]" />
+    <Node top={25} left={75} title="Irrelevant Docs" subtitle="Timeline for what?" icon={XCircle} type="error" width="w-[120px]" />
+
+    {/* Good Path */}
+    <Node top={75} left={15} title='"What is the timeline?"' icon={FileQuestion} type="secondary" width="w-[120px]" />
+    <Node top={75} left={35} title="LLM Rewrite" subtitle='"Q3 release timeline"' icon={Sparkles} type="primary" width="w-[120px]" />
+    <Node top={75} left={60} title="Specific Search" subtitle="Targeted embedding" icon={Target} type="primary" width="w-[120px]" />
+    <Node top={75} left={85} title="Relevant Docs" subtitle="Finds Q3 data" icon={CheckCircle2} type="success" width="w-[110px]" />
+  </div>
+);
+
+// Card 2: HyDE (Hypothetical Document Embedding)
+const CardHyDE = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={15} y1={50} x2={35} y2={50} />
+      <Connection x1={35} y1={50} x2={60} y2={50} />
+      <Connection x1={60} y1={50} x2={85} y2={50} />
+      
+      {/* Direct vs HyDE visual comparison lines */}
+      <path d="M 15 40 Q 50 15 85 40" fill="none" stroke="#ef4444" strokeWidth="2" strokeDasharray="5,5" markerEnd="url(#arrow-red)" />
+    </SvgCanvas>
+
+    <Node top={50} left={15} title="Short Query" subtitle='"return policy"' icon={MessageSquare} type="secondary" width="w-[110px]" />
+    
+    <Node top={50} left={35} title="Generate Fake Doc" subtitle='"Our policy is 30 days..."' icon={Brain} type="primary" width="w-[130px]" />
+    <Node top={50} left={60} title="Embed Fake Doc" subtitle="Dense, informative vector" icon={Cpu} type="dashed" width="w-[140px]" />
+    
+    <Node top={50} left={85} title="Find Real Docs" subtitle="Matches dense patterns" icon={Database} type="success" width="w-[120px]" />
+
+    <Label top={20} left={50} text="Naive Search: Too short, fails to match" icon={AlertTriangle} type="error" />
+    <Label top={75} left={50} text="HyDE: Fakes the answer to find the real answer" icon={Sparkles} type="success" />
+  </div>
+);
+
+// Card 3: Hybrid Search (Dense + Sparse)
+const CardHybridSearch = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={15} y1={50} x2={30} y2={25} />
+      <Connection x1={15} y1={50} x2={30} y2={75} />
+      
+      <Connection x1={30} y1={25} x2={55} y2={25} />
+      <Connection x1={30} y1={75} x2={55} y2={75} />
+      
+      <Connection x1={55} y1={25} x2={75} y2={50} />
+      <Connection x1={55} y1={75} x2={75} y2={50} />
+      
+      <Connection x1={75} y1={50} x2={90} y2={50} />
+    </SvgCanvas>
+
+    <Node top={50} left={10} title='"CEO Salary"' icon={Search} type="secondary" width="w-[90px]" />
+
+    {/* Top Track (Dense) */}
+    <Node top={25} left={30} title="Dense Search" subtitle="Embeddings" icon={Cpu} type="primary" width="w-[120px]" />
+    <Node top={25} left={55} title="Semantic Match" subtitle="Finds 'compensation'" icon={CheckCircle2} type="dashed" width="w-[130px]" />
+    
+    {/* Bottom Track (Sparse) */}
+    <Node top={75} left={30} title="Sparse Search" subtitle="BM25 Keywords" icon={FileText} type="warning" width="w-[120px]" />
+    <Node top={75} left={55} title="Exact Match" subtitle="Finds exact 'CEO'" icon={CheckCircle2} type="dashed" width="w-[130px]" />
+
+    {/* Fusion */}
+    <Node top={50} left={75} title="Reciprocal Rank Fusion (RRF)" icon={Combine} type="primary" width="w-[130px]" />
+    <Node top={50} left={92} title="Best Results" icon={Zap} type="success" width="w-[90px]" />
+  </div>
+);
+
+// Card 4: Full Advanced Pipeline
+const CardPipeline = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      {/* Down flow */}
+      <Connection x1={50} y1={12} x2={50} y2={28} />
+      <Connection x1={50} y1={28} x2={50} y2={46} />
+      <Connection x1={50} y1={46} x2={50} y2={64} />
+      <Connection x1={50} y1={64} x2={50} y2={82} />
+      
+      {/* Multi-query branching visual */}
+      <path d="M 50 34 L 35 34 L 35 40 M 50 34 L 65 34 L 65 40" fill="none" stroke={THEME.line} strokeWidth="2" />
+    </SvgCanvas>
+
+    <div className="absolute top-[12%] left-[25%] -translate-y-1/2 text-[10px] text-slate-500 font-bold uppercase w-[120px] text-right">User Query</div>
+    <Node top={12} left={50} title="1. Query Rewriting" subtitle="Clarify / Expand" icon={Sparkles} type="primary" width="w-[180px]" />
+    
+    <div className="absolute top-[37%] left-[25%] -translate-y-1/2 text-[10px] text-slate-500 font-bold uppercase w-[120px] text-right">Hybrid Searches</div>
+    <Node top={37} left={50} title="2. Multi-Query Retrieval" subtitle="Dense + Sparse (BM25)" icon={GitBranch} type="primary" width="w-[180px]" />
+    
+    <div className="absolute top-[55%] left-[25%] -translate-y-1/2 text-[10px] text-slate-500 font-bold uppercase w-[120px] text-right">Merge Results</div>
+    <Node top={55} left={50} title="3. Deduplicate / Combine" subtitle="RRF Scoring" icon={Combine} type="secondary" width="w-[180px]" />
+    
+    <div className="absolute top-[73%] left-[25%] -translate-y-1/2 text-[10px] text-slate-500 font-bold uppercase w-[120px] text-right">Score Validation</div>
+    <Node top={73} left={50} title="4. Reranking (Cross-Encoder)" subtitle="Rescore top chunks" icon={Filter} type="warning" width="w-[180px]" />
+    
+    <div className="absolute top-[91%] left-[25%] -translate-y-1/2 text-[10px] text-slate-500 font-bold uppercase w-[120px] text-right">Final Output</div>
+    <Node top={91} left={50} title="5. Generate Answer" subtitle="LLM builds grounded response" icon={Brain} type="success" width="w-[180px]" />
+  </div>
+);
+
+// Card 5: Decision Tree for Techniques
+const CardDecisionTree = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={20} y1={15} x2={20} y2={35} />
+      <Connection x1={20} y1={15} x2={50} y2={15} dashed={true} />
+      
+      <Connection x1={50} y1={15} x2={50} y2={35} />
+      <Connection x1={50} y1={15} x2={80} y2={15} dashed={true} />
+
+      <Connection x1={80} y1={15} x2={80} y2={35} />
+      <Connection x1={80} y1={15} x2={80} y2={65} dashed={true} />
+      <Connection x1={80} y1={65} x2={50} y2={65} dashed={true} />
+      <Connection x1={50} y1={65} x2={20} y2={65} dashed={true} />
+      
+      <Connection x1={20} y1={65} x2={20} y2={80} />
+    </SvgCanvas>
+
+    {/* Level 1: Ambiguity */}
+    <Node top={15} left={20} title="Is Ambiguous?" subtitle="Vague intent" icon={HelpCircle} type="secondary" width="w-[120px] z-20" />
+    <Label top={25} left={20} text="YES" />
+    <Node top={45} left={20} title="Query Rewrite" subtitle="LLM specifies query" icon={Sparkles} type="success" width="w-[130px] z-20" />
+    <Label top={15} left={35} text="NO" type="warning" />
+
+    {/* Level 2: Short Query */}
+    <Node top={15} left={50} title="Very Short?" subtitle="1-2 words" icon={HelpCircle} type="secondary" width="w-[120px] z-20" />
+    <Label top={25} left={50} text="YES" />
+    <Node top={45} left={50} title="HyDE" subtitle="Fake answer -> embed" icon={Brain} type="success" width="w-[130px] z-20" />
+    <Label top={15} left={65} text="NO" type="warning" />
+
+    {/* Level 3: Need Keywords */}
+    <Node top={15} left={80} title="Need Keywords?" subtitle="IDs, Names, Acronyms" icon={HelpCircle} type="secondary" width="w-[130px] z-20" />
+    <Label top={25} left={80} text="YES" />
+    <Node top={45} left={80} title="Hybrid Search" subtitle="Dense + BM25" icon={Combine} type="success" width="w-[130px] z-20" />
+    <Label top={40} left={80} text="NO" type="warning" />
+    
+    {/* Final Catch-all / Rerank */}
+    <Node top={65} left={20} title="Low Relevance?" subtitle="Chunks seem noisy" icon={HelpCircle} type="secondary" width="w-[130px] z-20" />
+    <Label top={75} left={20} text="YES" />
+    <Node top={85} left={20} title="Reranker" subtitle="Cross-encoder validation" icon={Filter} type="success" width="w-[130px] z-20" />
+
+  </div>
+);
+
+
+// --- MAIN APP LAYOUT ---
+export default function App() {
+  return (
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-800">
+      
+      <header className="max-w-7xl mx-auto mb-10 border-b border-slate-200 pb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+             Visual Dev Guides <span className="text-slate-400 font-normal">| Advanced RAG</span>
+          </h1>
+          <p className="text-slate-500 mt-2 text-sm max-w-lg">
+            Phase 1 Theory: Upgrading Naive RAG. Fixing ambiguous queries, short inputs, and missing keyword matches.
+          </p>
+        </div>
+        <div className="bg-slate-800 text-white text-sm font-bold py-2 px-5 rounded-full shadow-md flex items-center gap-2">
+          <Combine size={16} /> Advanced Retrieval
+        </div>
+      </header>
+      
+      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-10">
+         <Card title="01. Technique: Query Rewriting">
+           <CardQueryRewriting />
+         </Card>
+
+         <Card title="02. Technique: HyDE">
+           <CardHyDE />
+         </Card>
+
+         <Card title="03. Technique: Hybrid Search (Dense+BM25)">
+           <CardHybridSearch />
+         </Card>
+
+         <Card title="05. How to Choose: Decision Tree" tall={false}>
+            <CardDecisionTree />
+        </Card>
+      </main>
+
+      <div className="max-w-7xl mx-auto mt-6">
+        <Card title="04. The Full Advanced Pipeline" xTall={true}>
+            <CardPipeline />
+        </Card>
+      </div>
+
+    </div>
+  );
+}

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chunking Strategies: Compact Cheat Sheet</title>
+    <style>
+        :root {
+            /* Light Mode Palette (Consistent) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --accent-danger: #b91c1c; /* Red */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Overflow vs Split */
+        .overflow-demo { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+        .doc-bar { height: 12px; background: #94a3b8; width: 100%; border-radius: 2px; position: relative; }
+        .window-limit {
+            position: absolute; right: 0; top: -4px; bottom: -4px; width: 40%;
+            border: 2px dashed var(--accent-danger); border-radius: 4px;
+        }
+        .bar-split { display: flex; gap: 2px; }
+        .seg { height: 12px; background: var(--accent-success); flex: 1; border-radius: 2px; opacity: 0; transform: scaleX(0); }
+        .s1 { animation: splitOpen 0.5s 0.2s forwards; }
+        .s2 { animation: splitOpen 0.5s 0.4s forwards; }
+        .s3 { animation: splitOpen 0.5s 0.6s forwards; }
+        .s4 { animation: splitOpen 0.5s 0.8s forwards; }
+
+        @keyframes splitOpen { to { opacity: 1; transform: scaleX(1); } }
+
+        /* 2. Sliding Window */
+        .slider-track {
+            position: relative; width: 100%; height: 30px;
+            border: 1px solid #cbd5e1; border-radius: 4px;
+            background: #f1f5f9; overflow: hidden;
+        }
+        .window-frame {
+            position: absolute; height: 100%; width: 50%;
+            background: rgba(56, 189, 248, 0.2); border: 1px solid var(--accent-primary);
+            left: -50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.6rem; color: var(--accent-primary);
+            animation: slideOver 4s infinite linear;
+        }
+        @keyframes slideOver { 
+            0% { left: -50%; } 40% { left: 0; } 60% { left: 0; } 100% { left: 50%; } 
+        }
+
+        /* 3. Semantic Cut */
+        .semantic-flow { display: flex; gap: 2px; width: 100%; height: 40px; align-items: center; justify-content: center; }
+        .sem-block { 
+            width: 10%; height: 20px; background: #cbd5e1; border-radius: 2px; 
+            opacity: 0; animation: fadeIn 0.3s forwards;
+        }
+        .sb-1 { animation-delay: 0.1s; background: #a5b4fc; }
+        .sb-2 { animation-delay: 0.2s; background: #a5b4fc; }
+        .cut-line {
+            width: 2px; height: 100%; background: var(--accent-danger);
+            transform: scaleY(0); transform-origin: top;
+            animation: cutDown 0.3s 0.8s forwards;
+        }
+        .sb-3 { animation-delay: 0.9s; background: #fda4af; }
+        .sb-4 { animation-delay: 1.0s; background: #fda4af; }
+
+        @keyframes cutDown { to { transform: scaleY(1); } }
+
+        /* 4. Recursive Tree */
+        .tree-svg { width: 100%; height: 100px; }
+        .tree-path { fill: none; stroke: var(--text-secondary); stroke-width: 1.5; stroke-dasharray: 200; stroke-dashoffset: 200; animation: drawPath 2s forwards; }
+        .tree-node { fill: var(--accent-primary); opacity: 0; animation: popNode 0.3s forwards; }
+        .tn-1 { animation-delay: 1.5s; }
+        .tn-2 { animation-delay: 1.8s; }
+        .tn-3 { animation-delay: 2.1s; }
+
+        @keyframes drawPath { to { stroke-dashoffset: 0; } }
+        @keyframes popNode { from { transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+
+        /* 5. Document Aware */
+        .doc-struct { width: 100%; font-size: 0.7rem; text-align: left; }
+        .ds-header { font-weight: bold; color: var(--accent-primary); margin-top: 4px; }
+        .ds-chunk { background: #fff; border: 1px solid #cbd5e1; margin: 2px 0 2px 10px; padding: 2px; border-radius: 2px; transform: translateX(-10px); opacity: 0; animation: slideInChunk 0.3s forwards; }
+        .dc-1 { animation-delay: 0.2s; }
+        .dc-2 { animation-delay: 0.4s; }
+        .dc-3 { animation-delay: 0.6s; }
+
+        @keyframes slideInChunk { to { transform: translateX(0); opacity: 1; } }
+
+        /* 6. Pitfalls */
+        .pitfall-box { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; }
+        .p-card { background: #fff7ed; border: 1px solid #fdba74; padding: 4px; font-size: 0.7rem; color: #9a3412; text-align: center; border-radius: 4px; }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>04. Chunking Strategies</h1>
+            <div class="subtitle">Splitting Text • Semantic Quality • RAG Foundation</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>Why Chunking Exists</h2>
+            <p>Documents (10k+ tokens) exceed the <strong>Context Window</strong> (e.g., 2k-4k tokens). We must split them into manageable pieces.</p>
+            <h3>The Goal</h3>
+            <p>Preserve semantic meaning while keeping chunks small enough to fit.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Overflow vs. Split</span>
+            <div class="overflow-demo">
+                <div style="font-size: 0.65rem; color: var(--accent-danger);">❌ Too Long</div>
+                <div class="doc-bar">
+                    <div class="window-limit"></div>
+                </div>
+                
+                <div style="font-size: 0.65rem; color: var(--accent-success);">✅ Chunked</div>
+                <div class="bar-split">
+                    <div class="seg s1"></div>
+                    <div class="seg s2"></div>
+                    <div class="seg s3"></div>
+                    <div class="seg s4"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>Fixed-Size & Sliding Window</h2>
+            <h3>Fixed-Size</h3>
+            <p>Simple, fast, predictable. Cons: Breaks semantic boundaries (splits sentences mid-way).</p>
+            <h3>Sliding Window</h3>
+            <p>Fixed size but with overlap (e.g., Chunk 2 starts at 50% of Chunk 1). Preserves context at boundaries.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Sliding Window</span>
+            <div class="slider-track">
+                <div class="window-frame">Chunk</div>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--accent-primary); margin-top: 4px; width: 100%; text-align: center;">
+                Window moves with overlap
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>Semantic Chunking</h2>
+            <p>Split based on meaning, not fixed length. Embed every sentence, calculate cosine similarity. If similarity < threshold → <strong>Start new chunk</strong>.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Pros:</strong> High semantic coherence, variable sizes.</li>
+                <li><strong>Cons:</strong> Expensive (requires embedding all sentences).</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Semantic Boundary</span>
+            <div class="semantic-flow">
+                <div class="sem-block sb-1"></div>
+                <div class="sem-block sb-2"></div>
+                <div class="cut-line"></div>
+                <div class="sem-block sb-3"></div>
+                <div class="sem-block sb-4"></div>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--accent-danger); margin-top: 4px;">
+                Low Similarity Trigger → CUT
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Recursive Chunking</h2>
+            <p>Hierarchical splitting. Try Paragraphs → If too big, try Sentences → If too big, try Words.</p>
+            <p>Respects document structure while handling edge cases of long sections.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Recursive Split</span>
+            <svg class="tree-svg" viewBox="0 0 100 100">
+                <!-- Paths -->
+                <path d="M50 10 L50 50 M50 50 L20 80 M50 50 L80 80" class="tree-path" />
+                <!-- Nodes -->
+                <circle cx="50" cy="10" r="4" class="tree-node tn-1" />
+                <circle cx="50" cy="50" r="4" class="tree-node tn-2" />
+                <circle cx="20" cy="80" r="3" class="tree-node tn-3" />
+                <circle cx="80" cy="80" r="3" class="tree-node tn-3" />
+                <!-- Labels -->
+                <text x="50" y="5" text-anchor="middle" font-size="4" fill="#333">Doc</text>
+                <text x="15" y="90" text-anchor="middle" font-size="4" fill="#333">Para</text>
+                <text x="85" y="90" text-anchor="middle" font-size="4" fill="#333">Sent</text>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>Document-Aware Chunking</h2>
+            <p>Split based on document structure (Markdown headers, HTML tags). Each chunk retains the header context.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Best for:</strong> Structured docs (Legal, Technical Manuals).</li>
+                <li><strong>Pros:</strong> Preserves hierarchy perfectly.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Structure Aware</span>
+            <div class="doc-struct">
+                <div class="ds-header"># Section 1</div>
+                <div class="ds-chunk dc-1">Intro text...</div>
+                <div class="ds-chunk dc-2">More text...</div>
+                <div class="ds-header"># Section 2</div>
+                <div class="ds-chunk dc-3">New topic...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 6 -->
+    <section class="topic-section">
+        <div>
+            <h2>Common Pitfalls</h2>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Too Small:</strong> < 100 tokens loses context.</li>
+                <li><strong>Too Large:</strong> > 5k tokens won't fit context window.</li>
+                <li><strong>No Overlap:</strong> Loses meaning at edges.</li>
+                <li><strong>No Metadata:</strong> Can't trace chunk back to source.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Risks</span>
+            <div class="pitfall-box">
+                <div class="p-card">🔹 Too Small</div>
+                <div class="p-card">🔹 Too Large</div>
+                <div class="p-card">🔹 No Overlap</div>
+                <div class="p-card">🔹 No Metadata</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Necessary Evil:</strong> Long docs must be split for RAG.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Strategy Choice:</strong> Fixed (Fast) vs. Semantic (Quality) vs. Structured (Hierarchy).</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Size Matters:</strong> Target ~1/3 of context window.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Metadata is King:</strong> Always attach source ID to chunks.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,268 @@
+import React from 'react';
+import { 
+  Type, Hash, Scissors, Cpu, FileText, 
+  AlertCircle, CheckCircle2, Maximize, 
+  Minimize, Layers, Filter, MessageSquare, 
+  Clock, Zap, Coins, ArrowRight
+} from 'lucide-react';
+
+// --- STYLING CONSTANTS (ByteByteGo Aesthetic) ---
+const THEME = {
+  cardBg: "bg-white",
+  cardBorder: "border-slate-200",
+  titleBg: "bg-[#41d8a0]",
+  titleBorder: "border-[#2e9e73]",
+  primaryNode: "bg-[#a6f0d4] border-[#31a67a] text-slate-900",
+  secondaryNode: "bg-white border-slate-300 text-slate-700 shadow-sm",
+  dashedNode: "bg-[#f8fafc] border-slate-400 border-dashed text-slate-700",
+  errorNode: "bg-[#ffe4e6] border-[#f43f5e] text-slate-900",
+  warningNode: "bg-[#fef3c7] border-[#d97706] text-slate-900",
+  line: "#64748b"
+};
+
+// --- CORE UI COMPONENTS ---
+
+const Card = ({ title, children, tall = false }) => (
+  <div className={`relative ${THEME.cardBg} rounded-2xl shadow-sm border ${THEME.cardBorder} overflow-hidden flex flex-col items-center w-full ${tall ? 'h-[550px]' : 'h-[400px]'} mb-6 hover:shadow-md transition-shadow`}>
+    <div className={`mt-5 ${THEME.titleBg} text-slate-900 font-extrabold text-lg py-2 px-6 rounded-xl border-2 ${THEME.titleBorder} w-[85%] text-center z-20 shadow-sm tracking-tight`}>
+      {title}
+    </div>
+    <div className="absolute inset-0 top-[60px] w-full p-4 flex items-center justify-center">
+      {children}
+    </div>
+  </div>
+);
+
+const Node = ({ top, left, title, subtitle, icon: Icon, type = "primary", className = "", width = "w-[120px]" }) => {
+  const styleClass = THEME[`${type}Node`] || THEME.primaryNode;
+  return (
+    <div 
+      className={`absolute z-10 flex flex-col items-center justify-center p-2 rounded-lg border-2 ${width} text-center transition-transform hover:scale-105 ${styleClass} ${className}`}
+      style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+    >
+      {Icon && <Icon className="mb-1 opacity-80" size={20} strokeWidth={2} />}
+      <span className="text-[11px] font-bold leading-tight">{title}</span>
+      {subtitle && <span className="text-[9px] opacity-80 mt-1 leading-tight">{subtitle}</span>}
+    </div>
+  );
+};
+
+const Label = ({ top, left, text, icon: Icon, type="default", width="w-auto" }) => (
+  <div 
+    className={`absolute z-20 flex flex-col items-center justify-center px-3 py-1.5 rounded-full text-[10px] font-bold shadow-sm border border-slate-200 ${width} ${type === 'error' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-slate-700'}`}
+    style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+  >
+    {Icon && <Icon size={14} className={`mb-1 ${type === 'error' ? 'text-red-500' : 'text-[#2e9e73]'}`} />}
+    {text}
+  </div>
+);
+
+const SvgCanvas = ({ children }) => (
+  <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+    <defs>
+       <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill={THEME.line} />
+       </marker>
+       <marker id="arrow-red" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+       </marker>
+    </defs>
+    {children}
+  </svg>
+);
+
+const Connection = ({ x1, y1, x2, y2, dashed = false, arrow = true, color = THEME.line }) => (
+  <line 
+    x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} 
+    stroke={color} strokeWidth="2" strokeDasharray={dashed ? "5,5" : "none"} 
+    markerEnd={arrow ? (color === '#ef4444' ? "url(#arrow-red)" : "url(#arrow)") : "none"} 
+  />
+);
+
+// --- SPECIFIC DIAGRAM CARDS ---
+
+// Card 1: What is a Token? / Tokenization
+const CardTokenization = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={15} y1={50} x2={35} y2={50} />
+      <Connection x1={35} y1={50} x2={60} y2={50} />
+      <Connection x1={60} y1={50} x2={85} y2={50} />
+    </SvgCanvas>
+    
+    <Node top={50} left={15} title="Raw Text" subtitle='"Hello, world!"' icon={Type} type="secondary" />
+    <Node top={50} left={35} title="Tokenizer" subtitle="Vocab Lookup" icon={Scissors} type="primary" />
+    <Node top={50} left={60} title="Token IDs" subtitle="[15496, 11, 28357, 28808]" icon={Hash} type="dashed" width="w-[140px]" />
+    <Node top={50} left={85} title="LLM Processing" subtitle="Computes next ID" icon={Cpu} type="primary" />
+    
+    <Label top={25} left={50} text="Insight: Tokens are variable-length pieces, NOT whole words!" icon={AlertCircle} width="w-[320px]" />
+  </div>
+);
+
+// Card 2: The Context Window
+const CardContextWindow = () => (
+  <div className="relative w-full h-full">
+    {/* The Context Window Box */}
+    <div className="absolute top-[20%] bottom-[20%] left-[20%] right-[40%] border-4 border-[#31a67a] border-dashed rounded-xl bg-[#e6fcf5] flex flex-col justify-between p-2 z-0">
+       <div className="text-center font-bold text-slate-600 text-[10px] uppercase tracking-wider mb-1">4K Token Window Limit</div>
+    </div>
+
+    <SvgCanvas>
+      <Connection x1={60} y1={80} x2={75} y2={80} color="#ef4444" />
+    </SvgCanvas>
+
+    {/* Inside the window */}
+    <Node top={35} left={40} title="[System Prompt]" subtitle="200 tokens" type="secondary" width="w-[200px]" />
+    <Node top={55} left={40} title="[History]" subtitle="2000 tokens" type="secondary" width="w-[200px]" />
+    <Node top={75} left={40} title="[User Message]" subtitle="1000 tokens" type="primary" width="w-[200px]" />
+    
+    {/* Outside the window (Overflow) */}
+    <Node top={80} left={85} title="1500 Tokens" subtitle="Long Document" icon={FileText} type="error" />
+    
+    <Label top={65} left={85} text="ERROR / TRUNCATION" icon={AlertCircle} type="error" />
+  </div>
+);
+
+// Card 3: Token Math & Rules of Thumb
+const CardTokenMath = () => (
+  <div className="relative w-full h-full flex flex-col items-center justify-center space-y-4">
+    <div className="grid grid-cols-2 gap-4 w-[80%] z-10">
+      <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center">
+        <Type className="mx-auto mb-2 text-[#31a67a]" />
+        <div className="font-bold text-slate-800 text-sm">1 Word</div>
+        <div className="text-xs text-slate-500">≈ 1.3 Tokens</div>
+      </div>
+      <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center">
+        <FileText className="mx-auto mb-2 text-[#31a67a]" />
+        <div className="font-bold text-slate-800 text-sm">1 Sentence</div>
+        <div className="text-xs text-slate-500">≈ 5 - 10 Tokens</div>
+      </div>
+      <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center">
+        <Layers className="mx-auto mb-2 text-[#31a67a]" />
+        <div className="font-bold text-slate-800 text-sm">1 Paragraph</div>
+        <div className="text-xs text-slate-500">≈ 50 - 100 Tokens</div>
+      </div>
+      <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm text-center">
+        <Maximize className="mx-auto mb-2 text-[#31a67a]" />
+        <div className="font-bold text-slate-800 text-sm">1 Page</div>
+        <div className="text-xs text-slate-500">≈ 300 - 500 Tokens</div>
+      </div>
+    </div>
+    
+    <div className="bg-[#fef3c7] border border-[#d97706] px-4 py-2 rounded-lg text-[11px] font-bold text-amber-800 flex items-center gap-2 z-10 w-[80%]">
+      <AlertCircle size={16} /> Don't forget Special Tokens! &lt;|start|&gt; Hello &lt;|end|&gt; = 3 tokens, not 1!
+    </div>
+  </div>
+);
+
+// Card 4: Context Optimization Strategies
+const CardOptimization = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      {/* Flow 1 */}
+      <Connection x1={20} y1={25} x2={50} y2={25} />
+      <Connection x1={50} y1={25} x2={80} y2={25} />
+      {/* Flow 2 */}
+      <Connection x1={20} y1={50} x2={50} y2={50} />
+      <Connection x1={50} y1={50} x2={80} y2={50} />
+      {/* Flow 3 */}
+      <Connection x1={20} y1={75} x2={50} y2={75} />
+      <Connection x1={50} y1={75} x2={80} y2={75} />
+    </SvgCanvas>
+
+    {/* Flow 1: Summarize */}
+    <Node top={25} left={20} title="Long Doc (8K)" icon={FileText} type="secondary" />
+    <Node top={25} left={50} title="1. Summarize" icon={Minimize} type="warning" />
+    <Node top={25} left={80} title="Summary (500)" subtitle="✅ Fits Window" icon={CheckCircle2} type="primary" />
+
+    {/* Flow 2: RAG / Chunking */}
+    <Node top={50} left={20} title="Long Doc (8K)" icon={FileText} type="secondary" />
+    <Node top={50} left={50} title="2. RAG Chunking" subtitle="Split -> Retrieve 1" icon={Scissors} type="warning" />
+    <Node top={50} left={80} title="1 Chunk (2K)" subtitle="✅ Fits Window" icon={CheckCircle2} type="primary" />
+
+    {/* Flow 3: Compression */}
+    <Node top={75} left={20} title='"The quick brown fox"' icon={Type} type="secondary" />
+    <Node top={75} left={50} title="3. Compress" subtitle="Remove stopwords" icon={Filter} type="warning" />
+    <Node top={75} left={80} title='"Fox over dog"' subtitle="✅ Keeps meaning" icon={CheckCircle2} type="primary" />
+  </div>
+);
+
+// Card 5: Practical RAG Assembly (Good vs Bad)
+const CardRAGExample = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[8%] left-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Bad Approach (Greedy)</div>
+    <div className="absolute top-[52%] left-4 text-xs font-bold text-[#31a67a] uppercase tracking-widest">Good Approach (Optimized)</div>
+    <div className="absolute top-[48%] left-[5%] right-[5%] border-t-2 border-dashed border-slate-200"></div>
+
+    <SvgCanvas>
+      {/* Top Flow */}
+      <Connection x1={15} y1={25} x2={40} y2={25} />
+      <Connection x1={40} y1={25} x2={65} y2={25} />
+      <Connection x1={65} y1={25} x2={85} y2={25} color="#ef4444" />
+      {/* Bottom Flow */}
+      <Connection x1={15} y1={75} x2={40} y2={75} />
+      <Connection x1={40} y1={75} x2={65} y2={75} />
+      <Connection x1={65} y1={75} x2={85} y2={75} />
+    </SvgCanvas>
+
+    {/* Bad */}
+    <Node top={25} left={15} title="Query" icon={MessageSquare} type="secondary" width="w-[80px]" />
+    <Node top={25} left={40} title="Top-10 Chunks" subtitle="10 x 500 = 5000t" icon={Layers} type="secondary" width="w-[120px]" />
+    <Node top={25} left={65} title="System Prompt" subtitle="+500t" icon={FileText} type="secondary" width="w-[100px]" />
+    <Node top={25} left={85} title="5500 Total" subtitle="Expensive & Slow!" icon={Coins} type="error" width="w-[110px]" />
+
+    {/* Good */}
+    <Node top={75} left={15} title="Query" icon={MessageSquare} type="primary" width="w-[80px]" />
+    <Node top={75} left={40} title="Top-3 Chunks" subtitle="3 x 300 = 900t" icon={Filter} type="primary" width="w-[120px]" />
+    <Node top={75} left={65} title="System Prompt" subtitle="+200t" icon={FileText} type="primary" width="w-[100px]" />
+    <Node top={75} left={85} title="1100 Total" subtitle="Cheap & Fast!" icon={Zap} type="primary" width="w-[110px]" />
+  </div>
+);
+
+
+// --- MAIN APP LAYOUT ---
+export default function App() {
+  return (
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-800">
+      
+      <header className="max-w-7xl mx-auto mb-10 border-b border-slate-200 pb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+             Visual Dev Guides <span className="text-slate-400 font-normal">| Tokenization</span>
+          </h1>
+          <p className="text-slate-500 mt-2 text-sm max-w-lg">
+            Phase 1 Theory: Understanding tokens, context windows, and optimization strategies for LLMs.
+          </p>
+        </div>
+        <div className="bg-slate-800 text-white text-sm font-bold py-2 px-5 rounded-full shadow-md flex items-center gap-2">
+          <Scissors size={16} /> Parsing & Context
+        </div>
+      </header>
+      
+      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-10">
+         <Card title="01. How Tokenization Works">
+           <CardTokenization />
+         </Card>
+
+         <Card title="02. The Context Window Limit">
+           <CardContextWindow />
+         </Card>
+
+         <Card title="03. Token Counting Rules of Thumb">
+           <CardTokenMath />
+         </Card>
+
+         <Card title="04. Context Window Optimization">
+           <CardOptimization />
+         </Card>
+      </main>
+
+      <div className="max-w-7xl mx-auto mt-6">
+        <Card title="05. Building a RAG Prompt (Bad vs Good)" tall={false}>
+            <CardRAGExample />
+        </Card>
+      </div>
+
+    </div>
+  );
+}

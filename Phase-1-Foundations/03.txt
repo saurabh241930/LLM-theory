@@ -1,0 +1,283 @@
+import React from 'react';
+import { 
+  Terminal, Brain, FileText, CheckCircle2, 
+  AlertCircle, ListChecks, MessageSquare, 
+  Code, Workflow, UserCircle, Settings,
+  Database, Braces, Sparkles, Layers
+} from 'lucide-react';
+
+// --- STYLING CONSTANTS (ByteByteGo Aesthetic) ---
+const THEME = {
+  cardBg: "bg-white",
+  cardBorder: "border-slate-200",
+  titleBg: "bg-[#41d8a0]",
+  titleBorder: "border-[#2e9e73]",
+  primaryNode: "bg-[#a6f0d4] border-[#31a67a] text-slate-900",
+  secondaryNode: "bg-white border-slate-300 text-slate-700 shadow-sm",
+  dashedNode: "bg-[#f8fafc] border-slate-400 border-dashed text-slate-700",
+  errorNode: "bg-[#ffe4e6] border-[#f43f5e] text-slate-900",
+  warningNode: "bg-[#fef3c7] border-[#d97706] text-slate-900",
+  line: "#64748b"
+};
+
+// --- CORE UI COMPONENTS ---
+
+const Card = ({ title, children, tall = false }) => (
+  <div className={`relative ${THEME.cardBg} rounded-2xl shadow-sm border ${THEME.cardBorder} overflow-hidden flex flex-col items-center w-full ${tall ? 'h-[550px]' : 'h-[400px]'} mb-6 hover:shadow-md transition-shadow`}>
+    <div className={`mt-5 ${THEME.titleBg} text-slate-900 font-extrabold text-lg py-2 px-6 rounded-xl border-2 ${THEME.titleBorder} w-[85%] text-center z-20 shadow-sm tracking-tight`}>
+      {title}
+    </div>
+    <div className="absolute inset-0 top-[60px] w-full p-4 flex items-center justify-center">
+      {children}
+    </div>
+  </div>
+);
+
+const Node = ({ top, left, title, subtitle, icon: Icon, type = "primary", className = "", width = "w-[130px]" }) => {
+  const styleClass = THEME[`${type}Node`] || THEME.primaryNode;
+  return (
+    <div 
+      className={`absolute z-10 flex flex-col items-center justify-center p-2 rounded-lg border-2 ${width} text-center transition-transform hover:scale-105 ${styleClass} ${className}`}
+      style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+    >
+      {Icon && <Icon className="mb-1 opacity-80" size={18} strokeWidth={2} />}
+      <span className="text-[11px] font-bold leading-tight">{title}</span>
+      {subtitle && <span className="text-[9px] opacity-80 mt-1 leading-tight whitespace-pre-line">{subtitle}</span>}
+    </div>
+  );
+};
+
+const Label = ({ top, left, text, icon: Icon, type="default", width="w-auto" }) => (
+  <div 
+    className={`absolute z-20 flex flex-col items-center justify-center px-3 py-1.5 rounded-full text-[10px] font-bold shadow-sm border border-slate-200 ${width} ${type === 'error' ? 'bg-red-50 text-red-600 border-red-200' : type === 'success' ? 'bg-[#e6fcf5] text-[#2e9e73] border-[#31a67a]' : 'bg-white text-slate-700'}`}
+    style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+  >
+    {Icon && <Icon size={14} className={`mb-1 ${type === 'error' ? 'text-red-500' : 'text-[#2e9e73]'}`} />}
+    {text}
+  </div>
+);
+
+const SvgCanvas = ({ children }) => (
+  <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+    <defs>
+       <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill={THEME.line} />
+       </marker>
+       <marker id="arrow-red" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+       </marker>
+       <marker id="arrow-green" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#31a67a" />
+       </marker>
+    </defs>
+    {children}
+  </svg>
+);
+
+const Connection = ({ x1, y1, x2, y2, dashed = false, arrow = true, color = THEME.line }) => {
+  let marker = "none";
+  if (arrow) {
+    if (color === '#ef4444') marker = "url(#arrow-red)";
+    else if (color === '#31a67a') marker = "url(#arrow-green)";
+    else marker = "url(#arrow)";
+  }
+  return (
+    <line 
+      x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} 
+      stroke={color} strokeWidth="2" strokeDasharray={dashed ? "5,5" : "none"} 
+      markerEnd={marker} 
+    />
+  );
+};
+
+// --- SPECIFIC DIAGRAM CARDS ---
+
+// Card 1: Anatomy of a Perfect Prompt
+const CardAnatomy = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={50} y1={20} x2={50} y2={35} />
+      <Connection x1={50} y1={35} x2={50} y2={50} />
+      <Connection x1={50} y1={50} x2={50} y2={65} />
+      <Connection x1={50} y1={65} x2={50} y2={80} />
+    </SvgCanvas>
+    
+    <div className="absolute top-[50%] left-[20%] text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center w-[100px] -translate-y-1/2">
+      Assemble these blocks for best results
+    </div>
+
+    <Node top={20} left={50} title="1. System Prompt" subtitle='"You are a helpful expert..."' icon={Settings} type="secondary" width="w-[220px]" />
+    <Node top={35} left={50} title="2. Context / Background" subtitle='"Here is the annual report..."' icon={Database} type="secondary" width="w-[220px]" />
+    <Node top={50} left={50} title="3. Few-Shot Examples" subtitle='"Example 1: X -> Y"' icon={Layers} type="dashed" width="w-[220px]" />
+    <Node top={65} left={50} title="4. Current Task" subtitle='"Now, summarize section Z..."' icon={Terminal} type="primary" width="w-[220px]" />
+    <Node top={80} left={50} title="5. Output Format" subtitle='"Return strictly as JSON"' icon={Code} type="warning" width="w-[220px]" />
+  </div>
+);
+
+// Card 2: Zero-Shot vs Few-Shot
+const CardZeroVsFew = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[8%] left-[25%] text-xs font-bold text-slate-400 uppercase tracking-widest -translate-x-1/2">Zero-Shot</div>
+    <div className="absolute top-[8%] left-[75%] text-xs font-bold text-[#31a67a] uppercase tracking-widest -translate-x-1/2">Few-Shot</div>
+    <div className="absolute top-[15%] bottom-[5%] left-[50%] border-l-2 border-dashed border-slate-200"></div>
+
+    <SvgCanvas>
+      {/* Zero Shot */}
+      <Connection x1={25} y1={25} x2={25} y2={55} />
+      <Connection x1={25} y1={55} x2={25} y2={85} />
+      {/* Few Shot */}
+      <Connection x1={75} y1={25} x2={75} y2={55} />
+      <Connection x1={75} y1={55} x2={75} y2={85} />
+    </SvgCanvas>
+
+    {/* Zero Shot */}
+    <Node top={25} left={25} title="Task Only" subtitle='"Classify this: Great!"' icon={MessageSquare} type="secondary" />
+    <Node top={55} left={25} title="LLM" icon={Brain} type="secondary" />
+    <Node top={85} left={25} title="Unpredictable" subtitle='"It is positive!" (Wordy)' icon={AlertCircle} type="error" />
+
+    {/* Few Shot */}
+    <Node top={25} left={75} title="Task + Examples" subtitle='"Bad -> Neg\nGreat! -> Pos"' icon={ListChecks} type="primary" />
+    <Node top={55} left={75} title="LLM" subtitle="Learns pattern" icon={Brain} type="primary" />
+    <Node top={85} left={75} title="Structured Match" subtitle='"Pos" (Exact format)' icon={CheckCircle2} type="primary" />
+  </div>
+);
+
+// Card 3: Chain of Thought (CoT)
+const CardCoT = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[8%] left-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Direct Prompt (Fails)</div>
+    <div className="absolute top-[52%] left-4 text-xs font-bold text-[#31a67a] uppercase tracking-widest">Zero-Shot CoT (Succeeds)</div>
+    <div className="absolute top-[48%] left-[5%] right-[5%] border-t-2 border-dashed border-slate-200"></div>
+
+    <SvgCanvas>
+      {/* Top */}
+      <Connection x1={20} y1={25} x2={45} y2={25} />
+      <Connection x1={45} y1={25} x2={75} y2={25} color="#ef4444" />
+      {/* Bottom */}
+      <Connection x1={20} y1={75} x2={40} y2={75} />
+      <Connection x1={40} y1={75} x2={60} y2={75} />
+      <Connection x1={60} y1={75} x2={80} y2={75} color="#31a67a" />
+    </SvgCanvas>
+
+    {/* Bad */}
+    <Node top={25} left={20} title='"Is 23 x 45 = 1035?"' icon={MessageSquare} type="secondary" width="w-[140px]" />
+    <Node top={25} left={45} title="LLM Guesses" icon={Brain} type="secondary" />
+    <Node top={25} left={75} title="Wrong Answer" subtitle="Hallucinates Math" type="error" />
+
+    {/* Good */}
+    <Node top={75} left={20} title='"Is 23 x 45 = 1035?"' subtitle='+ "Think step-by-step"' icon={Sparkles} type="primary" width="w-[140px]" />
+    <Node top={75} left={40} title="Step 1" subtitle="23 x 40 = 920" icon={Brain} type="primary" width="w-[100px]" />
+    <Node top={75} left={60} title="Step 2" subtitle="23 x 5 = 115" icon={Brain} type="primary" width="w-[100px]" />
+    <Node top={75} left={80} title="Right Answer" subtitle="920 + 115 = 1035" type="primary" width="w-[110px]" />
+
+    <Label top={92} left={50} text='Magic Phrase: "Let us think step by step"' icon={Sparkles} type="success" />
+  </div>
+);
+
+// Card 4: Prompt Chaining & ReAct
+const CardChaining = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={15} y1={40} x2={35} y2={40} />
+      <Connection x1={35} y1={40} x2={50} y2={40} />
+      <Connection x1={50} y1={40} x2={65} y2={40} />
+      <Connection x1={65} y1={40} x2={85} y2={40} />
+      
+      {/* Loop back for ReAct / Error recovery */}
+      <path d="M 65% 30% Q 50% 15% 35% 30%" fill="none" stroke={THEME.line} strokeWidth="2" strokeDasharray="5,5" markerEnd="url(#arrow)" />
+    </SvgCanvas>
+
+    <Node top={40} left={15} title="Long Doc" icon={FileText} type="secondary" width="w-[90px]" />
+    <Node top={40} left={35} title="Prompt 1" subtitle="Extract Keys" icon={Terminal} type="primary" width="w-[110px]" />
+    <Node top={40} left={50} title="Data Array" subtitle="[sec1, sec2]" icon={ListChecks} type="dashed" width="w-[100px]" />
+    <Node top={40} left={65} title="Prompt 2" subtitle="Summarize Each" icon={Terminal} type="primary" width="w-[110px]" />
+    <Node top={40} left={85} title="Final Output" icon={CheckCircle2} type="secondary" width="w-[100px]" />
+
+    <Label top={20} left={50} text="Error Recovery / Self-Correction Loop" icon={Workflow} />
+    
+    <div className="absolute top-[75%] left-[50%] -translate-x-1/2 w-[85%] bg-[#f8fafc] border border-slate-300 p-3 rounded-lg text-xs text-center">
+      <strong>ReAct Framework (Reason + Act):</strong><br/>
+      <span className="text-slate-500">Thought: Need info → Action: Search → Observation: Found it → Final Answer</span>
+    </div>
+  </div>
+);
+
+// Card 5: Structured Outputs (JSON Mode)
+const CardJSON = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[8%] left-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Generic Prompt</div>
+    <div className="absolute top-[52%] left-4 text-xs font-bold text-[#31a67a] uppercase tracking-widest">Structured + JSON Mode</div>
+    <div className="absolute top-[48%] left-[5%] right-[5%] border-t-2 border-dashed border-slate-200"></div>
+
+    <SvgCanvas>
+      <Connection x1={30} y1={25} x2={70} y2={25} color="#ef4444" />
+      <Connection x1={30} y1={75} x2={70} y2={75} color="#31a67a" />
+    </SvgCanvas>
+
+    {/* Bad */}
+    <Node top={25} left={30} title='"Who is John?"' icon={UserCircle} type="secondary" width="w-[180px]" />
+    <Node top={25} left={70} title="Messy Text" subtitle='"John works at Google..."' icon={AlertCircle} type="error" width="w-[180px]" />
+
+    {/* Good */}
+    <Node top={75} left={30} title='"Extract Entities"' subtitle='Output format: JSON' icon={Braces} type="primary" width="w-[180px]" />
+    <div 
+      className={`absolute z-10 p-3 rounded-lg border-2 w-[180px] bg-[#1e293b] border-slate-700 text-[#41d8a0] font-mono text-[9px] text-left leading-relaxed shadow-lg transition-transform hover:scale-105`}
+      style={{ top: `75%`, left: `70%`, transform: 'translate(-50%, -50%)' }}
+    >
+      {"{"}<br/>
+      &nbsp;&nbsp;"name": "John",<br/>
+      &nbsp;&nbsp;"company": "Google"<br/>
+      {"}"}
+    </div>
+  </div>
+);
+
+
+// --- MAIN APP LAYOUT ---
+export default function App() {
+  return (
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-800">
+      
+      <header className="max-w-7xl mx-auto mb-10 border-b border-slate-200 pb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+             Visual Dev Guides <span className="text-slate-400 font-normal">| Prompt Engineering</span>
+          </h1>
+          <p className="text-slate-500 mt-2 text-sm max-w-lg">
+            Phase 1 Theory: Getting better outputs from LLMs without retraining, through structured instructions, examples, and logic chaining.
+          </p>
+        </div>
+        <div className="bg-slate-800 text-white text-sm font-bold py-2 px-5 rounded-full shadow-md flex items-center gap-2">
+          <Terminal size={16} /> Prompt Design
+        </div>
+      </header>
+      
+      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-10">
+         <Card title="01. Anatomy of a Perfect Prompt" tall={true}>
+           <CardAnatomy />
+         </Card>
+
+         <div className="flex flex-col gap-y-10">
+           <Card title="02. Zero-Shot vs Few-Shot">
+             <CardZeroVsFew />
+           </Card>
+
+           <Card title="03. Chain of Thought (CoT)">
+             <CardCoT />
+           </Card>
+         </div>
+      </main>
+
+      <div className="max-w-7xl mx-auto mt-6 grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-10">
+        <Card title="04. Prompt Chaining & ReAct">
+            <CardChaining />
+        </Card>
+        
+        <Card title="05. Structured Outputs (JSON)">
+            <CardJSON />
+        </Card>
+      </div>
+
+    </div>
+  );
+}

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced RAG: Compact Cheat Sheet</title>
+    <style>
+        :root {
+            /* Light Mode Palette (Consistent) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --accent-danger: #b91c1c; /* Red */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Query Rewrite (Top/Bottom) */
+        .qr-container { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+        .qr-row { display: flex; gap: 4px; align-items: center; position: relative; height: 30px; }
+        .qr-node { 
+            flex: 1; border: 1px solid #cbd5e1; background: #fff; border-radius: 4px; 
+            display: flex; align-items: center; justify-content: center; font-size: 0.6rem; text-align: center;
+        }
+        .qr-bad { border-color: #fca5a5; color: #b91c1c; }
+        .qr-good { border-color: var(--accent-success); color: var(--accent-success); background: #f0fdf4; }
+        .qr-arrow { width: 10px; height: 2px; background: #cbd5e1; position: relative; }
+        .qr-packet { 
+            position: absolute; width: 6px; height: 6px; background: var(--accent-secondary); border-radius: 50%; top: -2px; left: 0; 
+            opacity: 0;
+        }
+        
+        /* Bad Packet Animation */
+        .qr-row.bad .qr-packet { animation: failMove 2s infinite linear; }
+        @keyframes failMove { 
+            0% { left: 0; opacity: 1; } 80% { left: 100%; opacity: 1; } 90% { left: 100%; opacity: 0; } 100% { left: 0; opacity: 0; }
+        }
+
+        /* Good Packet Animation */
+        .qr-row.good .qr-packet { background: var(--accent-success); animation: successMove 2s infinite linear 1s; }
+        @keyframes successMove { 
+            0% { left: 0; opacity: 1; } 80% { left: 100%; opacity: 1; } 90% { left: 100%; opacity: 0; } 100% { left: 0; opacity: 0; }
+        }
+
+        /* 2. HyDE (Typing) */
+        .hyde-flow { display: flex; gap: 4px; width: 100%; align-items: center; }
+        .hd-box { 
+            padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.6rem; text-align: center; flex: 1; background: #fff; position: relative; overflow: hidden;
+        }
+        .hd-ghost { border-style: dashed; color: #94a3b8; }
+        .hd-typing { 
+            background: #f0f9ff; border-color: var(--accent-primary); color: var(--accent-primary);
+        }
+        .hd-text {
+            overflow: hidden; white-space: nowrap; width: 0; display: inline-block;
+            animation: typeText 3s steps(20, end) infinite;
+        }
+        @keyframes typeText { 0% { width: 0; } 50%, 100% { width: 100%; } }
+
+        /* 3. Hybrid Search (Merge) */
+        .hybrid-grid { position: relative; width: 100%; height: 100px; display: flex; justify-content: center; align-items: center; }
+        .hb-node {
+            position: absolute; width: 50px; height: 20px; border: 1px solid #cbd5e1; background: #fff; border-radius: 4px; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; z-index: 2;
+        }
+        .hb-q { top: 50%; left: 10px; transform: translateY(-50%); }
+        .hb-dense { top: 20%; left: 50%; transform: translateX(-50%); border-color: var(--accent-primary); }
+        .hb-sparse { bottom: 20%; left: 50%; transform: translateX(-50%); border-color: var(--accent-warning); }
+        .hb-fusion { top: 50%; right: 10px; transform: translateY(-50%); border-color: var(--accent-success); background: #f0fdf4; }
+
+        .hb-line { position: absolute; background: #cbd5e1; height: 1px; transform-origin: left center; z-index: 1; }
+        .hl-1 { top: 50%; left: 35px; width: 20px; transform: rotate(-45deg); }
+        .hl-2 { top: 50%; left: 35px; width: 20px; transform: rotate(45deg); }
+        .hl-3 { top: 50%; left: 50%; width: 20px; transform: rotate(45deg); }
+        .hl-4 { bottom: 20%; left: 50%; width: 20px; transform: rotate(-45deg); }
+
+        .hb-particle {
+            position: absolute; width: 4px; height: 4px; background: #64748b; border-radius: 50%; z-index: 3;
+        }
+        .hp-1 { animation: splitPath 3s infinite linear; }
+        .hp-2 { animation: splitPath 3s infinite linear; animation-delay: 1.5s; }
+
+        @keyframes splitPath {
+            0% { top: 50%; left: 35px; opacity: 1; }
+            33% { top: 20%; left: 50%; opacity: 1; } /* Dense hit */
+            66% { top: 50%; left: 50%; opacity: 1; } /* Merge */
+            100% { top: 50%; left: calc(100% - 60px); opacity: 0; }
+        }
+
+        /* 4. Pipeline (Sequential) */
+        .pipe-vert { display: flex; flex-direction: column; gap: 4px; width: 90%; }
+        .pv-step {
+            padding: 4px; border-left: 2px solid #cbd5e1; padding-left: 8px; font-size: 0.65rem;
+            opacity: 0.3; transition: 0.3s;
+        }
+        .pv-step.active { opacity: 1; border-color: var(--accent-primary); background: #f0f9ff; font-weight: bold; }
+
+        /* 5. Decision Tree (SVG Path) */
+        .tree-svg { width: 100%; height: 100px; }
+        .tree-path { fill: none; stroke: #cbd5e1; stroke-width: 1.5; stroke-dasharray: 100; stroke-dashoffset: 100; animation: drawTree 4s infinite linear; }
+        @keyframes drawTree { 0% { stroke-dashoffset: 100; } 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 0; } }
+        
+        .tree-node { fill: #fff; stroke: var(--accent-primary); stroke-width: 1; }
+        .tree-text { font-size: 0.5rem; text-anchor: middle; fill: #333; }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body onload="initAnimations()">
+
+<div class="container">
+    <header>
+        <div>
+            <h1>06. Advanced RAG</h1>
+            <div class="subtitle">Query Rewriting • HyDE • Hybrid Search • Pipeline</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>Technique 1: Query Rewriting</h2>
+            <p><strong>Problem:</strong> User queries are ambiguous ("What's the timeline?"). Generic embeddings retrieve irrelevant chunks.</p>
+            <p><strong>Solution:</strong> LLM rewrites the query to be specific before embedding.</p>
+            <p>"Timeline" → "Q3 Project Release Timeline"</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Before vs. After</span>
+            <div class="qr-container">
+                <!-- Bad Path -->
+                <div class="qr-row bad">
+                    <div class="qr-node qr-bad">Vague Query</div>
+                    <div class="qr-arrow"><div class="qr-packet"></div></div>
+                    <div class="qr-node qr-bad">Random Result</div>
+                </div>
+                <!-- Good Path -->
+                <div class="qr-row good">
+                    <div class="qr-node qr-good">Rewritten Query</div>
+                    <div class="qr-arrow"><div class="qr-packet"></div></div>
+                    <div class="qr-node qr-good">Relevant Docs</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>Technique 2: HyDE</h2>
+            <p><strong>Hypothetical Document Embedding.</strong></p>
+            <p>Query is too short to embed well. Instead, generate a <strong>fake answer</strong> first, then embed the fake answer.</p>
+            <p>The fake document is dense and informative, leading to better vector matches than the sparse query.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Fake Doc Generation</span>
+            <div class="hyde-flow">
+                <div class="hd-box">Query<br>"Return policy"</div>
+                <div style="color:var(--accent-primary)">→</div>
+                <div class="hd-box hd-ghost">LLM<br>Generator</div>
+                <div style="color:var(--accent-primary)">→</div>
+                <div class="hd-box hd-typing">
+                    Fake Doc: <br>
+                    <span class="hd-text">"Our policy is 30 days..."</span>
+                </div>
+                <div style="color:var(--accent-primary)">→</div>
+                <div class="hd-box" style="border-color:var(--accent-success); background:#f0fdf4;">Match</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>Technique 3: Hybrid Search</h2>
+            <p><strong>Dense + Sparse.</strong> Embeddings miss keywords; Keywords miss semantics. Use both.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Dense:</strong> Finds "Compensation" (Semantic).</li>
+                <li><strong>Sparse (BM25):</strong> Finds exact "CEO" (Keyword).</li>
+            </ul>
+            <p><strong>Merge:</strong> Use Reciprocal Rank Fusion (RRF) or Weighted Scoring.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Fusion Pipeline</span>
+            <div class="hybrid-grid">
+                <!-- Lines -->
+                <div class="hb-line hl-1"></div>
+                <div class="hb-line hl-2"></div>
+                <div class="hb-line hl-3"></div>
+                <div class="hb-line hl-4"></div>
+                
+                <!-- Nodes -->
+                <div class="hb-node hb-q">Query</div>
+                <div class="hb-node hb-dense">Dense</div>
+                <div class="hb-node hb-sparse">Sparse</div>
+                <div class="hb-node hb-fusion">Fusion</div>
+
+                <!-- Particles -->
+                <div class="hb-particle hp-1"></div>
+                <div class="hb-particle hp-2"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Full Advanced Pipeline</h2>
+            <p>1. <strong>Query Rewrite</strong> → Clarify.</p>
+            <p>2. <strong>Multi-Query Retrieval</strong> → Dense + Sparse for each.</p>
+            <p>3. <strong>Deduplicate</strong> → Merge lists.</p>
+            <p>4. <strong>Rerank</strong> → Cross-encoder scoring.</p>
+            <p>5. <strong>Generate</strong> → LLM answer.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Sequence</span>
+            <div class="pipe-vert" id="pipelineAnim">
+                <div class="pv-step">1. Query Rewriting</div>
+                <div class="pv-step">2. Multi-Query Retrieval (Dense+Sparse)</div>
+                <div class="pv-step">3. Deduplicate / Combine</div>
+                <div class="pv-step">4. Reranking (Cross-Encoder)</div>
+                <div class="pv-step">5. Generate Answer</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>Decision Tree</h2>
+            <p>How to choose the right technique?</p>
+            <ul style="font-size: 0.8rem;">
+                <li>Ambiguous? → <strong>Query Rewrite</strong>.</li>
+                <li>Very Short? → <strong>HyDE</strong>.</li>
+                <li>Need Keywords? → <strong>Hybrid</strong>.</li>
+                <li>Noisy Results? → <strong>Rerank</strong>.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Logic Flow</span>
+            <svg class="tree-svg" viewBox="0 0 200 100">
+                <!-- Tree Structure -->
+                <rect x="90" y="10" width="20" height="10" rx="2" class="tree-node" />
+                <text x="100" y="18" class="tree-text">Ambig?</text>
+                
+                <!-- Yes Branch -->
+                <path d="M 100 20 L 100 30 L 50 30 L 50 50" class="tree-path" style="animation-delay: 0s;" />
+                <rect x="40" y="50" width="20" height="10" rx="2" class="tree-node" style="fill:#f0fdf4" />
+                <text x="50" y="58" class="tree-text">Rewrite</text>
+                
+                <!-- No Branch -->
+                <path d="M 100 20 L 100 30 L 150 30 L 150 50" class="tree-path" style="animation-delay: 1s;" />
+                <rect x="140" y="50" width="20" height="10" rx="2" class="tree-node" />
+                <text x="150" y="58" class="tree-text">Short?</text>
+
+                <!-- Yes Branch 2 -->
+                <path d="M 150 60 L 150 70 L 120 70" class="tree-path" style="animation-delay: 2s;" />
+                <rect x="110" y="70" width="20" height="10" rx="2" class="tree-node" style="fill:#f0fdf4" />
+                <text x="120" y="78" class="tree-text">HyDE</text>
+
+                <!-- No Branch 2 -->
+                <path d="M 150 60 L 150 70 L 180 70" class="tree-path" style="animation-delay: 2s;" />
+                <rect x="170" y="70" width="20" height="10" rx="2" class="tree-node" style="fill:#f0fdf4" />
+                <text x="180" y="78" class="tree-text">Done</text>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Rewrite Queries:</strong> Fix ambiguity before searching.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>HyDE:</strong> Generate fake answers to improve embedding.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Hybrid:</strong> Combine Dense (Meaning) + Sparse (Keywords).</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Rerank:</strong> Validate retrieved chunks before answering.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    function initAnimations() {
+        // 1. Pipeline Sequential Animation
+        const steps = document.querySelectorAll('.pv-step');
+        let stepIndex = 0;
+        
+        function cycleSteps() {
+            steps.forEach(s => s.classList.remove('active'));
+            steps[stepIndex].classList.add('active');
+            stepIndex = (stepIndex + 1) % steps.length;
+        }
+        
+        setInterval(cycleSteps, 1000); // Highlight step every second
+        cycleSteps(); // Start immediately
+    }
+</script>
+
+</body>
+</html>
