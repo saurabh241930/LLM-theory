@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             category: 'System Design',
             links: [
+                { id: 'system_design_company_assistant.html', title: 'Company AI Assistant' },
                 { id: 'system_design_patterns.html', title: 'System Design Patterns' },
                 { id: 'system_design_scaling.html', title: 'System Design Scaling' },
                 { id: 'system_design_chatgpt.html', title: 'ChatGPT Case Study' },

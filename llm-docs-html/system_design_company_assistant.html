@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Design: Company Policy AI Assistant</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <script src="sidebar.js" defer></script>
+</head>
+
+<body>
+    <div class="content-container">
+        <h1>System Design: Company Policy AI Assistant</h1>
+        <div class="subtitle">Architecting a multi-domain internal AI for HR, IT, and Finance.</div>
+
+        <p><strong>Goal:</strong> Design an Internal Company AI Assistant capable of answering multi-domain questions
+            regarding HR employee policies, leave & attendance records, expense reimbursement statuses, and IT security
+            compliance guidelines. This assistant must operate securely within the enterprise firewall, protect
+            sensitive employee data, and guarantee high accuracy (zero hallucinations on policy facts).</p>
+
+        <hr>
+
+        <h2>1. The Core Challenge: Why Not Send All Documents at Once?</h2>
+        <p>A common misconception when building an internal AI is attempting to load the entire employee handbook, IT
+            manual, and SQL database schema directly into the LLM's context window. This approach fails catastrophically
+            for three reasons:</p>
+
+        <ul>
+            <li><strong>Context Limits & Cost:</strong> Even models with massive 128K+ token windows charge per token.
+                Sending a 500-page PDF on every query is financially unsustainable.</li>
+            <li><strong>Attention Degradation:</strong> LLMs suffer from "Lost in the Middle" syndrome. When crammed
+                with too much noise, they struggle to retrieve specific facts (e.g., "What is the per-diem limit in
+                London?"), often hallucinating or ignoring the correct paragraph buried in the middle of the prompt.
+            </li>
+            <li><strong>Data Privacy & ACL:</strong> You cannot send User A's un-redacted employee records to the LLM
+                when User B is asking a generic HR question. Data must be filtered <em>before</em> it hits the LLM.</li>
+        </ul>
+        <p><strong>Solution:</strong> We use an Agentic <strong>Integration & Retrieval-Augmented Generation
+                (RAG)</strong> pattern. The system first categorizes the user's intent, retrieves <em>only</em> the
+            highly relevant data chunks or API responses, and constructs a narrow, highly targeted factual prompt for
+            the LLM to synthesize.</p>
+
+        <hr>
+
+        <h2>2. High Level Architecture Diagram</h2>
+
+        <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+            flowchart TD
+            User[Employee frontend / Teams Bot] --> API[API Gateway]
+            API --> Router[Intent Router Agent LLM]
+
+            subgraph "Agentic Routing (e.g. LangGraph)"
+            Router -- "HR/IT Policies" --> RAG[RAG Pipeline]
+            Router -- "Reimbursements/Attendance" --> SQL[SQL/API Tool Execution]
+            Router -- "Unclear" --> Clarify[Clarification Prompt]
+            end
+
+            subgraph "Unstructured Data (RAG)"
+            RAG --> Embed[Embedding Model]
+            Embed --> VDB[(Vector DB\nPinecone/Milvus)]
+            VDB --> BM25[(Lexical DB\nElasticSearch)]
+            VDB -.-> Reranker[Cross-Encoder Reranker]
+            BM25 -.-> Reranker
+            end
+
+            subgraph "Structured Data (APIs)"
+            SQL --> Workday[Workday API]
+            SQL --> Concur[SAP Concur API]
+            end
+
+            Reranker --> Synthesizer[Final Synthesizer LLM]
+            Workday --> Synthesizer
+            Concur --> Synthesizer
+
+            Synthesizer --> Guardrails[Output Guardrails]
+            Guardrails --> User
+
+            style Router fill:#f9dbf9,stroke:#939,stroke-width:2px
+            style Synthesizer fill:#d9ead3,stroke:#38761d,stroke-width:2px
+        </div>
+
+        <hr>
+
+        <h2>3. Intelligent Routing with LangChain / LangGraph</h2>
+        <p>The core of this system is not a single static chain, but a dynamic routing agent. An employee asking
+            <em>"What is the maternity leave policy?"</em> requires document retrieval (RAG). An employee asking
+            <em>"How many PTO days do I have left?"</em> requires executing an SQL query or API call against a
+            transactional database.</p>
+
+        <p>We use <strong>LangGraph</strong> (or LangChain's AgentExecutor) to handle this. The router LLM is equipped
+            with <strong>Function Calling</strong> (Tools):</p>
+        <ul>
+            <li><code>Query_HR_VectorDB(query: str)</code></li>
+            <li><code>Query_IT_Security_DB(query: str)</code></li>
+            <li><code>Get_User_PTO_Balance(employee_id: str)</code></li>
+            <li><code>Check_Expense_Status(employee_id: str, expense_id: str)</code></li>
+        </ul>
+        <p><strong>How it works:</strong> The router analyzes the user request. If the required data is dynamic (PTO),
+            it generates a JSON payload to call the <code>Get_User_PTO_Balance</code> tool, hitting the Workday API. If
+            the data is static text (IT Policy), it routes the query down the RAG path.</p>
+
+        <hr>
+
+        <h2>4. Advanced RAG: Chunking & Hybrid Search</h2>
+
+        <h3>Chunking Strategies</h3>
+        <p>Treating all documents equally leads to poor retrieval. We apply domain-specific chunking:</p>
+        <ul>
+            <li><strong>IT Security Policies (Semantic Chunking):</strong> IT guides are highly prose-based. We use
+                Semantic Chunking (breaking text at sentence or paragraph boundaries when the semantic embedding drifts)
+                so full concepts hold together.</li>
+            <li><strong>HR Reimbursement Tables (Structural / Markdown Chunking):</strong> Tables regarding per-diem
+                rates by city fail completely under standard splitting. We pre-process these docs using tools like
+                Unstructured.io, converting tables into Markdown or HTML schemas, maintaining the exact row/column
+                relationships within a single chunk.</li>
+        </ul>
+
+        <h3>Why Hybrid Search?</h3>
+        <p>If an employee asks, <em>"What is policy SEC-809 regarding YubiKeys?"</em>, a pure Vector (Semantic) Search
+            might fail. "SEC-809" is an exact keyword string; its dense mathematical vector representation might
+            inadvertently map closer to documents discussing "general hardware security" rather than the exact required
+            document.</p>
+        <p><strong>The Solution: Hybrid Search (BM25 + Dense Vectors)</strong></p>
+        <ol>
+            <li><strong>Dense Search (Semantic):</strong> Uses embeddings to find meaning ("I lost my password token" ->
+                retrieves YubiKey docs).</li>
+            <li><strong>Sparse Search (BM25):</strong> Uses exact keyword matching (TF-IDF variants) to surgically
+                strike exact IDs like "SEC-809".</li>
+        </ol>
+        <p>We execute both searches in parallel, retrieving the Top-K from each. We then use a fusion algorithm like
+            <strong>Reciprocal Rank Fusion (RRF)</strong> to merge the lists, before passing the combined list to a
+            <strong>Cross-Encoder Reranker</strong> (e.g., Cohere Rerank) to sort the absolute specific passages for the
+            LLM to read.</p>
+
+        <hr>
+
+        <h2>5. Hallucination Prevention & Measurement (RAGAS)</h2>
+        <p>In a corporate environment, the AI declaring "You get 6 months of paid leave" when the policy is actually 6
+            weeks is a critical incident. We measure accuracy using frameworks like <strong>RAGAS (Retrieval Augmented
+                Generation Assessment)</strong> in CI/CD, and enforce real-time guardrails.</p>
+
+        <h3>RAGAS Metrics in Pipeline Testing</h3>
+        <ul>
+            <li><strong>Faithfulness (Groundedness):</strong> Measures if the LLM's final answer can be completely
+                derived from the retrieved chunks. If the LLM generates facts not present in the chunks, this score
+                plummets.</li>
+            <li><strong>Answer Relevance:</strong> Measures if the generated answer directly addresses the user's
+                initial question, avoiding tangential rambling.</li>
+            <li><strong>Context Precision:</strong> Measures if the Retriever put the most relevant chunks at the very
+                top of the list.</li>
+        </ul>
+
+        <h3>Real-Time Guardrails</h3>
+        <p>To prevent hallucinations at run-time, we append rigorous System Prompts forcing citation:</p>
+        <pre
+            style="background: var(--wp-code-bg); padding: 10px; overflow-x: auto; border: 1px solid var(--wp-border); font-family: monospace;">
+System: You are a strict corporate assistant. 
+Answer the user's query ONLY using the provided Context chunks. 
+You must cite the [Document ID] next to every factual claim you make.
+If the Context does not contain the answer, you must output EXACTLY: 
+"I do not have access to that policy document." Do not guess.
+        </pre>
+
+        <hr>
+
+        <h2>Summary of Execution Flow</h2>
+        <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+            sequenceDiagram
+            actor Employee
+            participant Router as LangGraph Agent
+            participant DB as Hybrid Vector+BM25
+            participant API as Workday API
+            participant Rerank as Cross-Encoder
+            participant LLM as Synthesizer
+
+            Employee->>Router: "What is the internet policy, and how many vacation days do I have?"
+
+            Note over Router: Agent detects multi-hop query
+
+            par Fetch Static Data
+            Router->>DB: Query: "employee internet usage policy"
+            DB-->>Rerank: Top 20 chunks (Hybrid)
+            Rerank-->>Router: Top 3 highly relevant paragraphs
+            and Fetch Dynamic Data
+            Router->>API: Execute Get_User_PTO_Balance(user="Emp-123")
+            API-->>Router: JSON { "vacation_days": 14 }
+            end
+
+            Router->>LLM: Compile System Prompt + Policy Context + JSON Data
+            LLM-->>Employee: "Under IT-04 you cannot use... You currently have 14 days."
+        </div>
+
+    </div>
+</body>
+
+</html>
