@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Evaluation: Measuring Retrieval and Generation Quality</title>
+    <style>
+        :root { --bg-body: #f6f6f6; --bg-content: #ffffff; --text-primary: #202122; --text-secondary: #54595d; --accent-primary: #0645ad; --accent-secondary: #d73027; --accent-success: #007d2e; --accent-warning: #d46a2a; --border-color: #a2a9b1; --wiki-bg: #f8f9fa; --font-body: Georgia, serif; --font-code: monospace; --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; --space-sm: 8px; --space-md: 16px; --space-lg: 24px; --radius: 2px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-body); color: var(--text-primary); font-family: var(--font-body); line-height: 1.6; font-size: 15px; padding: var(--space-md); -webkit-font-smoothing: antialiased; }
+        .container { max-width: 900px; margin: 0 auto; background: var(--bg-content); padding: var(--space-lg); border: 1px solid var(--border-color); box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        header { border-bottom: 3px solid var(--accent-primary); padding-bottom: var(--space-md); margin-bottom: var(--space-lg); }
+        h1 { font-size: 1.8rem; color: var(--text-primary); font-weight: normal; margin-bottom: 4px; font-family: var(--font-system); }
+        .subtitle { color: var(--text-secondary); font-size: 0.95rem; font-style: italic; font-family: var(--font-system); }
+        .topic-section { margin-bottom: var(--space-lg); padding-bottom: var(--space-lg); border-bottom: 1px solid #e8e8e8; }
+        .topic-section:last-of-type { border-bottom: none; }
+        h2 { font-size: 1.4rem; color: var(--text-primary); margin-top: var(--space-lg); margin-bottom: var(--space-md); font-weight: normal; font-family: var(--font-system); border-bottom: 2px solid #e8e8e8; padding-bottom: 8px; }
+        h3 { font-size: 1.1rem; color: var(--text-primary); margin-top: var(--space-md); margin-bottom: 8px; font-weight: bold; font-family: var(--font-system); }
+        p { color: var(--text-primary); margin-bottom: var(--space-md); text-align: justify; line-height: 1.8; }
+        strong { color: var(--text-primary); font-weight: bold; }
+        em { font-style: italic; color: var(--text-secondary); }
+        code { background: var(--wiki-bg); padding: 2px 4px; border-radius: var(--radius); font-family: var(--font-code); font-size: 0.9em; color: var(--accent-secondary); }
+        ul, ol { margin-left: 2em; margin-bottom: var(--space-md); }
+        li { margin-bottom: 8px; color: var(--text-primary); line-height: 1.7; }
+        .infobox { background: var(--wiki-bg); border: 1px solid var(--border-color); padding: var(--space-md); margin: var(--space-md) 0; border-left: 4px solid var(--accent-primary); border-radius: var(--radius); }
+        .infobox strong { display: block; margin-bottom: 6px; color: var(--accent-primary); }
+        .pipeline { display: flex; flex-direction: column; gap: 8px; margin: var(--space-md) 0; }
+        .pipeline-stage { padding: 16px; background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%); border-left: 4px solid var(--accent-primary); border-radius: var(--radius); font-family: var(--font-system); color: var(--text-primary); }
+        .pipeline-stage strong { display: block; margin-bottom: 4px; color: var(--accent-primary); }
+        .warning-card { background: #fff1f0; border: 1px solid #ffa6a6; border-left: 4px solid var(--accent-secondary); padding: var(--space-md); margin: var(--space-md) 0; border-radius: var(--radius); }
+        .warning-card strong { color: var(--accent-secondary); display: block; margin-bottom: 6px; }
+        .takeaway-section { background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%); border: 2px solid var(--accent-primary); padding: var(--space-lg); margin-top: var(--space-lg); border-radius: var(--radius); }
+        .takeaway-section h2 { color: var(--accent-primary); margin-top: 0; }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md); }
+        .takeaway-item { padding: var(--space-md); background: white; border-left: 3px solid var(--accent-success); border-radius: var(--radius); }
+        .takeaway-item strong { color: var(--accent-success); display: block; margin-bottom: 6px; font-family: var(--font-system); }
+        @media (max-width: 768px) { .container { padding: var(--space-md); border: none; box-shadow: none; background: var(--bg-body); } h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>RAG Evaluation: Measuring Retrieval and Generation Quality</h1>
+            <div class="subtitle">Frameworks for Evaluating RAG Systems: From Retrieval Metrics to End-to-End Assessment</div>
+        </div>
+    </header>
+    <!-- Section 1: The Challenge of Evaluating RAG Systems -->
+    <section class="topic-section">
+        <h2>The Challenge of Evaluating RAG Systems</h2>
+        
+        <p>Evaluating Retrieval-Augmented Generation (RAG) systems presents a fundamentally different challenge than evaluating traditional language models or information retrieval systems in isolation. Traditional language models are evaluated on their ability to generate fluent, coherent text following instructions. Standalone information retrieval systems are measured on whether they return relevant documents. RAG systems, however, must succeed at both tasks simultaneously while maintaining consistency across the entire pipeline: the retrieval component must find appropriate documents, and the generation component must synthesize them into accurate, coherent responses grounded in the retrieved context.</p>
+
+        <p>This compound challenge creates a matrix of potential failure modes. A RAG system might retrieve perfectly relevant documents but fail to extract the correct information from them. Conversely, it might generate plausible-sounding text that contradicts the retrieved documents. The system might even retrieve relevant information but still produce hallucinated content because the language model ignores or misinterprets the provided context. Traditional metrics from either domain alone cannot capture these complex failure patterns.</p>
+
+        <h3>Why Standard Language Model Metrics Fall Short</h3>
+
+        <p>Standard language model metrics like BLEU, ROUGE, or METEOR compare generated text to reference answers using surface-level string matching. These metrics fundamentally misalign with the goals of RAG systems. A RAG system might generate "The temperature reached 25 degrees Celsius" when the reference answer is "It was 77 Fahrenheit"—semantically identical but the metric marks it as wrong. These metrics also cannot assess whether the generated text is actually grounded in retrieved documents, missing the central value proposition of RAG architectures.</p>
+
+        <div class="infobox">
+            <strong>Key Insight:</strong> RAG evaluation requires metrics that assess both retrieval quality and generation quality independently, plus joint metrics that measure whether generation is truly grounded in retrieval results.
+        </div>
+
+        <h3>The Three Pillars of RAG Evaluation</h3>
+
+        <p>Robust RAG evaluation frameworks typically measure three interconnected dimensions: retrieval quality (are the right documents found?), generation quality (is the output accurate and well-formed?), and grounding quality (is generation actually based on retrieved context rather than model hallucination?). Each dimension requires distinct metrics and methodologies, yet they must be evaluated in conjunction to give a complete picture of system performance.</p>
+    </section>
+
+    <!-- Section 2: Retrieval Metrics -->
+    <section class="topic-section">
+        <h2>Measuring Retrieval Quality</h2>
+        
+        <p>The retrieval component of RAG systems returns a ranked list of documents in response to user queries. Evaluating retrieval quality borrows extensively from information retrieval research, adapting classical metrics that measure ranking effectiveness. These metrics quantify whether the most relevant documents appear at the top of the retrieved list, recognizing that users typically examine only the first few results.</p>
+
+        <h3>Precision and Recall in Retrieval Context</h3>
+
+        <p><strong>Precision at k (P@k)</strong> measures the proportion of retrieved documents that are relevant, calculated as the number of relevant documents in the top-k results divided by k. For instance, if you retrieve the top 10 documents and 7 are relevant, Precision@10 = 0.7. This metric answers the question: "How much of what I retrieved was actually useful?" Conversely, <strong>Recall at k (R@k)</strong> measures the proportion of all relevant documents that appear in the top-k results. If there are 15 total relevant documents and 10 appear in your top-10 retrieval, Recall@10 = 10/15 ≈ 0.67. Recall answers: "Of all the useful information available, how much did I find?"</p>
+
+        <p>These metrics optimize for different applications. High precision matters when users can tolerate missing results but cannot tolerate irrelevant ones (like a legal search system). High recall matters when comprehensiveness is critical (like medical literature review). RAG systems typically prioritize recall because missing relevant information leads to hallucination, while irrelevant information can often be ignored by the language model.</p>
+
+        <h3>Mean Reciprocal Rank</h3>
+
+        <p><strong>Mean Reciprocal Rank (MRR)</strong> measures the average position of the first relevant result across multiple queries. If the first relevant document appears at position 3 for one query and position 1 for another, MRR = (1/3 + 1/1) / 2 ≈ 0.67. This metric captures user experience more directly than precision/recall—finding the relevant answer sooner has exponentially higher perceived value. MRR particularly matters for RAG systems because the language model processes the top-ranked documents first, so early-ranked relevant results have outsized influence on generation quality.</p>
+
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>Precision@k</strong>
+                <p>What proportion of retrieved documents are relevant? Measures efficiency of retrieval.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Recall@k</strong>
+                <p>What proportion of all relevant documents were retrieved? Measures completeness of retrieval.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>NDCG (Normalized Discounted Cumulative Gain)</strong>
+                <p>Measures ranking quality, giving more credit to relevant results appearing earlier. Best for importance-graded relevance judgments.</p>
+            </div>
+        </div>
+
+        <h3>The Challenge of Relevance Judgment</h3>
+
+        <p>Computing any retrieval metric requires determining which documents are "relevant" to a given query—the ground truth against which retrieval is measured. For factual queries like "What is the capital of France?", this is straightforward. But many RAG applications involve open-ended questions where multiple documents might be partially relevant or relevant from different perspectives. Creating gold-standard relevance judgments is expensive and requires human annotation, limiting evaluation to small test sets. Some organizations use automatic relevance assessment based on whether retrieved documents contain specific entities mentioned in the user query, but this heuristic often fails for semantic relationships.</p>
+    </section>
+
+    <!-- Section 3: Generation Quality Metrics -->
+    <section class="topic-section">
+        <h2>Assessing Generation Quality</h2>
+        
+        <p>Once documents are retrieved, the generation component synthesizes them into natural language responses. Evaluating this output requires assessing whether the generated text is factually accurate, coherent, well-formed, and directly addresses the user's question. These metrics partly overlap with language model evaluation but must account for the presence of retrieved context.</p>
+
+        <h3>Reference-Based Metrics: ROUGE and BLEU</h3>
+
+        <p>ROUGE (Recall-Oriented Understudy for Gisting Evaluation) and BLEU are surface-level metrics that compare generated text to reference answers using n-gram overlap. <strong>ROUGE-L</strong> measures longest common subsequences between generated and reference text, while <strong>BLEU</strong> counts matching n-grams weighted by their specificity. These metrics are computationally cheap—they require only string comparison—but they have critical limitations for RAG evaluation. They penalize paraphrasing (saying the same thing differently) and cannot distinguish between factual errors and benign stylistic differences. A response stating "Paris is France's capital" gets low ROUGE scores compared to reference "The capital of France is Paris," despite conveying identical information.</p>
+
+        <p>In practice, these metrics serve as useful supplementary signals for development and debugging. They can reveal when a system's output diverges drastically from expected format, and they're useful for identifying trivial variations. However, they're insufficient as the sole evaluation metric for RAG systems, particularly when the same information can be expressed many ways.</p>
+
+        <h3>Semantic Similarity Metrics</h3>
+
+        <p><strong>BERTScore</strong> and embedding-based similarity metrics address some ROUGE limitations by comparing semantic meaning rather than surface strings. These metrics embed both generated and reference answers, then compute similarity between embeddings. This approach correctly identifies that "Paris is the capital of France" and "France's capital is Paris" are semantically equivalent. However, semantic similarity metrics still require reference answers to exist, which may not always be available or may not reflect all valid responses to open-ended questions.</p>
+
+        <h3>Reference-Free Metrics and Factuality Assessment</h3>
+
+        <p><strong>Factuality assessment</strong> is arguably the most critical aspect of generation quality for RAG systems, yet it's the hardest to measure automatically. Factually incorrect responses are worse than incomplete responses because they actively mislead users. Some approaches use language models themselves to judge factuality: pose a question to the generated answer and see if the model answers correctly. Others entailment-based scoring: check whether the generated answer is logically entailed by the retrieved documents. These methods are creative but require careful validation—a model assessing its own correctness often agrees with itself through recognition bias.</p>
+
+        <div class="warning-card">
+            <strong>Reference-Free Evaluation Trap:</strong> Automatic reference-free metrics for generation quality (including language-model-based evaluators) are improving but remain unreliable for critical applications. They should always be validated against human judgment on a separate test set.
+        </div>
+    </section>
+
+    <!-- Section 4: Grounding and Attribution -->
+    <section class="topic-section">
+        <h2>Measuring Grounding and Attribution</h2>
+        
+        <p>Perhaps the most important evaluation dimension specific to RAG systems is <strong>grounding</strong>—whether the generated response actually uses and remains faithful to the retrieved context. A high-recall retrieval system and a fluent language model are both valuable, but together, they should produce outputs grounded in retrieved documents, not model hallucinations. Measuring grounding answers the critical question: "Is this generated answer actually based on what we found, or did the model make it up?"</p>
+
+        <h3>Attribution and Textual Entailment</h3>
+
+        <p><strong>Attribution scores</strong> measure whether the generated answer can be supported by fragments from the retrieved documents. The most straightforward approach is human evaluation: annotators review generated answers and mark which sentences can be directly attributed to retrieved passages. This ground truth then enables automatic metric development. Some automatic approaches use dense retrieval to find document fragments supporting each generated sentence, or use Natural Language Inference (NLI) models to check whether generated statements are entailed by retrieved documents. An NLI model can determine that "The Eiffel Tower is in Paris" is entailed by the passage "The Eiffel Tower, located in Paris, is one of the world's most famous landmarks."</p>
+
+        <h3>Hallucination Detection</h3>
+
+        <p><strong>Hallucination</strong> in RAG systems occurs when the model generates confident assertions about facts not present in retrieved documents. This is particularly insidious because the generated text may be fluent and coherent, making hallucinations difficult to detect without careful comparison to source material. Evaluation approaches include: (1) using NLI models to identify statements not supported by retrieved documents, (2) entity linking to verify that mentioned entities actually appear in source text, and (3) manual annotation where humans identify unsupported claims. The key metric is <strong>hallucination rate</strong>: the proportion of generated statements that cannot be supported by retrieved documents.</p>
+
+        <div class="infobox">
+            <strong>Grounding is Non-Negotiable:</strong> A RAG system with perfect generation quality that hallucinates facts is worse than one that produces imperfect but grounded responses. Grounding assessment should be a primary evaluation dimension.
+        </div>
+
+        <h3>Answer Dependency and Information Completeness</h3>
+
+        <p>Beyond attribution, a critical question is whether the answer is <strong>complete</strong>—does it contain all information necessary to fully address the user's question? This overlaps with recall in retrieval but adds nuance. Even if retrieval found all relevant documents, generation might fail to extract all necessary information. For example, a question about "the advantages and disadvantages of nuclear power" requires identifying both positive and negative aspects from retrieved documents. A response mentioning only advantages has low completeness despite being grounded.</p>
+    </section>
+
+    <!-- Section 5: End-to-End Evaluation Frameworks -->
+    <section class="topic-section">
+        <h2>Creating Comprehensive Evaluation Frameworks</h2>
+        
+        <p>Effective RAG systems integrate multiple metrics into unified evaluation frameworks that capture the system's true behavior on realistic applications. Rather than relying on single metrics, comprehensive frameworks combine metrics from all three dimensions—retrieval, generation, and grounding—along with weighted scoring that reflects business priorities.</p>
+
+        <h3>Building Evaluation Datasets</h3>
+
+        <p>Reliable evaluation begins with high-quality test datasets. These datasets should include queries, reference answers, relevant documents, and relevance judgments—ideally from multiple annotators to assess agreement and catch ambiguous cases. The queries should represent realistic distribution of user inputs, including edge cases and adversarial examples that reveal system weaknesses. Many organizations split evaluation into tiers: a larger automated test set for rapid iteration, and a smaller human-annotated set (50-200 examples) for more reliable assessment during major releases. Some teams implement continuous evaluation pipelines that automatically track performance on held-out queries over time, surfacing regressions before they impact users.</p>
+
+        <h3>Composite Scoring and Trade-off Analysis</h3>
+
+        <p>Different applications weight evaluation dimensions differently. A medical information system might weight factuality and completeness heavily, tolerating longer responses, while a customer support chatbot might prioritize response brevity alongside accuracy. <strong>Composite scoring</strong> strategies create weighted summations of individual metrics: Final_Score = w₁×Retrieval_NDCG + w₂×Generation_Factuality + w₃×Grounding_Attribution. The weights should reflect actual user priorities, ideally calibrated against user satisfaction metrics or business outcomes. This approach enables systematic comparison between model versions and configuration changes.</p>
+
+        <h3>Comparative Evaluation and A/B Testing</h3>
+
+        <p>When evaluating new retrieval models, generation models, or architectural changes, comparative evaluation reveals which changes actually improve overall system performance. A/B testing in production with real users provides the ground truth, but requires careful experimental design and sufficient traffic. During development, controlled comparisons on fixed test sets enable rapid iteration. The challenge is ensuring test sets adequately represent production distribution and that metrics correlate with real user satisfaction. Successful teams regularly validate that improvements on their internal metrics translate to improved user outcomes.</p>
+
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>Phase 1: Offline Evaluation</strong>
+                <p>Evaluate on test datasets using multiple metrics. Quick iteration, but potentially misses real-world performance differences.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Phase 2: Continuous Evaluation</strong>
+                <p>Track performance on production queries in real-time, identifying regressions and trending changes.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Phase 3: Online Evaluation</strong>
+                <p>A/B test improvements with real users. Definitively validates that changes improve actual satisfaction and business metrics.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 6: Advanced Evaluation Techniques -->
+    <section class="topic-section">
+        <h2>Advanced Evaluation and Debugging Techniques</h2>
+        
+        <p>Beyond standard metrics, sophisticated evaluation involves error analysis, failure mode identification, and adversarial testing. These techniques uncover system weaknesses that aggregate metrics might mask.</p>
+
+        <h3>Error Analysis and Failure Mode Categorization</h3>
+
+        <p>When the system fails, understanding <em>why</em> it failed is as important as knowing that it did. Systematic error analysis categorizes failures into retrieval failures (relevant documents weren't retrieved), ranking failures (relevant documents were retrieved but ranked low), extraction failures (documents contained information but the generation model didn't use it), and hallucination failures (the model generated false information). By tracking failure distribution across a test set, you identify bottlenecks to prioritize. If most failures are retrieval-related, improving the embedding model yields more value than improving the generation model. If hallucinations dominate, you need better grounding mechanisms.</p>
+
+        <h3>Adversarial Testing and Edge Cases</h3>
+
+        <p>Production RAG systems encounter numerous challenging scenarios that standard test sets might underrepresent. These include queries with temporal components ("What was news about X yesterday?"), contradictory information in retrieved documents, ambiguous pronouns, multi-hop reasoning requirements, and queries about out-of-domain topics. Adversarial test sets deliberately include these challenging cases, forcing systems to confront their limitations. Successful adversarial testing reveals edge cases that should either be handled better or explicitly documented as system limitations.</p>
+
+        <h3>User Study Validation</h3>
+
+        <p>Ultimately, automatic metrics correlate with but don't perfectly predict user satisfaction. Periodic user studies where people interact with the system and provide feedback validate that metric improvements translate to better perceived quality. These studies are expensive and difficult to scale, but they're essential for validating that your evaluation framework truly captures user priorities. Many organizations perform quarterly user studies on a sample of system queries, tracking whether satisfaction increases alongside metric improvements.</p>
+    </section>
+
+    <!-- Section 7: Common Pitfalls in RAG Evaluation -->
+    <section class="topic-section">
+        <h2>Common Pitfalls and Misconceptions</h2>
+        
+        <p>RAG evaluation is rife with pitfalls that lead teams to make confident decisions based on misleading metrics.</p>
+
+        <div class="warning-card">
+            <strong>Metric Anchoring Without Correlation:</strong> A team might optimize Recall@10 aggressively and see impressive improvements, only to find that end-to-end system performance barely improved. This happens when retrieval recall is already sufficient and the real bottleneck was generation quality or grounding. Always validate that metric improvements correlate with actual system improvements.
+        </div>
+
+        <div class="warning-card">
+            <strong>Overfitting to Test Sets:</strong> Iterating continuously on a fixed test set creates models that perform artificially well on that specific set but fail on new queries. Teams should maintain separate development and held-out test sets, only examining final results on held-out sets to avoid optimizing away generalization.
+        </div>
+
+        <div class="warning-card">
+            <strong>Ignoring Grounding Quality:</strong> It's tempting to focus on retrieval and generation metrics because they're easier to compute automatically. But RAG systems that hallucinate aggressively (low grounding quality) actively harm users. Grounding must be measured explicitly and weighted appropriately in evaluation frameworks.
+        </div>
+
+        <h3>Validation Against Human Judgment</h3>
+
+        <p>The ultimate validation for any evaluation framework is agreement with human assessment. Before relying on automated metrics, measure their correlation with human judgments on at least a few hundred manually-annotated examples. Build confusion matrices to identify systematic disagreements between metrics and human judgment, investigating whether the metric is fundamentally flawed or just measuring something different from human perception.</p>
+    </section>
+
+    <!-- Section 8: Future Directions -->
+    <section class="topic-section">
+        <h2>Future Directions in RAG Evaluation</h2>
+        
+        <p>RAG evaluation remains an active area of research as systems become more complex and capable. Emerging directions include better automatic evaluation models, evaluation of RAG systems with interleaved retrieval and generation, and domain-specific evaluation frameworks. Promising research includes using specialized language models trained specifically to assess relevance, factuality, and grounding; developing metrics for conversational RAG systems where context evolves across multiple turns; and creating better tools for dataset construction and human annotation at scale.</p>
+
+        <p>As RAG systems increasingly handle critical applications in healthcare, law, and finance, the bar for evaluation rigor rises correspondingly. Systems without comprehensive evaluation frameworks cause genuine harm. Organizations implementing RAG systems should invest in evaluation infrastructure as a first-class concern, not an afterthought. This investment pays dividends through faster iteration, earlier problem detection, and ultimately systems that actually perform well in production.</p>
+    </section>
+
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>Three Evaluation Dimensions:</strong> RAG evaluation requires measuring retrieval quality, generation quality, and grounding quality as interconnected but distinct dimensions.
+            </div>
+            <div class="takeaway-item">
+                <strong>Retrieval Metrics:</strong> Precision@k, Recall@k, MRR, and NDCG measure whether relevant documents are found and ranked appropriately.
+            </div>
+            <div class="takeaway-item">
+                <strong>Generation Metrics:</strong> Reference-based metrics (ROUGE, BLEU) are useful but limited; semantic and reference-free metrics are improving but still need validation.
+            </div>
+            <div class="takeaway-item">
+                <strong>Grounding is Critical:</strong> Measuring whether outputs are actually based on retrieved documents (not hallucinations) is essential and often overlooked.
+            </div>
+            <div class="takeaway-item">
+                <strong>Comprehensive Frameworks:</strong> Effective evaluation combines multiple metrics, error analysis, adversarial testing, and periodic human validation to create reliable assessment.
+            </div>
+            <div class="takeaway-item">
+                <strong>Metrics Must Correlate with Outcomes:</strong> Automated metrics should be regularly validated against user satisfaction and business metrics to ensure they're measuring what actually matters.
+            </div>
+        </div>
+    </section>
+</div>
+</body>
+</html>

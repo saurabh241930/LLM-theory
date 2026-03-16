@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Improving NL-to-SQL: Compact Cheat Sheet</title>
+    <style>
+        :root {
+            /* Light Mode Palette (Consistent) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --accent-danger: #b91c1c; /* Red */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Schema Retrieval (Filtering) */
+        .schema-visual { width: 100%; height: 140px; display: flex; gap: 10px; align-items: center; }
+        .sv-sidebar { flex: 1; height: 100%; border-right: 1px dashed #cbd5e1; position: relative; padding-right: 4px; display: flex; flex-direction: column; gap: 4px; }
+        .sv-main { flex: 2; height: 100%; background: #1e293b; border-radius: 4px; padding: 8px; color: #cbd5e1; font-family: monospace; font-size: 0.7rem; display: flex; flex-direction: column; justify-content: center; text-align: left; }
+        
+        .sv-item { padding: 2px 4px; border-radius: 2px; font-size: 0.65rem; display: flex; justify-content: space-between; }
+        .sv-highlight { background: #f0fdf4; color: var(--accent-success); border: 1px solid var(--accent-success); }
+        .sv-dim { opacity: 0.4; }
+        
+        .scan-line { position: absolute; top: 0; left: 35%; width: 2px; height: 100%; background: var(--accent-primary); opacity: 0.5; z-index: 10; }
+        .scan-anim { animation: scanDown 3s infinite ease-in-out; }
+        @keyframes scanDown { 0%, 100% { top: 0; } 50% { top: 100%; } }
+
+        /* 2. Ambiguity (Step flow) */
+        .ambiguity-flow { width: 100%; height: 140px; display: flex; flex-direction: column; justify-content: space-between; }
+        .af-step { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; position: relative; opacity: 0; transform: translateX(10px); }
+        .af-node { padding: 4px 8px; border-radius: 4px; background: #f1f5f9; border: 1px solid #cbd5e1; flex: 1; }
+        .af-user { border-color: var(--accent-secondary); background: #fff1f2; color: var(--accent-secondary); }
+        .af-ask { border-color: var(--accent-warning); background: #fef3c7; color: var(--accent-warning); }
+        .af-success { border-color: var(--accent-success); background: #f0fdf4; color: var(--accent-success); }
+        .af-arrow { color: var(--accent-primary); }
+        
+        .as-1 { animation: slideIn 0.5s forwards; }
+        .as-2 { animation: slideIn 0.5s 1.5s forwards; }
+        .as-3 { animation: slideIn 0.5s 3s forwards; }
+
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+
+        /* 3. Validation Loop */
+        .loop-canvas { position: relative; width: 140px; height: 140px; margin: 0 auto; }
+        .lc-center { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border-radius: 50%; background: var(--accent-primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; text-align: center; z-index: 10;
+        }
+        .lc-orbit { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 2px dashed #e2e8f0; border-radius: 50%; animation: spinSlow 10s linear infinite;
+        }
+        .lc-dot { 
+            position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--accent-danger); 
+            top: -5px; left: 50%; transform: translateX(-50%);
+            animation: orbitDot 3s infinite linear;
+        }
+        /* Dot changes color on success simulation */
+        @keyframes spinSlow { to { transform: rotate(360deg); } }
+        @keyframes orbitDot { 
+            0% { top: -5px; left: 50%; background: var(--accent-danger); } /* Error */
+            80% { top: -5px; left: 50%; background: var(--accent-danger); }
+            100% { top: -5px; left: 50%; background: var(--accent-success); } /* Success */
+        }
+
+        /* 4. Post Processing */
+        .trans-box { width: 100%; display: flex; gap: 10px; align-items: center; height: 100px; }
+        .tb-grid { 
+            flex: 1; height: 100%; background: #1e293b; border-radius: 4px; padding: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-family: monospace; font-size: 0.6rem; color: #94a3b8; border: 1px solid #334155;
+        }
+        .tb-cell { background: #0f172a; padding: 2px; text-align: center; }
+        .tb-arrow { color: var(--accent-primary); font-size: 1.5rem; }
+        .tb-result { 
+            flex: 1; padding: 8px; background: #fff; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.7rem; color: var(--text-primary); height: 100%; display: flex; align-items: center; text-align: center; font-weight: bold; color: var(--accent-success);
+        }
+
+        /* 5. Full Pipeline (Snake) */
+        .pipeline-container { width: 100%; height: 220px; position: relative; }
+        .pl-step {
+            position: absolute; width: 100px; height: 30px; background: #fff; border: 1px solid #cbd5e1; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center; font-size: 0.65rem; text-align: center; padding: 2px;
+            opacity: 0.3; transition: 0.3s; z-index: 2;
+        }
+        .pl-step.active { border-color: var(--accent-primary); background: #f0f9ff; opacity: 1; box-shadow: 0 0 6px rgba(3, 105, 161, 0.2); font-weight: bold; }
+        
+        /* Snake Layout Coordinates */
+        .pl-1 { top: 5%; left: 2%; }
+        .pl-2 { top: 5%; left: 30%; }
+        .pl-3 { top: 5%; left: 58%; }
+        .pl-4 { top: 5%; left: 85%; }
+        .pl-5 { top: 45%; left: 85%; } /* Down */
+        .pl-6 { top: 45%; left: 58%; } /* Back Left */
+        .pl-7 { top: 45%; left: 30%; }
+        .pl-8 { top: 85%; left: 2%; } /* Down */
+        .pl-9 { top: 85%; left: 30%; }
+        .pl-10 { top: 85%; left: 58%; }
+
+        .pl-connector {
+            position: absolute; background: #e2e8f0; height: 2px; z-index: 1; opacity: 0; transition: 0.3s;
+        }
+        .pl-connector.active { background: var(--accent-success); opacity: 1; }
+
+        /* Connectors (Manual positioning for snake path) */
+        .c-1 { top: 12%; left: 12%; width: 16%; } /* 1-2 */
+        .c-2 { top: 12%; left: 40%; width: 16%; } /* 2-3 */
+        .c-3 { top: 12%; left: 68%; width: 15%; } /* 3-4 */
+        .c-4 { top: 15%; left: 95%; height: 28%; width: 2px; } /* 4-5 Down */
+        .c-5 { top: 62%; left: 68%; width: 15%; } /* 5-6 Back */
+        .c-6 { top: 62%; left: 40%; width: 16%; } /* 6-7 Back */
+        .c-7 { top: 62%; left: 15%; height: 23%; width: 2px; } /* 7-8 Down */
+        .c-8 { top: 92%; left: 12%; width: 16%; } /* 8-9 */
+        .c-9 { top: 92%; left: 40%; width: 16%; } /* 9-10 */
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body onload="initAnimations()">
+
+<div class="container">
+    <header>
+        <div>
+            <h1>11. Improving NL-to-SQL</h1>
+            <div class="subtitle">Advanced Techniques • Validation • Full Pipeline</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>Smart Schema Retrieval</h2>
+            <p><strong>Problem:</strong> 100+ tables don't fit in the context window.</p>
+            <p><strong>Solution:</strong> Use Vector Search on table descriptions to retrieve only relevant tables and columns before building the prompt.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Filtering Context</span>
+            <div class="schema-visual">
+                <div class="sv-sidebar">
+                    <div class="sv-item sv-highlight" id="tbl-1">customers (0.95)</div>
+                    <div class="sv-item sv-dim" id="tbl-2">logs (0.12)</div>
+                    <div class="sv-item sv-highlight" id="tbl-3">orders (0.88)</div>
+                    <div class="sv-item sv-dim" id="tbl-4">config (0.05)</div>
+                    <div class="scan-line scan-anim"></div>
+                </div>
+                <div class="sv-main">
+                    <div style="color:var(--accent-success); font-weight:bold; margin-bottom:4px;">PROMPT CONTEXT:</div>
+                    <div>TABLE: customers</div>
+                    <div> - id (INT)</div>
+                    <div> - region (VARCHAR)</div>
+                    <div>TABLE: orders</div>
+                    <div> - amount (DECIMAL)</div>
+                    <div style="color:#64748b; font-style:italic; margin-top:4px;">// other tables omitted</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>Ambiguity Resolution</h2>
+            <p>LLMs often hallucinate defaults for ambiguous questions (e.g., "Top" customers by what? Revenue? Count?).</p>
+            <p><strong>Solution:</strong> Detect ambiguity and ask the user (Human-in-the-loop) or use reasonable defaults.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Clarification Flow</span>
+            <div class="ambiguity-flow">
+                <div class="af-step as-1">
+                    <div class="af-node af-user">User: "Top customers?"</div>
+                    <div class="af-arrow">→</div>
+                    <div class="af-node">Bot: "By Revenue or Count?"</div>
+                </div>
+                <div class="af-step as-2">
+                    <div class="af-node af-ask">User: "By Revenue"</div>
+                    <div class="af-arrow">→</div>
+                    <div class="af-node">Bot: "What timeframe?"</div>
+                </div>
+                <div class="af-step as-3">
+                    <div class="af-node af-user">User: "This month"</div>
+                    <div class="af-arrow">→</div>
+                    <div class="af-node af-success">Bot: Generates SQL</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>Validation & Retry Loop</h2>
+            <p>Syntax errors and typos are common. Basic systems fail once.</p>
+            <p><strong>Advanced:</strong> "Self-Healing". Catch SQL error -> Feed back to LLM with error string -> LLM fixes query -> Retry (max 3 times).</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Self-Healing Loop</span>
+            <div class="loop-canvas">
+                <div class="lc-orbit"></div>
+                <div class="lc-dot"></div>
+                <div class="lc-center">
+                    Error<br>Fix<br>Retry
+                </div>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 4px;">
+                Dot turns Green when Query Valid
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Post-Processing</h2>
+            <p>Raw SQL results are arrays of tuples (e.g., `[(1, 5000)]`). Users can't read this.</p>
+            <p><strong>Solution:</strong> A post-processor layer converts the result into natural language (e.g., "Order #1: $5,000").</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Transformation</span>
+            <div class="trans-box">
+                <div class="tb-grid">
+                    <div class="tb-cell">Region</div><div class="tb-cell">Amount</div>
+                    <div class="tb-cell">Americas</div><div class="tb-cell">5200000</div>
+                    <div class="tb-cell">EMEA</div><div class="tb-cell">3100000</div>
+                </div>
+                <div class="tb-arrow">→</div>
+                <div class="tb-result">
+                    "Revenue by region:<br>• Americas: $5.2M<br>• EMEA: $3.1M"
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>Full Enterprise Pipeline</h2>
+            <p>A robust NL-to-SQL system handles Caching, Retrieval, Disambiguation, Prompting, Generation, Explanation, Validation, Execution, and Formatting.</p>
+        </div>
+        <div class="diagram-box" style="min-height: auto; align-items: start; padding: 10px;">
+            <span class="diagram-label">The Enterprise Snake</span>
+            <div class="pipeline-container">
+                <!-- Nodes -->
+                <div class="pl-step pl-1" id="p1">1. User Query</div>
+                <div class="pl-step pl-2" id="p2">2. Cache Check</div>
+                <div class="pl-step pl-3" id="p3">3. Retrieve Schema</div>
+                <div class="pl-step pl-4" id="p4">4. Disambiguate</div>
+                
+                <div class="pl-step pl-5" id="p5">5. Build Prompt</div>
+                <div class="pl-step pl-6" id="p6">6. Generate SQL</div>
+                <div class="pl-step pl-7" id="p7">7. Explain (Opt)</div>
+                
+                <div class="pl-step pl-8" id="p8">8. Validate</div>
+                <div class="pl-step pl-9" id="p9">9. Execute DB</div>
+                <div class="pl-step pl-10" id="p10">10. Format Output</div>
+
+                <!-- Connectors -->
+                <div class="pl-connector c-1" id="c1"></div>
+                <div class="pl-connector c-2" id="c2"></div>
+                <div class="pl-connector c-3" id="c3"></div>
+                <div class="pl-connector c-4" id="c4"></div>
+                <div class="pl-connector c-5" id="c5"></div>
+                <div class="pl-connector c-6" id="c6"></div>
+                <div class="pl-connector c-7" id="c7"></div>
+                <div class="pl-connector c-8" id="c8"></div>
+                <div class="pl-connector c-9" id="c9"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Smart Retrieval:</strong> Vector search table descriptions to fit context.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Ambiguity:</strong> Detect vague questions and ask for clarification.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Self-Healing:</strong> Catch SQL errors and retry automatically with feedback.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Pipeline:</strong> Combine caching, retrieval, validation, and formatting for enterprise grade.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    function initAnimations() {
+        // 1. Pipeline Animation (Cycling through 10 steps)
+        const steps = [1,2,3,4,5,6,7,8,9,10];
+        const conns = [1,2,3,4,5,6,7,8,9];
+        let stepIdx = 0;
+
+        function cyclePipeline() {
+            // Reset
+            steps.forEach(s => document.getElementById('p'+s).classList.remove('active'));
+            conns.forEach(c => document.getElementById('c'+c).classList.remove('active'));
+
+            // Activate Current Step
+            document.getElementById('p'+steps[stepIdx]).classList.add('active');
+
+            // Activate previous connector (logic: connector i connects i and i+1)
+            if(stepIdx > 0) {
+                document.getElementById('c'+(stepIdx)).classList.add('active');
+            }
+
+            stepIdx = (stepIdx + 1) % steps.length;
+        }
+
+        setInterval(cyclePipeline, 800);
+        cyclePipeline();
+    }
+</script>
+
+</body>
+</html>

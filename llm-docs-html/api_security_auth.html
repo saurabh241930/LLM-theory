@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API & Security</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+        .one-liner { font-weight: bold; margin-bottom: 10px; }
+        .trap { background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin-top: 10px; }
+        .depth { background-color: #e2e3e5; padding: 10px; border-left: 4px solid #6c757d; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="subtitle">Authentication & Authorization</div>
+    </header>
+
+    <div class="content-wrapper">
+<div class="qa-container" id="q34">
+            <h3>Q34: What is HATEOAS and is it practical?</h3>
+            <div class="answer">
+                <div class="one-liner">HATEOAS embeds links to related actions in API responses — theoretically self-documenting but rarely fully implemented in practice.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Response includes _links with available next actions: { order: {...}, _links: { cancel: '/orders/1/cancel',</li>
+                    <li>pay: '/orders/1/pay' } }</li>
+                    <li> Clients can discover API dynamically without hardcoding URLs — reduces coupling</li>
+                    <li> Most teams implement a pragmatic subset: include key related resource URLs without full HATEOAS</li>
+                    <li>compliance</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  API -- "Payload + Links array" --> Client
+  Client -- "Follows link 'rel': 'next'" --> NextAPI["Next Resource Endpoint"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>HAL (Hypertext Application Language) and JSON:API are popular HATEOAS-inspired standards</li>
+                        <li>GraphQL solves the related-resources problem differently — clients query exactly what they need</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Full HATEOAS is rarely worth the implementation cost for internal APIs — focus on consistent URL design and good documentation instead
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q35">
+            <h3>Q35: How do you design APIs for long-running operations?</h3>
+            <div class="answer">
+                <div class="one-liner">Async pattern: return 202 Accepted with a job ID immediately; client polls status endpoint or receives webhook on completion.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> POST /reports → 202 Accepted { job_id: 'abc123' }</li>
+                    <li> GET /jobs/abc123 → { status: 'processing', progress: 45 } or { status: 'complete', result_url: '...' }</li>
+                    <li> Webhook alternative: client registers callback URL; server POSTs result when ready</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Client -- "POST /jobs (huge operation)" --> API
+  API -- "202 Accepted + Location: /jobs/123" --> Client
+  API -- "Enqueue Task" --> Worker["Background Worker"]
+  Client -- "GET /jobs/123 (Polling)" --> API
+  Worker -- "Updates Status" --> DB
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Server-Sent Events (SSE) for streaming progress updates without polling overhead</li>
+                        <li>Job TTL: clean up completed job records after 24-48hr to avoid unbounded storage growth</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Never block the HTTP connection for >30 seconds — client and proxy timeouts make it unreliable; use async pattern instead
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q36">
+            <h3>Q36: Explain GraphQL vs REST — when to choose which?</h3>
+            <div class="answer">
+                <div class="one-liner">REST is simple and cacheable; GraphQL eliminates over/under-fetching and is powerful for complex, flexible data requirements.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> REST: fixed endpoints, fixed response shapes — easy to cache, monitor, and understand</li>
+                    <li> GraphQL: single endpoint, client defines exact query — no over-fetching (mobile gets only needed</li>
+                    <li>fields)</li>
+                    <li> Choose GraphQL when: multiple client types (mobile/web/third-party), complex nested queries, rapid</li>
+                    <li>frontend iteration</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  Client -- "POST { user { id, name, posts { title } } }" --> GraphQL["GraphQL Server"]
+  GraphQL -- "Resolver: User" --> DB1[("User DB")]
+  GraphQL -- "Resolver: Posts" --> DB2[("Posts DB")]
+  DB1 --> GraphQL
+  DB2 --> GraphQL
+  GraphQL -- "Single JSON Response" --> Client
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>GraphQL N+1 problem: naive resolvers fire N DB queries for N items — solve with DataLoader</li>
+                        <li>(batching)</li>
+                        <li>REST is better for public APIs — simpler to document, easier for external developers to consume</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> GraphQL is not always better — the N+1 problem, complex caching, and query depth attacks require careful handling
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q37">
+            <h3>Q37: How do you handle file uploads in REST APIs?</h3>
+            <div class="answer">
+                <div class="one-liner">Multipart form-data for small files direct to server; pre-signed S3 URLs for large files uploaded directly from client.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Multipart/form-data: standard for file + metadata in same request — works for files up to ~10MB</li>
+                    <li> Pre-signed URL: API generates time-limited S3 URL → client uploads directly to S3 — server never</li>
+                    <li>handles file bytes</li>
+                    <li> Return file URL or ID in response after successful upload</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Client -- "1. Request Upload URL" --> API
+  API -- "2. Pre-signed S3 URL" --> Client
+  Client -- "3. PUT multipart/form-data" --> S3[("S3 Bucket")]
+  S3 -- "4. Event Trigger" --> Lambda["Processor"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Chunked upload for large files: split client-side, upload chunks in parallel, server reassembles</li>
+                        <li>Validate file type server-side via magic bytes, not just extension — extensions can be spoofed</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't stream large files through your API server to S3 — double bandwidth cost and blocks threads. Pre-signed URL is the correct pattern.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q38">
+            <h3>Q38: What are best practices for API documentation?</h3>
+            <div class="answer">
+                <div class="one-liner">OpenAPI (Swagger) spec as the source of truth — auto-generate docs, client SDKs, and mock servers from it.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> OpenAPI 3.0 spec: documents endpoints, request/response schemas, auth methods, and error</li>
+                    <li>codes</li>
+                    <li> Interactive docs (Swagger UI, Redoc) let developers test endpoints without writing code</li>
+                    <li> Include real-world examples in docs — not just schema, but actual request/response payloads</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  Code["Annotations/Code"] --> SwaggerGen["Swagger/OpenAPI Generator"]
+  SwaggerGen --> JSON["openapi.json"]
+  JSON --> UI["Swagger UI / Redoc"]
+  UI --> Dev["Developer (Client)"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Contract testing (Pact): consumers write tests against API contract — breaks if provider changes</li>
+                        <li>break the contract</li>
+                        <li>Changelog in docs: document every breaking and non-breaking change with version and date</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Docs that lag behind implementation are worse than no docs — auto-generate from code annotations or spec-first development
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q39">
+            <h3>Q39: How do you implement request tracing across microservices?</h3>
+            <div class="answer">
+                <div class="one-liner">Inject a Trace ID at API Gateway entry; propagate via HTTP headers through all service calls; collect spans in Jaeger or Zipkin.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> W3C Trace Context standard: traceparent header carries trace ID + span ID — propagate on every</li>
+                    <li>outbound call</li>
+                    <li> Each service creates a child span with its own work duration — builds the full request tree</li>
+                    <li> Correlate logs, metrics, and traces by trace ID — enables root cause analysis across services</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  Client -- "Request" --> API_GW["API Gateway (Generates Trace-ID)"]
+  API_GW -- "X-B3-TraceId: 123" --> ServA["Service A"]
+  ServA -- "X-B3-TraceId: 123" --> ServB["Service B"]
+  ServA -. "Send Span" .-> Jaeger["Jaeger/Zipkin"]
+  ServB -. "Send Span" .-> Jaeger
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>OpenTelemetry (OTel): vendor-neutral SDK for traces + metrics + logs — export to Jaeger,</li>
+                        <li>Datadog, or Grafana Tempo</li>
+                        <li>Sampling: trace 100% in dev, 1-10% in prod — full tracing at scale is cost-prohibitive</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Logging without trace IDs makes debugging distributed issues nearly impossible — always include trace ID in every log line
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q40">
+            <h3>Q40: What is the difference between authentication and authorization?</h3>
+            <div class="answer">
+                <div class="one-liner">Authentication verifies identity (who are you?); authorization verifies permission (what can you do?).</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> AuthN: validating credentials — JWT signature check, session lookup, OAuth token introspection</li>
+                    <li> AuthZ: checking permissions — RBAC (role-based), ABAC (attribute-based), or policy-based (OPA)</li>
+                    <li> Always do AuthN first, then AuthZ — no point checking permissions for an unverified identity</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  User["User"] --> AuthN{"Authentication"}
+  AuthN -- "Verifies Identity (Who are you?)" --> IDP["IdP (Okta / Auth0)"]
+  IDP --> AuthZ{"Authorization"}
+  AuthZ -- "Checks Permissions (What can you do?)" --> Roles["RBAC/ABAC Policy"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>RBAC: user has role (admin, editor, viewer); roles have permissions — simple but inflexible for</li>
+                        <li>complex rules</li>
+                        <li>ABAC: permissions based on attributes (user department, resource owner, time of day) — more</li>
+                        <li>flexible, more complex</li>
+                        <li>OPA (Open Policy Agent): policy as code — externalize authorization rules, query from any service</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Confusing 401 (unauthenticated — not logged in) with 403 (unauthorized — logged in but not permitted) is a very common mistake
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q41">
+            <h3>Q41: How do you test REST APIs effectively?</h3>
+            <div class="answer">
+                <div class="one-liner">Layer tests: unit tests for business logic, integration tests for API contracts, and e2e tests for critical flows.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Unit tests: test service/repository layer in isolation with mocked dependencies — fast, run on every</li>
+                    <li>commit</li>
+                    <li> Integration tests: spin up real DB + app in Docker, hit API endpoints — validate full request/response</li>
+                    <li>cycle</li>
+                    <li> Contract tests (Pact): ensure API changes don't break consumers — run in CI before deployment</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  Dev["Developer"] --> Unit["Unit Tests (Mocked DB)"]
+  Unit --> Integration["Integration Tests (Testcontainers)"]
+  Integration --> E2E["E2E Tests (Cypress/Postman)"]
+  E2E --> CD["Deployment"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Postman collections + Newman for automated API regression testing in CI pipeline</li>
+                        <li>Mutation testing: inject intentional bugs to verify tests catch them — validates test quality, not just</li>
+                        <li>coverage</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> 100% code coverage doesn't mean correct behavior — test behavior and edge cases, not just line coverage
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+</html>

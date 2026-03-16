@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Rewriting</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Query Rewriting</h1>
+        <div class="subtitle">Query Translation and Expansion</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container" id="query-rewrite">
+            <h3>Why and how do we rewrite queries in RAG?</h3>
+            <div class="answer">
+                <div class="one-liner">User queries are often vague or poorly phrased. We use LLMs to translate the
+                    query into a better representation before retrieving documents.</div>
+
+                <h4>Key Methods</h4>
+                <ul>
+                    <li><strong>HyDE (Hypothetical Document Embeddings):</strong> The LLM answers the user query from
+                        memory, and we embed that hallucinated answer to find similar real documents.</li>
+                    <li><strong>Query Expansion:</strong> Breaking a complex query into multiple sub-queries, retrieving
+                        for all, and concatenating results.</li>
+                    <li><strong>Step-back Prompting:</strong> Generating a more general, high-level version of the query
+                        to grab broader context.</li>
+                </ul>
+                <div class="mermaid">
+                    flowchart TD
+                    U["User: How to fix engine light?"] --> LLM["LLM Query Rewriter"]
+                    LLM --> Q1["Query 1: OBD2 Engine Codes"]
+                    LLM --> Q2["Query 2: Check engine dashboard warning"]
+                    Q1 --> DB[("Vector DB")]
+                    Q2 --> DB[("Vector DB")]
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

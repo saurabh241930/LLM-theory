@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chunking Strategies: Complete Guide</title>
+    <style>
+        :root {
+            /* Wikipedia-style Palette */
+            --bg-body: #f6f6f6;
+            --bg-content: #ffffff;
+            --text-primary: #202122;
+            --text-secondary: #54595d;
+            --accent-primary: #0645ad;
+            --accent-secondary: #d73027;
+            --accent-success: #007d2e;
+            --accent-warning: #d46a2a;
+            --border-color: #a2a9b1;
+            --wiki-bg: #f8f9fa;
+            
+            /* Typography */
+            --font-body: Georgia, serif;
+            --font-code: monospace;
+            --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --radius: 2px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            font-size: 15px;
+            padding: var(--space-md);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-content);
+            padding: var(--space-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        /* Header - Wikipedia Style */
+        header {
+            border-bottom: 3px solid var(--accent-primary);
+            padding-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text-primary);
+            font-weight: normal;
+            margin-bottom: 4px;
+            font-family: var(--font-system);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Content Sections */
+        .topic-section {
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-lg);
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .topic-section:last-of-type {
+            border-bottom: none;
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            margin-top: var(--space-lg);
+            margin-bottom: var(--space-md);
+            font-weight: normal;
+            font-family: var(--font-system);
+            border-bottom: 2px solid #e8e8e8;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-top: var(--space-md);
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-family: var(--font-system);
+        }
+
+        p {
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+            text-align: justify;
+            line-height: 1.8;
+        }
+
+        strong { 
+            color: var(--text-primary); 
+            font-weight: bold; 
+        }
+
+        em {
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        code {
+            background: var(--wiki-bg);
+            padding: 2px 4px;
+            border-radius: var(--radius);
+            font-family: var(--font-code);
+            font-size: 0.9em;
+            color: var(--accent-secondary);
+        }
+
+        ul, ol {
+            margin-left: 2em;
+            margin-bottom: var(--space-md);
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+
+        /* Info Box */
+        .infobox {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-left: 4px solid var(--accent-primary);
+            border-radius: var(--radius);
+        }
+
+        .infobox strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--accent-primary);
+        }
+
+        /* Figure Container */
+        .figure-container {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            text-align: center;
+            border-radius: var(--radius);
+            position: relative;
+        }
+
+        .figure-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Table Styling */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--space-md) 0;
+            background: var(--bg-content);
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #e8f0ff 0%, #f0f4ff 100%);
+            color: var(--text-primary);
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid var(--accent-primary);
+            font-weight: bold;
+            font-family: var(--font-system);
+        }
+
+        .comparison-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .comparison-table tr:hover {
+            background: var(--wiki-bg);
+        }
+
+        /* Warning Card */
+        .warning-card {
+            background: #fff1f0;
+            border: 1px solid #ffa6a6;
+            border-left: 4px solid var(--accent-secondary);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-radius: var(--radius);
+        }
+
+        .warning-card strong {
+            color: var(--accent-secondary);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        /* Takeaway Box */
+        .takeaway-section {
+            background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%);
+            border: 2px solid var(--accent-primary);
+            padding: var(--space-lg);
+            margin-top: var(--space-lg);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-section h2 {
+            color: var(--accent-primary);
+            margin-top: 0;
+        }
+
+        .takeaway-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .takeaway-item {
+            padding: var(--space-md);
+            background: white;
+            border-left: 3px solid var(--accent-success);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-item strong {
+            color: var(--accent-success);
+            display: block;
+            margin-bottom: 6px;
+            font-family: var(--font-system);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--space-md);
+                border: none;
+                box-shadow: none;
+                background: var(--bg-body);
+            }
+            h1 { font-size: 1.4rem; }
+            h2 { font-size: 1.1rem; }
+            .comparison-table { font-size: 0.9rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Chunking Strategies</h1>
+            <div class="subtitle">Splitting Documents for Effective Retrieval-Augmented Generation: Methods, Trade-offs, and Best Practices</div>
+        </div>
+    </header>
+
+    <!-- Section 1: The Problem -->
+    <section class="topic-section">
+        <h2>The Chunking Challenge in RAG</h2>
+        
+        <p>Retrieval-Augmented Generation (RAG) systems extend language models with the ability to reference external documents. However, documents—whether research papers, legal contracts, user manuals, or knowledge bases—often exceed the context window of language models. A document with 50,000 tokens cannot be provided directly to a model with a 4,000-token context window.</p>
+
+        <p>This fundamental constraint necessitates chunking: the strategic division of long documents into smaller, semantically coherent pieces that can be retrieved and provided to the model when needed. How documents are chunked directly impacts both the relevance of retrieved information and the model's ability to generate coherent answers.</p>
+
+        <p>The goal of chunking is deceptively simple yet challenging: preserve semantic meaning while ensuring pieces fit within context constraints. A chunk that is too small loses valuable context; one that is too large wastes tokens or doesn't fit at all. A chunk with artificial breaks (e.g., mid-sentence splits) becomes less useful. The right chunking strategy depends on the document structure, retrieval method, and downstream language model.</p>
+
+        <div class="infobox">
+            <strong>Core Tension:</strong> Chunking must balance context preservation (larger pieces are better) against context window constraints (smaller pieces are necessary). The optimal size depends on your specific system.
+        </div>
+    </section>
+
+    <!-- Section 2: Fixed-Size Chunking -->
+    <section class="topic-section">
+        <h2>Fixed-Size Chunking</h2>
+        
+        <p>The simplest and most common chunking approach is to divide documents into fixed-size pieces. A document is split every N tokens (e.g., every 1,000 tokens), with optional overlap to preserve context at boundaries.</p>
+
+        <h3>How It Works</h3>
+        <p>A 10,000-token document with chunk size 1,000 and no overlap produces 10 chunks. A sliding window approach with 50% overlap would produce overlapping segments, so chunk 2 begins at token 500, chunk 3 at token 1,500, and so on. This overlap helps preserve meaning at chunk boundaries.</p>
+
+        <h3>Advantages</h3>
+        <ul>
+            <li><strong>Speed:</strong> Splitting requires no deep analysis—purely numerical operations.</li>
+            <li><strong>Predictability:</strong> Output chunk count is entirely deterministic.</li>
+            <li><strong>Simplicity:</strong> Easy to implement and understand.</li>
+            <li><strong>Scalability:</strong> Works efficiently even on very large document collections.</li>
+        </ul>
+
+        <h3>Disadvantages</h3>
+        <ul>
+            <li><strong>Semantic Fragmentation:</strong> Breaks may occur mid-sentence or mid-paragraph, losing meaning.</li>
+            <li><strong>Inflexibility:</strong> Cannot adapt to natural document structure. A 500-word paragraph might span 5 chunks.</li>
+            <li><strong>Boundary Loss:</strong> Without overlap, information at chunk edges can be lost entirely.</li>
+        </ul>
+
+        <p>Despite these limitations, fixed-size chunking remains popular because its predictability makes retrieval and memory management straightforward. For many applications, the semantic cost is acceptable given the operational simplicity.</p>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Effect</th>
+                    <th>Tradeoff</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Chunk Size</strong></td>
+                    <td>Determines how much context each piece contains</td>
+                    <td>Larger = more context but fewer chunks; smaller = more chunks but less context</td>
+                </tr>
+                <tr>
+                    <td><strong>Overlap</strong></td>
+                    <td>Overlap amount between consecutive chunks</td>
+                    <td>More overlap = safer boundaries but increased storage; no overlap = efficiency but context loss</td>
+                </tr>
+                <tr>
+                    <td><strong>Unit</strong></td>
+                    <td>Number of tokens or characters</td>
+                    <td>Tokens are precise but require tokenization; characters are simpler but less accurate</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Section 3: Semantic Chunking -->
+    <section class="topic-section">
+        <h2>Semantic Chunking</h2>
+        
+        <p>Rather than dividing at fixed intervals, semantic chunking splits documents where topic shifts occur. The approach uses embeddings to measure semantic similarity between consecutive sentences and introduces a chunk boundary when similarity drops below a threshold.</p>
+
+        <h3>The Algorithm</h3>
+        <ol>
+            <li>Embed every sentence in the document using an embedding model.</li>
+            <li>Calculate cosine similarity between consecutive sentences.</li>
+            <li>When similarity drops below a threshold (e.g., 0.5), mark a chunk boundary.</li>
+            <li>Recursively combine adjacent low-similarity groups if they're very small.</li>
+        </ol>
+
+        <h3>Advantages</h3>
+        <ul>
+            <li><strong>Semantic Coherence:</strong> Each chunk represents a distinct topic, preserving meaning.</li>
+            <li><strong>Variable Size:</strong> Chunks naturally adapt to content. A brief announcement might be one chunk; a complex explanation spans multiple.</li>
+            <li><strong>No Artificial Breaks:</strong> Sentences stay intact—no mid-sentence splitting.</li>
+        </ul>
+
+        <h3>Disadvantages</h3>
+        <ul>
+            <li><strong>Computational Cost:</strong> Embedding every sentence is expensive, especially for large document collections.</li>
+            <li><strong>Dependency on Embeddings:</strong> Quality depends on the embedding model. Poor embeddings produce poor boundaries.</li>
+            <li><strong>Threshold Sensitivity:</strong> Choosing the right similarity threshold requires tuning and experimentation.</li>
+        </ul>
+
+        <div class="infobox">
+            <strong>When to Use:</strong> Semantic chunking is best for knowledge bases where semantic coherence is critical (e.g., medical documentation, legal contracts). The embedding cost is worthwhile if retrieval quality significantly improves.
+        </div>
+    </section>
+
+    <!-- Section 4: Recursive Chunking -->
+    <section class="topic-section">
+        <h2>Recursive Chunking</h2>
+        
+        <p>Recursive chunking attempts to preserve document structure by splitting hierarchically. It respects natural text boundaries while still adhering to size constraints.</p>
+
+        <h3>How It Works</h3>
+        <p>The algorithm tries splitting approaches in order, selecting the first that produces appropriately-sized chunks:</p>
+        <ol>
+            <li>First, try splitting by document structure markers (headers, section breaks).</li>
+            <li>If chunks are still too large, recursively split by paragraph.</li>
+            <li>If still too large, split by sentence.</li>
+            <li>As a last resort, split by token if sentences are still oversized.</li>
+        </ol>
+
+        <h3>Advantages</h3>
+        <ul>
+            <li><strong>Structure Preservation:</strong> Respects hierarchical document organization.</li>
+            <li><strong>Flexibility:</strong> Adapts to various document types without configuration.</li>
+            <li><strong>Balance:</strong> Attempts to honor semantic boundaries when possible, but falls back to size constraints when necessary.</li>
+        </ul>
+
+        <h3>Disadvantages</h3>
+        <ul>
+            <li><strong>Complexity:</strong> More elaborate implementation than fixed-size chunking.</li>
+            <li><strong>Unpredictability:</strong> Output structure varies based on document content.</li>
+        </ul>
+
+        <p>Recursive chunking works well generically across different document types. It's particularly effective for structured documents like research papers (with sections and subsections) or software documentation (with headings and code blocks).</p>
+    </section>
+
+    <!-- Section 5: Document-Aware Chunking -->
+    <section class="topic-section">
+        <h2>Document-Aware Chunking</h2>
+        
+        <p>When documents have explicit structure (Markdown headers, HTML elements, XML tags), chunking can leverage this structure. Each chunk preserves its source context—the header hierarchy from which it came.</p>
+
+        <h3>Example: Markdown Documents</h3>
+        <p>A Markdown document with multiple `## Section` headers can be chunked per section, with each chunk prefixed by its header. This metadata helps the retriever understand context and helps the model generate more contextualized responses.</p>
+
+        <h3>Benefits</h3>
+        <ul>
+            <li><strong>Context Preservation:</strong> The section title is always available as context for the chunk content.</li>
+            <li><strong>Relevance Improvement:</strong> Metadata allows filters and better ranking by retrieval systems.</li>
+            <li><strong>Traceability:</strong> Easy to link results back to the source section.</li>
+        </ul>
+
+        <h3>Implementation</h3>
+        <p>Document-aware chunking requires parsing the document format (Markdown, HTML, XML, PDF). Once structural elements are identified, chunks are created at meaningful boundaries. The document structure becomes metadata attached to each chunk.</p>
+
+        <div class="warning-card">
+            <strong>Limitation:</strong> Not all document formats have explicit structure. Unstructured text (emails, chat histories, scanned documents) cannot be chunked document-aware without additional processing.
+        </div>
+    </section>
+
+    <!-- Section 6: Practical Considerations -->
+    <section class="topic-section">
+        <h2>Practical Guidelines for Chunk Sizing</h2>
+        
+        <p>Determining the optimal chunk size depends on multiple factors: the retrieval mechanism, the language model's context window, the embedding model, and the document type.</p>
+
+        <h3>Recommended Sizes</h3>
+        <p>A common heuristic is to use chunks that comprise approximately one-third of your language model's context window. If your model has a 4,000-token context, aim for chunks around 1,000-1,500 tokens. This leaves room for the query, other retrieved chunks, and generation.</p>
+
+        <p>Chunks smaller than 300 tokens often lack sufficient context, making them poor candidates for retrieval. Chunks larger than 3,000 tokens may not fit comfortably in context windows below 8,000 tokens.</p>
+
+        <h3>Overlap Strategy</h3>
+        <p>If using fixed-size or sliding window chunking, include 20-30% overlap. This ensures that information at chunk boundaries isn't lost. For instance, with 1,000-token chunks, use a 200-300-token overlap window.</p>
+
+        <h3>Metadata and Traceability</h3>
+        <p>Always attach metadata to chunks: source document name, source page or section, creation timestamp. This enables you to trace retrieved information back to its source and to identify and correct erroneous chunks later.</p>
+
+        <h3>Validation and Iteration</h3>
+        <p>Chunking decisions affect retrieval quality. Evaluate your chunking strategy empirically by measuring retrieval precision and recall. If many queries retrieve irrelevant chunks, try adjusting size, overlap, or strategy. This is inherently an iterative process without universal solutions.</p>
+    </section>
+
+    <!-- Section 7: Common Pitfalls -->
+    <section class="topic-section">
+        <h2>Common Mistakes</h2>
+        
+        <h3>Chunks Too Small</h3>
+        <p>Fragments smaller than 200 tokens often lack sufficient context for meaningful retrieval. The search system must retrieve many fragments to assemble a coherent answer, increasing latency and complexity.</p>
+
+        <h3>Chunks Too Large</h3>
+        <p>Oversized chunks waste context window—they may contain relevant information mixed with irrelevant material. Large chunks also increase storage costs when vectorized.</p>
+
+        <h3>No Overlap (Sliding Window Omission)</h3>
+        <p>Without overlap, information at chunk boundaries can be entirely missed by retrieval. A retrieved chunk might be 5 tokens short of answering the query because relevant information exists in the adjacent omitted chunk.</p>
+
+        <h3>Ignoring Document Structure</h3>
+        <p>When documents have natural structure (sections, subsections), ignoring it by using only fixed-size chunking wastes this valuable signal. Document-aware approaches leverage structure better.</p>
+
+        <h3>Missing Metadata</h3>
+        <p>Chunks without source information become orphans. You cannot trace them back to original documents, making auditing and updates difficult.</p>
+
+        <h3>Absence of Chunk Validation</h3>
+        <p>Assuming a chunking strategy works without measuring retrieval quality is risky. Always validate chunks on representative queries before deploying to production.</p>
+    </section>
+
+    <!-- Takeaway Section -->
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>Start Simple, Optimize Later:</strong> Begin with fixed-size chunking (easy to implement). Move to semantic or structural chunking if retrieval quality is insufficient.
+            </div>
+            <div class="takeaway-item">
+                <strong>Size Matters:</strong> Target chunks around 1/3 of your language model's context window. Most practical systems use 500-2,000 tokens per chunk.
+            </div>
+            <div class="takeaway-item">
+                <strong>Overlap Prevents Loss:</strong> Sliding window approaches with 20-30% overlap prevent valuable information from being lost at chunk boundaries.
+            </div>
+            <div class="takeaway-item">
+                <strong>Preserve Structure:</strong> When documents have structure (Markdown headers, sections), use document-aware chunking to preserve this context.
+            </div>
+            <div class="takeaway-item">
+                <strong>Always Attach Metadata:</strong> Source document, page, section—these enable traceability and debugging.
+            </div>
+            <div class="takeaway-item">
+                <strong>Validate Empirically:</strong> Measure retrieval quality on real queries. Chunking decisions are system-specific and require experimentation.
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>

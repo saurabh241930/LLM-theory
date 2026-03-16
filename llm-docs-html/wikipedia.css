@@ -1,0 +1,441 @@
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+    --wp-bg: #ffffff;
+    --wp-text: #202122;
+    --wp-title-text: #000000;
+    --wp-link: #3366cc;
+    --wp-link-hover: #447ff5;
+    --wp-border: #a2a9b1;
+    --wp-infobox-bg: #f8f9fa;
+    --wp-hr: #a2a9b1;
+    --wp-accent: #36c;
+
+    --font-serif: 'Libre Baskerville', 'Georgia', serif;
+    --font-sans: 'Inter', 'Helvetica Neue', 'Arial', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--wp-bg);
+    color: var(--wp-text);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    padding: 20px 40px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+header {
+    border-bottom: 1px solid var(--wp-hr);
+    margin-bottom: 1.5em;
+    padding-bottom: 0.5em;
+}
+
+h1 {
+    font-family: var(--font-serif);
+    font-size: 2.2em;
+    font-weight: normal;
+    color: var(--wp-title-text);
+}
+
+.subtitle {
+    color: #54595d;
+    font-size: 0.9em;
+    margin-top: 2px;
+}
+
+h2 {
+    font-family: var(--font-serif);
+    font-size: 1.5em;
+    border-bottom: 1px solid var(--wp-hr);
+    margin: 1.2em 0 0.5em;
+    padding-bottom: 0.2em;
+}
+
+h3 {
+    font-family: var(--font-sans);
+    font-size: 1.2em;
+    margin: 1em 0 0.4em;
+    font-weight: bold;
+}
+
+p {
+    margin-bottom: 1em;
+    text-align: justify;
+}
+
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+/* Wikipedia Infobox Style */
+.infobox {
+    float: right;
+    width: 280px;
+    background: var(--wp-infobox-bg);
+    border: 1px solid var(--wp-border);
+    margin: 0 0 1em 1em;
+    padding: 10px;
+    font-size: 0.85em;
+    clear: right;
+}
+
+.infobox-title {
+    text-align: center;
+    background: #eaecf0;
+    font-weight: bold;
+    padding: 4px;
+    margin-bottom: 8px;
+    font-family: var(--font-serif);
+}
+
+.infobox-image {
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.infobox-data {
+    display: table;
+    width: 100%;
+}
+
+.infobox-row {
+    display: table-row;
+}
+
+.infobox-label {
+    display: table-cell;
+    padding: 2px 4px;
+    font-weight: bold;
+    width: 40%;
+    vertical-align: top;
+}
+
+.infobox-value {
+    display: table-cell;
+    padding: 2px 4px;
+    vertical-align: top;
+}
+
+/* Content Sections */
+.content-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.topic-section {
+    margin-bottom: 2em;
+}
+
+/* Animations and Diagrams */
+.diagram-container {
+    background: #ffffff;
+    border: 1px solid var(--wp-border);
+    margin: 1em 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.02);
+}
+
+.diagram-caption {
+    font-size: 0.85em;
+    color: #54595d;
+    margin-top: 10px;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Specific Animation Styles */
+.flow-viz {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    justify-content: center;
+}
+
+.flow-node {
+    padding: 8px 12px;
+    border: 1px solid var(--wp-accent);
+    background: #f0f3f9;
+    border-radius: 2px;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.flow-arrow {
+    width: 40px;
+    height: 2px;
+    background: var(--wp-border);
+    position: relative;
+}
+
+.flow-arrow::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -4px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid var(--wp-border);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+}
+
+/* --- Premium Sidebar Styles --- */
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    background: #f8f9fa;
+    border-right: 1px solid var(--wp-border);
+    overflow-y: auto;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+    padding: 20px 0;
+}
+
+.sidebar.closed {
+    transform: translateX(-100%);
+}
+
+.sidebar-title {
+    padding: 0 20px 20px;
+    font-family: var(--font-serif);
+    font-size: 1.2em;
+    border-bottom: 1px solid var(--wp-hr);
+    margin-bottom: 5px;
+}
+
+.sidebar-content-scroll {
+    overflow-y: auto;
+    height: calc(100% - 60px);
+}
+
+.sidebar-category {
+    padding: 15px 20px 5px;
+    font-weight: 700;
+    font-size: 0.75em;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-top: 1px solid #f0f0f0;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+.sidebar-category:hover {
+    background-color: var(--wp-gray-bg);
+}
+
+.sidebar-category .chevron {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+}
+
+.sidebar-category .chevron.open {
+    transform: rotate(180deg);
+}
+
+.sidebar-category:first-of-type {
+    border-top: none;
+    padding-top: 5px;
+}
+
+.sidebar-nav {
+    list-style: none;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+}
+
+.sidebar-nav.open {
+    max-height: 1500px;
+}
+
+.sidebar-nav li a {
+    display: block;
+    padding: 8px 20px;
+    color: var(--wp-text);
+    text-decoration: none;
+    font-size: 0.9em;
+    transition: background 0.2s;
+}
+
+.sidebar-nav li a:hover {
+    background: #eaecf0;
+    color: var(--wp-accent);
+}
+
+.sidebar-nav li.active a {
+    background: #eef2ff;
+    border-left: 4px solid var(--wp-accent);
+    color: var(--wp-accent);
+    font-weight: 600;
+}
+
+.sidebar-toggle {
+    position: fixed;
+    left: 270px;
+    /* Visible when sidebar is OPEN */
+    top: 20px;
+    z-index: 2100;
+    background: var(--wp-bg);
+    border: 1px solid var(--wp-border);
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 1.4em;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: left 0.3s ease, background 0.2s;
+}
+
+.sidebar-toggle:hover {
+    background: #f8f9fa;
+}
+
+.sidebar.closed~.sidebar-toggle,
+.sidebar-closed .sidebar-toggle {
+    left: 20px;
+}
+
+/* Content adjustment when sidebar is open */
+body {
+    transition: padding-left 0.3s ease;
+    padding-left: 280px;
+    /* Push content for open sidebar */
+    max-width: 1300px;
+    margin: 0 auto;
+}
+
+body.sidebar-closed {
+    padding-left: 80px;
+    /* Room for toggle only */
+}
+
+/* --- Atom One Dark Syntax Highlighting --- */
+.code-block {
+    background: #282c34 !important;
+    color: #abb2bf !important;
+    padding: 20px;
+    border-radius: 6px;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 0.95em;
+    margin: 1.5em 0;
+    overflow-x: auto;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.code-block .keyword {
+    color: #c678dd;
+}
+
+.code-block .string {
+    color: #98c379;
+}
+
+.code-block .comment {
+    color: #5c6370;
+    font-style: italic;
+}
+
+.code-block .class-name {
+    color: #e5c07b;
+}
+
+.code-block .function {
+    color: #61afef;
+}
+
+.code-block .operator {
+    color: #56b6c2;
+}
+
+.code-block .number {
+    color: #d19a66;
+}
+
+/* Responsive - MUST BE AT END */
+@media (max-width: 1024px) {
+    body {
+        margin-left: 0 !important;
+        padding: 15px 15px 15px 60px !important;
+        /* Allow toggle button space without overlapping */
+    }
+
+    .sidebar {
+        z-index: 2000;
+        width: 280px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .sidebar-toggle {
+        left: 290px;
+    }
+
+    .sidebar-closed .sidebar-toggle,
+    .sidebar.closed~.sidebar-toggle {
+        left: 10px;
+    }
+}
+
+/* Mermaid Diagram Styling */
+.mermaid {
+    background-color: #fff;
+    border: 1px solid rgb(200, 204, 209);
+    padding: 20px;
+    margin: 20px 0;
+    overflow-x: auto;
+    text-align: center;
+    border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px 10px 10px 50px !important;
+    }
+
+    .qa-container,
+    .content-wrapper,
+    .chapter-list {
+        padding: 10px !important;
+        margin: 10px 0;
+    }
+
+    h1 {
+        font-size: 1.8em;
+    }
+
+    .sidebar-toggle {
+        top: 15px;
+        padding: 6px 10px;
+        font-size: 1.2em;
+    }
+
+    .infobox {
+        float: none !important;
+        width: 100% !important;
+        margin: 1em 0 !important;
+    }
+}

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Improving NL-to-SQL: Advanced Query Generation Techniques</title>
+    <style>
+        :root { --bg-body: #f6f6f6; --bg-content: #ffffff; --text-primary: #202122; --text-secondary: #54595d; --accent-primary: #0645ad; --accent-secondary: #d73027; --accent-success: #007d2e; --accent-warning: #d46a2a; --border-color: #a2a9b1; --wiki-bg: #f8f9fa; --font-body: Georgia, serif; --font-code: monospace; --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; --space-sm: 8px; --space-md: 16px; --space-lg: 24px; --radius: 2px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-body); color: var(--text-primary); font-family: var(--font-body); line-height: 1.6; font-size: 15px; padding: var(--space-md); -webkit-font-smoothing: antialiased; }
+        .container { max-width: 900px; margin: 0 auto; background: var(--bg-content); padding: var(--space-lg); border: 1px solid var(--border-color); box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        header { border-bottom: 3px solid var(--accent-primary); padding-bottom: var(--space-md); margin-bottom: var(--space-lg); }
+        h1 { font-size: 1.8rem; color: var(--text-primary); font-weight: normal; margin-bottom: 4px; font-family: var(--font-system); }
+        .subtitle { color: var(--text-secondary); font-size: 0.95rem; font-style: italic; font-family: var(--font-system); }
+        .topic-section { margin-bottom: var(--space-lg); padding-bottom: var(--space-lg); border-bottom: 1px solid #e8e8e8; }
+        .topic-section:last-of-type { border-bottom: none; }
+        h2 { font-size: 1.4rem; color: var(--text-primary); margin-top: var(--space-lg); margin-bottom: var(--space-md); font-weight: normal; font-family: var(--font-system); border-bottom: 2px solid #e8e8e8; padding-bottom: 8px; }
+        h3 { font-size: 1.1rem; color: var(--text-primary); margin-top: var(--space-md); margin-bottom: 8px; font-weight: bold; font-family: var(--font-system); }
+        p { color: var(--text-primary); margin-bottom: var(--space-md); text-align: justify; line-height: 1.8; }
+        strong { color: var(--text-primary); font-weight: bold; }
+        em { font-style: italic; color: var(--text-secondary); }
+        code { background: var(--wiki-bg); padding: 2px 4px; border-radius: var(--radius); font-family: var(--font-code); font-size: 0.9em; color: var(--accent-secondary); }
+        ul, ol { margin-left: 2em; margin-bottom: var(--space-md); }
+        li { margin-bottom: 8px; color: var(--text-primary); line-height: 1.7; }
+        .infobox { background: var(--wiki-bg); border: 1px solid var(--border-color); padding: var(--space-md); margin: var(--space-md) 0; border-left: 4px solid var(--accent-primary); border-radius: var(--radius); }
+        .infobox strong { display: block; margin-bottom: 6px; color: var(--accent-primary); }
+        .pipeline { display: flex; flex-direction: column; gap: 8px; margin: var(--space-md) 0; }
+        .pipeline-stage { padding: 16px; background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%); border-left: 4px solid var(--accent-primary); border-radius: var(--radius); font-family: var(--font-system); color: var(--text-primary); }
+        .pipeline-stage strong { display: block; margin-bottom: 4px; color: var(--accent-primary); }
+        .warning-card { background: #fff1f0; border: 1px solid #ffa6a6; border-left: 4px solid var(--accent-secondary); padding: var(--space-md); margin: var(--space-md) 0; border-radius: var(--radius); }
+        .warning-card strong { color: var(--accent-secondary); display: block; margin-bottom: 6px; }
+        .takeaway-section { background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%); border: 2px solid var(--accent-primary); padding: var(--space-lg); margin-top: var(--space-lg); border-radius: var(--radius); }
+        .takeaway-section h2 { color: var(--accent-primary); margin-top: 0; }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md); }
+        .takeaway-item { padding: var(--space-md); background: white; border-left: 3px solid var(--accent-success); border-radius: var(--radius); }
+        .takeaway-item strong { color: var(--accent-success); display: block; margin-bottom: 6px; font-family: var(--font-system); }
+        @media (max-width: 768px) { .container { padding: var(--space-md); border: none; box-shadow: none; background: var(--bg-body); } h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>Improving NL-to-SQL: Advanced Query Generation Techniques</h1>
+            <div class="subtitle">Beyond Basic Text-to-SQL: In-Context Learning and Multi-Stage Reasoning</div>
+        </div>
+    </header>
+    <!-- Section 1: Why Basic Approaches Fall Short -->
+    <section class="topic-section">
+        <h2>Limitations of Basic NL-to-SQL Approaches</h2>
+        
+        <p>Basic NL-to-SQL systems—those that simply prompt a language model with schema and examples—succeed on straightforward questions but fail on complex queries. A query like "Show me revenue by region for the last quarter" might work. But questions like "For each region, show customers with above-average order value and how their spending changed compared to the same quarter last year" involve temporal comparisons, aggregations, and complex joins that basic approaches struggle to handle correctly. These advanced scenarios require more sophisticated techniques beyond simple prompting.</p>
+
+        <p>The core problem: basic in-context learning approaches have no intermediate representation of their reasoning. The model must jump directly from natural language to SQL, making errors in understanding or schema mapping invisible until query execution. If a model misunderstands "above-average order value," the generated SQL might compare to the global average instead of per-region average, producing plausible but incorrect results. Without intermediate reasoning steps that can be inspected and corrected, these errors persist.</p>
+
+        <h3>Common Failure Patterns</h3>
+
+        <p>Advanced NL-to-SQL systems must address consistent failure patterns. Models struggle with: (1) multi-hop reasoning where answering the question requires multiple sequential transformations, (2) temporal reasoning involving date arithmetic and period comparisons, (3) subquery and aggregate complexity where nested logic makes the query structure non-obvious, (4) ambiguous schema where similar columns exist but the model chooses the wrong one, and (5) counting and aggregation where models misunderstand what to group by.</p>
+
+        <div class="infobox">
+            <strong>Key Insight:</strong> Intermediate reasoning steps—explicit planning before query generation—dramatically improve accuracy by making reasoning inspectable and correctable.
+        </div>
+    </section>
+
+    <!-- Section 2: Intermediate Representation and Planning -->
+    <section class="topic-section">
+        <h2>Intermediate Representations and Planning</h2>
+        
+        <p>Advanced approaches don't generate SQL directly. Instead, they generate <strong>intermediate representations</strong> that capture semantic structure before being compiled to SQL. This enables reasoning about logical correctness before committing to specific database implementation details.</p>
+
+        <h3>Semantic Parsing to Logical Forms</h3>
+
+        <p>One approach is semantic parsing—translating natural language to abstract logical forms (lambda calculus or specialized query representation languages) that are database-agnostic. For example, the question "Show me all customers from New York with orders over $100" might be parsed to: FILTER(customers, location="New York") ⊲ FILTER(..., orders.amount>100) ⊲ PROJECT(..., customer_id, name). This logical form captures the semantic intent without SQL-specific syntax. It can then be compiled to different SQL dialects. The advantage: logical forms are more understandable and inspectable, enabling validation before SQL generation.</p>
+
+        <h3>Multi-Step Reasoning with Planning</h3>
+
+        <p>Complex questions benefit from explicit multi-step planning. Rather than generating SQL directly, the system first decomposes the question into steps: "Step 1: Identify the time period. Step 2: Calculate per-region averages. Step 3: Identify above-average customers. Step 4: Calculate their spending change." Each step becomes a simplified sub-problem. The model generates SQL for each step, then chains them together. This approach is more reliable because each step is simpler than tackling the full complexity at once.</p>
+
+        <h3>Intermediate Schema Understanding</h3>
+
+        <p>Rather than embedding the full schema in the prompt, advanced systems first perform a schema understanding step: explicitly identify relevant tables, understand relationships, and map natural language entities to schema columns. This happens before SQL generation. For example, the system might determine: "question mentions customer revenue, which requires joining customers and orders; revenue is the order amount or sum of order items." Making these connections explicit before SQL generation reduces mistakes.</p>
+
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>1. Parse Question</strong>
+                <p>Identify intent, entities, constraints, and operations required by the question.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>2. Schema Mapping</strong>
+                <p>Map entities and concepts to relevant database tables and columns.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>3. Logical Planning</strong>
+                <p>Decompose into steps, determine joins and aggregations, express in logical form.</p>
+            </div>
+        </div>
+
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>4. SQL Generation</strong>
+                <p>Generate SQL based on logical plan, with explicit attention to join types and aggregation logic.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>5. Validation</strong>
+                <p>Check syntax, schema validity, and semantic correctness before presentation.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Retrieval and Example Selection -->
+    <section class="topic-section">
+        <h2>Retrieval-Augmented SQL Generation</h2>
+        
+        <p>Context windows are limited. Full database schemas with hundreds of tables and thousands of columns don't fit. Advanced systems use retrieval mechanisms to dynamically select relevant schema information and examples for each query.</p>
+
+        <h3>Schema Retrieval and Table Selection</h3>
+
+        <p>Rather than providing entire schemas, systems retrieve only relevant tables. Given the question "Show me customer purchase history," the system identifies that customers and orders tables are relevant, excludes inventory and logistics tables. Retrieval typically uses semantic similarity: embedding the question and table descriptions, finding most similar matches. The challenge: similarity might not capture complex reasoning. A question about "quarterly revenue trends" might not match "time_series_data" table if phrasing differs, even though it's necessary. Hybrid approaches combine semantic similarity with rule-based heuristics (if question mentions dates, retrieve time-related tables) to improve recall.</p>
+
+        <h3>Example Retrieval for Few-Shot Learning</h3>
+
+        <p><strong>In-context learning</strong> quality depends heavily on examples. Rather than including a fixed set of examples, advanced systems retrieve examples similar to the current question. This enables smaller context windows (fewer examples fit) while maintaining effectiveness. Similarity can be computed multiple ways: lexical overlap, structural similarity (questions with similar SQL structure), or semantic similarity. Some systems weight examples by quality—successful previous queries ranked higher than rarely-used patterns.</p>
+
+        <h3>Self-Refinement from Retrieved Corrections</h3>
+
+        <p>As systems execute queries and receive feedback, they build repositories of correct and incorrect patterns. When a similar question arrives, the system can retrieve previous errors and corrections: "This type of question previously made mistake X; avoid Y by doing Z." This creates a learning loop where systems improve through experience. Advanced systems surface these corrections in prompts, guiding away from known failure modes.</p>
+
+        <h3>Negative Example Selection</h3>
+
+        <p>Beyond positive examples, including <strong>negative examples</strong>—common mistakes and misconceptions—improves accuracy. "For this type of question, a common error is using COUNT(*) instead of COUNT(DISTINCT customer_id). Always use COUNT(DISTINCT) for unique counts." Negative examples help models avoid systematic errors. The tradeoff: context becomes consumed by error patterns, leaving less room for positive guidance. Effective systems balance both.</p>
+    </section>
+
+    <!-- Section 4: Safe Query Generation -->
+    <section class="topic-section">
+        <h2>Safe and Constrained Query Generation</h2>
+        
+        <p>Language models often hallucinate SQL—generating syntactically plausible but non-existent table/column names, or writing expensive queries that lock databases. Advanced systems constrain generation to ensure safety.</p>
+
+        <h3>Constrained Decoding and Grammar-Based Generation</h3>
+
+        <p>Rather than letting models generate free-form text, constrained decoding restricts the output space. <strong>Grammar-based SQL generation</strong> ensures generated SQL conforms to valid grammar before execution. The model generates tokens, but only tokens that produce valid SQL are allowed at each step. This eliminates syntax errors entirely—a significant class of failures prevented at generation time. However, grammar-based approaches require substantial engineering effort for each SQL dialect and database system.</p>
+
+        <h3>Column and Table Whitelisting</h3>
+
+        <p>Models sometimes reference non-existent tables or columns. A simple safeguard: whitelist only tables and columns that exist. If the model generates "SELECT * FROM custoemrs" (misspelled), the system corrects it to "customers" or rejects it. This prevents hallucinations from being executed. Multi-token correction is more sophisticated: if the model outputs "custr" (partial token), the system completes it to the most likely valid column name.</p>
+
+        <h3>Cost and Complexity Limits</h3>
+
+        <p>Some queries are syntactically valid but computationally prohibitive: joining hundreds of tables, full table scans on multi-terabyte data, or cartesian products. Advanced systems estimate query cost (number of rows to be processed) before execution, rejecting queries exceeding thresholds and suggesting refinements: "This query would process 100GB; please make your constraints more specific." This prevents runaway expensive queries.</p>
+
+        <div class="warning-card">
+            <strong>Hallucination Risk Persists:</strong> Even with constraints, models sometimes generate queries that are valid but wrong. A query selecting the wrong aggregation function might be syntactically correct but semantically wrong. Constraints prevent obvious errors but not subtle ones.
+        </div>
+    </section>
+
+    <!-- Section 5: Handling Complex Scenarios -->
+    <section class="topic-section">
+        <h2>Techniques for Complex Query Scenarios</h2>
+        
+        <p>Beyond schema retrieval and constrained generation, handling complex queries requires specialized techniques for specific challenge patterns.</p>
+
+        <h3>Temporal Query Handling</h3>
+
+        <p>Questions involving dates, time periods, and temporal comparisons are particularly error-prone. "In the last quarter" requires converting to specific date ranges depending on current date. "Same quarter last year" requires calendar arithmetic. Advanced systems handle temporal reasoning explicitly. One approach: <strong>temporal semantic parsing</strong> where date expressions are parsed and converted to concrete date ranges before SQL generation. Another: providing reference implementations for common temporal patterns in examples, so models learn to recognize and replicate them.</p>
+
+        <h3>Window Functions and Advanced SQL Features</h3>
+
+        <p>Questions like "Show each customer's spending rank compared to other customers" require window functions—SQL features for running calculations and ranking. Basic models often miss window function opportunities, generating complex subqueries instead. Advanced systems include window function examples and explicitly reason about scenarios where they apply: "This question requires ranking within groups; window functions are appropriate."</p>
+
+        <h3>Recursive Queries and Hierarchical Data</h3>
+
+        <p>Some datasets are hierarchical: employee management chains, product categories, organizational structures. Querying hierarchical data requires recursive CTEs (Common Table Expressions) or similar recursive SQL features. Models rarely generate these unprompted. Systems can identify hierarchical query patterns and include recursive examples.</p>
+
+        <h3>Bridging Impedance Mismatch: Relational to Nested Data</h3>
+
+        <p>Traditional databases are relational; newer databases support nested structures (JSON, arrays). Querying nested data requires different SQL features (unnesting arrays, JSON path expressions). Systems should recognize when questions require nested data operations and include appropriate examples or schema descriptions.</p>
+
+        <div class="infobox">
+            <strong>Advanced Topic Recognition:</strong> High-quality systems automatically recognize query patterns (temporal, hierarchical, recursive) and surface appropriate techniques in prompts or intermediate representations.
+        </div>
+    </section>
+
+    <!-- Section 6: Iterative Refinement and Conversation -->
+    <section class="topic-section">
+        <h2>Interactive Refinement and Multi-Turn Conversations</h2>
+        
+        <p>Beyond single-turn query generation, sophisticated systems support multi-turn interaction where users and systems collaborate to develop correct queries.</p>
+
+        <h3>Query Explanation and Clarification</h3>
+
+        <p>When a system generates SQL, it should explain what the query does in plain language. "This query shows revenue by region, filtering to orders from the last quarter where order amount exceeded $100, ranked by revenue descending." Users can immediately verify if this matches their intent. If not, they clarify: "Actually, I meant last four quarters, not just last quarter." The system incorporates feedback and regenerates SQL. This exposes misunderstandings early.</p>
+
+        <h3>Multi-Turn Schema Navigation</h3>
+
+        <p>When the full schema is unknown or ambiguous, systems support exploration. Users might ask "What tables contain customer information?" rather than "Show me all customers in the database." The system responds by exploring schema, identifying relevant tables, potentially suggesting related ones. This dialog helps users formulate precise queries.</p>
+
+        <h3>Incremental Query Building</h3>
+
+        <p>Complex queries often build incrementally. Systems might generate initial SQL for "Show me all customers," then refine it: "Only from last quarter." Then further refine: "With order totals over $100." Each refinement invokes generation with modified prompt, building on previous results. This reduces mistakes by decomposing complex queries into simpler iterations.</p>
+
+        <h3>User Feedback Integration</h3>
+
+        <p>When users accept or reject generated queries, systems can learn from feedback. Accepted queries are stored as examples for similar future questions. Rejection patterns are analyzed: if users consistently modify queries in similar ways, the system learns systematic corrections. Over time, systems improve through accumulated feedback.</p>
+    </section>
+
+    <!-- Section 7: Advanced Evaluation and Monitoring -->
+    <section class="topic-section">
+        <h2>Evaluation and Monitoring of NL-to-SQL Systems</h2>
+        
+        <p>Deploying advanced NL-to-SQL systems requires rigorous evaluation and monitoring. Standard metrics like "How often does the generated SQL match reference SQL?" are misleading—semantically equivalent SQL can look different. Advanced systems need different evaluation approaches.</p>
+
+        <h3>Semantic Equivalence and Execution-Based Evaluation</h3>
+
+        <p>Rather than comparing generated SQL to reference SQL string-by-string, advanced evaluation executes both queries against test databases and compares results. If both queries produce identical results, they're functionally equivalent even if syntactically different. This captures true correctness better than text matching.</p>
+
+        <h3>Partial Correctness and Diagnostic Failure Analysis</h3>
+
+        <p>When generated queries produce wrong results, understanding why matters. Did the model select the wrong table? Wrong aggregation function? Wrong join condition? Diagnostic analysis categorizes failures, revealing patterns. If 60% of errors involve wrong aggregation, investing in aggregation-example improvement pays dividends. If 40% are wrong joins, schema understanding needs improvement.</p>
+
+        <h3>User Acceptance as Validation</h3>
+
+        <p>Ultimate validation is whether users accept and use generated queries. Tracking acceptance rates (what percentage of generated queries do users execute without modification?) reveals practical performance better than test-set metrics. Queries generating identical results to reference but low user acceptance likely confuse users with complex SQL even if correct. Conversely, high acceptance even on harder queries indicates good alignment with user needs.</p>
+    </section>
+
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>Intermediate Representations Matter:</strong> Generating logical forms before SQL enables inspection and verification of semantic correctness.
+            </div>
+            <div class="takeaway-item">
+                <strong>Multi-Step Planning Improves Accuracy:</strong> Decomposing complex questions into simpler steps reduces errors in reasoning and SQL generation.
+            </div>
+            <div class="takeaway-item">
+                <strong>Retrieval Enables Scalability:</strong> Dynamically retrieving relevant schema and examples enables systems to handle diverse queries without context explosion.
+            </div>
+            <div class="takeaway-item">
+                <strong>Constrained Generation Prevents Errors:</strong> Grammar-based generation, whitelisting, and cost limits prevent entire classes of errors at generation time.
+            </div>
+            <div class="takeaway-item">
+                <strong>Pattern Recognition is Key:</strong> Identifying temporal, hierarchical, and recursive query patterns enables surfacing appropriate techniques and examples.
+            </div>
+            <div class="takeaway-item">
+                <strong>Interactive Refinement Bridges Gaps:</strong> Multi-turn dialog, explanation, and user feedback transform systems from one-shot generation to collaborative query development.
+            </div>
+        </div>
+    </section>
+</div>
+</body>
+</html>

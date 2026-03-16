@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The ReAct Pattern - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .react-loop-viz {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border: 1px solid var(--wp-border);
+        }
+
+        .react-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 8px;
+            border-radius: 4px;
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+
+        .animate-active .react-step {
+            opacity: 1;
+            transform: translateX(0);
+            transition: all 0.4s ease-out;
+        }
+
+        .step-tag {
+            width: 80px;
+            text-align: center;
+            padding: 4px;
+            background: var(--wp-accent);
+            color: #fff;
+            font-size: 0.8em;
+            font-weight: bold;
+            border-radius: 3px;
+        }
+
+        .step-thought {
+            background: #36c;
+        }
+
+        .step-action {
+            background: #37b24d;
+        }
+
+        .step-obs {
+            background: #6a737d;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>ReAct Pattern</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">ReAct</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <path d="M 10 20 Q 30 5 50 20 T 90 20" fill="none" stroke="#36c" stroke-width="2" />
+                    <circle cx="50" cy="20" r="5" fill="#36c" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Stands For</div>
+                    <div class="infobox-value">Reason + Act</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Iterative Agent Loop</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Goal</div>
+                    <div class="infobox-value">Multi-step Discovery</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>In AI Agent architecture, the <strong>ReAct Pattern</strong> (Reason + Act) is a prompting strategy and
+                operational cycle that enables Large Language Models to solve complex, multi-step tasks by interleaving
+                natural language reasoning with tool execution. By forcing the model to articulate its "Thought" before
+                taking an "Action," the system improves its transparency, accuracy, and ability to recover from
+                mid-process errors.</p>
+
+            <h2>The ReAct Cycle</h2>
+            <p>A standard ReAct loop consists of four recursive stages that continue until the task is complete.</p>
+
+            <div class="react-loop-viz animate-on-scroll">
+                <div class="react-step" style="transition-delay: 0.1s;">
+                    <div class="step-tag step-thought">THOUGHT</div>
+                    <div>The LLM explains its internal reasoning and next goal.</div>
+                </div>
+                <div class="react-step" style="transition-delay: 0.3s;">
+                    <div class="step-tag step-action">ACTION</div>
+                    <div>The LLM selects a tool and generates the necessary parameters.</div>
+                </div>
+                <div class="react-step" style="transition-delay: 0.5s;">
+                    <div class="step-tag step-obs">OBSERVE</div>
+                    <div>The system executes the tool and returns the result (Observation).</div>
+                </div>
+                <div class="react-step" style="transition-delay: 0.7s;">
+                    <div class="step-tag">ANSWER</div>
+                    <div>The LLM synthesizes a final response or loops back to Thought.</div>
+                </div>
+            </div>
+
+            <h2>Comparison: Function Calling vs ReAct</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Direct Tool Call</th>
+                        <th>ReAct Loop</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Decision Logic</strong></td>
+                        <td>Static (One-shot)</td>
+                        <td>Dynamic (Iterative)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Complexity</strong></td>
+                        <td>Low (Simple tasks)</td>
+                        <td>High (Research/Planning)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Error Handling</strong></td>
+                        <td>Fails on bad output</td>
+                        <td>Self-corrects in next "Thought"</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Traceability</strong></td>
+                        <td>Hidden reasoning</td>
+                        <td>Explicit "Chain of Thought"</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>System Implementation</h2>
+            <p>Implementing a ReAct agent requires a "Stop Condition" (usually a maximum step count) to prevent infinite
+                loops if the model becomes confused.</p>
+
+            <div class="code-block">
+                <span class="keyword">while</span> steps < max_steps:<br>
+                    &nbsp;&nbsp;reply = llm.generate(prompt)<br>
+                    &nbsp;&nbsp;<span class="keyword">if</span> <span class="string">"Final Answer"</span> <span
+                        class="keyword">in</span> reply: <span class="keyword">break</span><br>
+                    &nbsp;&nbsp;action = parse_tool(reply)<br>
+                    &nbsp;&nbsp;result = tools[action].run()<br>
+                    &nbsp;&nbsp;prompt += f<span class="string">"\nObservation: {result}"</span>
+            </div>
+
+            <h2>Common Failure Points</h2>
+            <ul>
+                <li><strong>The Infinite Loop:</strong> The agent calls the same tool repeatedly without making
+                    progress.</li>
+                <li><strong>Tool Hallucination:</strong> Reasoning that a non-existent tool (e.g., "get_user_thoughts")
+                    is needed.</li>
+                <li><strong>Observation Loss:</strong> Forgetting the results of step 1 by the time it reaches step 5 in
+                    a long context window.</li>
+            </ul>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>The dashboard's <strong>"Auto-Auditor"</strong> agent uses the <strong>ReAct Pattern</strong> to perform
+                deep investigations. When auditing a flagged call, the agent follows a loop: <strong>Thought:</strong>
+                "I need to check if the advisor mentioned that RSA is optional." → <strong>Action:</strong>
+                <code>search_transcript("optional", "RSA")</code> → <strong>Observation:</strong> "No mention found." →
+                <strong>Thought:</strong> "I should now check if the advisor explicitly claimed it was mandatory." →
+                <strong>Action:</strong> <code>search_transcript("required", "must have")</code>. This step-by-step
+                reasoning allows the agent to build a solid case for its compliance flags, which is then presented to
+                the human manager.
+            </p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: ReAct Auditor Loop</span>
+                <span class="keyword">class</span> <span class="class-name">RSAAuditor</span>:
+                <span class="keyword">def</span> <span class="class-name">audit_step</span>(self, transcript):
+                thought = <span class="string">"Check if RSA was described as 'optional'."</span>
+                action = search_tool.run(<span class="string">"optional RSA"</span>)
+                observation = <span class="string">"Found: 'I'll just add this for you'."</span>
+                <span class="keyword">if</span> <span class="string">"optional"</span> <span class="keyword">not</span>
+                <span class="keyword">in</span> observation:
+                <span class="keyword">return</span> <span class="string">"FLAG: Coercive sale detected."</span>
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ ReAct combines Chain-of-Thought with external tools.<br>
+                ✅ Reasoning before acting reduces irrational tool calls.<br>
+                ✅ Observations are the "Sensory Input" that updates the model's plan.<br>
+                ✅ Iteration allows for the solving of open-ended research tasks.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

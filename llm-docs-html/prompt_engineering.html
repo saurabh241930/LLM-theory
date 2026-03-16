@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Engineering - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .prompt-stack-viz {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+
+        .stack-block {
+            padding: 10px;
+            border: 1px solid var(--wp-border);
+            background: #f8f9fa;
+            text-align: center;
+            font-size: 0.9em;
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+
+        .animate-active .stack-block {
+            opacity: 1;
+            transform: translateX(0);
+            transition: all 0.5s ease-out;
+        }
+
+        .stack-block:nth-child(1) {
+            border-left: 4px solid var(--wp-accent);
+            transition-delay: 0.1s;
+        }
+
+        .stack-block:nth-child(2) {
+            transition-delay: 0.3s;
+        }
+
+        .stack-block:nth-child(3) {
+            transition-delay: 0.5s;
+        }
+
+        .stack-block:nth-child(4) {
+            border-left: 4px solid #be185d;
+            transition-delay: 0.7s;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .technique-box {
+            border: 1px solid var(--wp-border);
+            padding: 15px;
+            margin: 20px 0;
+            background: #fdfdfd;
+        }
+
+        .technique-header {
+            font-weight: bold;
+            color: var(--wp-accent);
+            border-bottom: 2px solid var(--wp-accent);
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        .example-box {
+            background: #f8f9fa;
+            border-left: 4px solid #36c;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: var(--font-serif);
+            font-style: italic;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Prompt Engineering</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Prompt Engineering</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <text x="50" y="25" font-family="serif" font-size="20" text-anchor="middle" fill="#36c">Prompt
+                        ></text>
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Interface Optimization</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Goal</div>
+                    <div class="infobox-value">Predictrable LLM Output</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Core Techniques</div>
+                    <div class="infobox-value">CoT, Few-Shot, ReAct</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p><strong>Prompt Engineering</strong> is a multidisciplinary field focused on the design and refinement of
+                inputs (prompts) to elicit specific, reliable, and high-quality responses from Large Language Models
+                (LLMs). Rather than a simple natural language interaction, modern prompt engineering treats the model
+                input as a structured instruction set, optimizing for factors such as reasoning accuracy, formatting
+                consistency, and toxicity mitigation.</p>
+
+            <h2>The Anatomy of a Prompt</h2>
+            <p>A sophisticated prompt is rarely a single sentence. It is typically a composite of five functional
+                sections that provide the model with necessary constraints.</p>
+
+            <div class="diagram-container animate-on-scroll">
+                <div class="prompt-stack-viz">
+                    <div class="stack-block">1. System Prompt (Persona & Constraints)</div>
+                    <div class="stack-block">2. Context Background (Knowledge Base)</div>
+                    <div class="stack-block">3. Demonstration Examples (Few-Shot)</div>
+                    <div class="stack-block">4. Current Task (User Query)</div>
+                    <div class="stack-block">5. Output Format (JSON/CSV Instructions)</div>
+                </div>
+                <div class="diagram-caption">Figure 1: The standard structural hierarchy of a complex LLM prompt.</div>
+            </div>
+
+            <h2>Standard Reasoning Paradigms</h2>
+
+            <div class="technique-box">
+                <div class="technique-header">Zero-Shot vs. Few-Shot</div>
+                <p><strong>Zero-shot</strong> prompting asks the model to perform a task without any examples.
+                    <strong>Few-shot</strong> prompting provides 1–3 examples of the desired output, which "primes" the
+                    model's pattern-matching capabilities.
+                </p>
+                <div class="example-box">
+                    "Classify reviews:<br>
+                    Ex 1: 'Love it!' → Positive<br>
+                    Ex 2: 'Terrible quality' → Negative<br>
+                    Now classify: 'This product is amazing!' → ?"
+                </div>
+                <p><strong>Trade-off:</strong> Few-shot increases accuracy but consumes more tokens.</p>
+            </div>
+
+            <div class="technique-box">
+                <div class="technique-header">Chain-of-Thought (CoT)</div>
+                <p>Instructing the model to "think step-by-step" encourages it to generate intermediate reasoning
+                    tokens. This is particularly effective for math and logic tasks where a model might otherwise "jump"
+                    to an incorrect conclusion.</p>
+                <div class="side-note">
+                    💡 <strong>Magic Phrase:</strong> Simply adding "Let's think step by step" to a zero-shot prompt
+                    (Zero-Shot CoT) often provides a significant accuracy boost with no extra examples.
+                </div>
+            </div>
+
+            <div class="technique-box">
+                <div class="technique-header">ReAct Pattern</div>
+                <p>Used for agentic workflows, ReAct (Reason + Act) involves a loop where the model writes a
+                    <strong>Thought</strong>, takes an <strong>Action</strong> (calls a tool), and then
+                    <strong>Observes</strong> the result, repeating until the goal is met.
+                </p>
+            </div>
+
+            <div class="technique-box">
+                <div class="technique-header">Self-Consistency</div>
+                <p>The model generates multiple answers to the same query, and the system selects the most frequent
+                    answer (majority vote). This higher-cost technique is used for high-stakes medical or legal
+                    reasoning.</p>
+            </div>
+
+            <h2>Structuring Outputs for Software Pipelines</h2>
+            <p>For LLMs to be useful in applications, their output must be machine-readable. Prompt engineers use
+                <strong>Structured Output Prompting</strong> to ensure responses adhere to specific schemas.
+            </p>
+
+            <div class="code-block">
+                Extract entities in JSON format:<br>
+                {<br>
+                &nbsp;&nbsp;"person": "...",<br>
+                &nbsp;&nbsp;"company": "...",<br>
+                &nbsp;&nbsp;"location": "..."<br>
+                }
+            </div>
+
+            <p>Modern APIs (like OpenAI's <strong>JSON Mode</strong>) now mathematically guarantee that the output will
+                be valid JSON by constraining the model's token sampling distribution.</p>
+
+            <h2>The 6-Step Prompting Framework</h2>
+            <ol>
+                <li><strong>Define Clearly:</strong> Be specific about the desired outcome.</li>
+                <li><strong>Provide Context:</strong> Give the model relevant facts, but avoid "context bloat."</li>
+                <li><strong>Show Examples:</strong> Use few-shot demonstrations for complex formatting.</li>
+                <li><strong>Request Reasoning:</strong> Force intermediate checks via "think step-by-step."</li>
+                <li><strong>Specify Format:</strong> Explicitly ask for JSON, CSV, or bullet points.</li>
+                <li><strong>Test & Iterate:</strong> Refine the prompt based on empirical performance (Evals).</li>
+            </ol>
+
+            <h2>Interview Insights</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>Core Answer Path</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Difference between Zero/Few-shot?</td>
+                        <td>Zero-shot relies on pretraining; Few-shot teaches specific patterns in-context.</td>
+                    </tr>
+                    <tr>
+                        <td>How to stop hallucinations?</td>
+                        <td>Use RAG, CoT, and constrained output (JSON mode).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Common Pitfalls</h2>
+            <ul>
+                <li><strong>Vague Instructions:</strong> "Summarize this" instead of "Summarize in 3 bullet points."
+                </li>
+                <li><strong>Context Overload:</strong> Providing 10 pages when only 1 paragraph is needed.</li>
+                <li><strong>Inconsistent Formats:</strong> Switching between requesting JSON and plain text in the same
+                    prompt chain.</li>
+            </ul>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>To audit <strong>Auto Insurance</strong> sales, the dashboard uses a structured <strong>System
+                    Prompt</strong> that defines the LLM's persona as a "Rigorous Compliance Officer." The prompt
+                includes <strong>Few-Shot</strong> examples of "Compliant" vs. "Non-Compliant" mentions of RSA (e.g.,
+                specifically checking if the agent mentioned that RSA is optional). By using
+                <strong>Chain-of-Thought</strong> ("Think step-by-step to identify if the agent pressured the
+                customer"), the model provides a reasoned justification for every flagged call, which helps sales
+                managers explain the violation to their advisors.
+            </p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Compliance System Prompt</span>
+                prompt = {
+                <span class="string">"role"</span>: <span class="string">"system"</span>,
+                <span class="string">"content"</span>: <span class="string">"""You are an RSA Compliance Auditor.
+                    Task: Audit transcript for 'Optional Disclosure'.
+                    Rule: Advisor MUST state that RSA is a voluntary add-on.
+                    Few-Shot Example:
+                    Compliant: 'RSA is an optional service for $5.99.'
+                    Non-Compliant: 'I'm adding the RSA service to your account now.'"""</span>
+                }
+            </div>
+
+            <h2>Checklist for Production Prompts</h2>
+            <div class="side-note">
+                [ ] Is the task clearly defined?<br>
+                [ ] Is the context relevant and pruned?<br>
+                [ ] Are there few-shot examples for complex output?<br>
+                [ ] Is CoT ("Think step-by-step") enabled for reasoning?<br>
+                [ ] Is the output format machine-readable (if needed)?
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

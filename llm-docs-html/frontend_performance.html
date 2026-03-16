@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .trap {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-left: 4px solid #ffc107;
+            margin-top: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="subtitle">State, Components & Optimization</div>
+    </header>
+
+    <div class="content-wrapper">
+<div class="qa-container" id="q53">
+            <h3>Q53: How do you handle error boundaries in React?</h3>
+            <div class="answer">
+                <div class="one-liner">Error boundaries are class components that catch rendering errors in their
+                    subtree and show a fallback UI instead of crashing the app.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> componentDidCatch and getDerivedStateFromError: catch errors in child component tree</li>
+                    <li> Granular boundaries: wrap individual sections (sidebar, feed, card) so one failure doesn't
+                        crash the</li>
+                    <li>whole app</li>
+                    <li> Log errors to Sentry or similar in componentDidCatch for production observability</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  App["Main App"] --> EB["Error Boundary Class Component"]
+  EB -- "try-catch equivalent for rendering" --> ComponentTree["Child Component Tree"]
+  ComponentTree -- "Throws JS Error" --> EB
+  EB -- "Catches Error" --> Fallback["Render Fallback UI avoiding white screen"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>react-error-boundary library: functional API wrapper around class-based error boundaries
+                        </li>
+                        <li>Error boundaries don't catch: async errors, event handler errors, or errors in the boundary
+                            itself</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> One global error boundary at the root catches errors but shows
+                    blank app — granular boundaries provide much better UX
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q54">
+            <h3>Q54: How do you implement authentication flow in a React SPA?</h3>
+            <div class="answer">
+                <div class="one-liner">Store JWT in memory (not localStorage), use refresh token in httpOnly cookie,
+                    protect routes with auth guard component.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Access token in memory (useState/Context): XSS can't steal it unlike localStorage</li>
+                    <li> Refresh token in httpOnly cookie: browser sends it automatically, JS can't access it</li>
+                    <li> ProtectedRoute component: checks auth state, redirects to /login if unauthenticated</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  Login["Login Form"] --> Context["Auth Provider"]
+  Context -- "API Call" --> Backend["Auth Backend"]
+  Backend -- "Returns JWT" --> Storage["HttpOnly Cookie"]
+  Storage --> Router["Protected Routes"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Silent refresh: use refresh token to get new access token before expiry — transparent to
+                            user</li>
+                        <li>PKCE flow for SPAs: OAuth2 extension that doesn't require client secret — safe for public
+                            clients</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Storing JWT in localStorage is a common mistake — any XSS
+                    vulnerability can steal it. Memory storage is safer.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q55">
+            <h3>Q55: What is the difference between controlled and uncontrolled components?</h3>
+            <div class="answer">
+                <div class="one-liner">Controlled: React state drives the input value; uncontrolled: DOM manages its own
+                    state, accessed via ref.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Controlled: value={state} onChange={setState} — React is the single source of truth; enables
+                    </li>
+                    <li>validation on every keystroke</li>
+                    <li> Uncontrolled: no value prop, use ref to read value on submit — simpler for file inputs and
+                        legacy</li>
+                    <li>integrations</li>
+                    <li> Controlled is preferred for most forms — predictable, easier to test, works with form
+                        libraries</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  subgraph Controlled Component
+    ReactState["React State (useState)"] <--> Input["Input value={state} onChange={update}"]
+  end
+  subgraph Uncontrolled Component
+    DOMNode["Raw DOM Node"] --> Ref["React useRef()"]
+  end
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Mixing controlled and uncontrolled: providing value then removing it switches mode — React
+                            warns</li>
+                        <li>about this</li>
+                        <li>React Hook Form uses uncontrolled inputs with refs for performance — avoids re-render on
+                            every</li>
+                        <li>keystroke</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Providing value={undefined} is the same as uncontrolled — use
+                    value={''} as initial state to keep it controlled
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q56">
+            <h3>Q56: How do you implement micro-frontends?</h3>
+            <div class="answer">
+                <div class="one-liner">Split large frontend apps into independently deployable modules, integrated at
+                    runtime via Module Federation or iframes.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Webpack Module Federation: host app loads remote modules at runtime from different deployment
+                    </li>
+                    <li>URLs</li>
+                    <li> Each team owns their module end-to-end: build, test, deploy independently</li>
+                    <li> Shared dependencies (React, design system) defined as singletons — loaded once, not per module
+                    </li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  AppShell["App Shell / Container"] --> Fed1["Module Federation: Header (React)"]
+  AppShell --> Fed2["Module Federation: Product List (Vue)"]
+  AppShell --> Fed3["Module Federation: Cart (Angular)"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Communication between modules: custom events on window or shared state store — avoid direct
+                        </li>
+                        <li>imports across boundaries</li>
+                        <li>iframe approach: maximum isolation but poor UX (separate scroll, URL, auth per frame)</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Micro-frontends add significant complexity — only justified for
+                    large teams where deployment coupling is a real problem
+                </div>
+            </div>
+        </div>
+
+                <div class="qa-container" id="q57">
+            <h3>Q57: What is Event Delegation and how does React handle events?</h3>
+            <div class="answer">
+                <div class="one-liner">Event delegation attaches a single listener to a parent element to manage events for all descendants, improving performance.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li>  Instead of putting onclick on 1,000 list items, you put one listener on the ul and use event.target</li>
+                    <li>  React implements this through its SyntheticEvent system—a cross-browser wrapper around native events</li>
+                    <li>  React attaches a single event listener to the root container for almost all events</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  ReactRoot["Root DOM Node (id=root)"] -- "Attaches Single Listener" --> EventQueue["React SyntheticEvent"]
+  Button1["Button A Click"] --> ReactRoot
+  Button2["Button B Click"] --> ReactRoot
+  EventQueue --> Handler["Dispatches to specific onClick"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>React 17 changed event delegation from attaching to the document object to the root DOM container</li>
+                        <li>This change allowed multiple React versions to safely coexist on the same page</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Calling e.stopPropagation() in React stops the React SyntheticEvent propagation, not necessarily the native DOM propagation outside the React tree.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q58">
+            <h3>Q58: How do you implement SSR and what are its tradeoffs?</h3>
+            <div class="answer">
+                <div class="one-liner">SSR renders HTML on server per request — faster first contentful paint and SEO;
+                    tradeoff is server load and complexity.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Next.js (React): getServerSideProps renders per-request; getStaticProps renders at build time
+                        (SSG)</li>
+                    <li> Angular Universal: server-side rendering for Angular apps — hydration re-attaches event
+                        listeners on</li>
+                    <li>client</li>
+                    <li> Time to First Byte (TTFB) is higher for SSR vs static — server must render before responding
+                    </li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  Server["Node/Next.js Server"] -- "Renders fully formed HTML" --> Browser["Browser"]
+  Browser -- "Displays FCP instantly" --> Paint["User Sees Page"]
+  Browser -- "Downloads JS bundles" --> Hydrate["React Hydration"]
+  Hydrate -- "Interactive" --> App["Responsive SPA"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Streaming SSR (Next.js 13+ App Router): stream HTML chunks as they're ready — user sees</li>
+                        <li>content faster</li>
+                        <li>Islands architecture: most of the page is static HTML; only interactive islands are hydrated
+                        </li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> SSR doesn't automatically improve performance — if the server is
+                    slow, TTFB suffers. Measure before assuming SSR is better.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q59">
+            <h3>Q59: What is hydration and why does it matter in SSR?</h3>
+            <div class="answer">
+                <div class="one-liner">Hydration is attaching React/Angular event handlers to server-rendered HTML so
+                    the static page becomes interactive.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Without hydration: HTML is visible but clicks, inputs, and state don't work</li>
+                    <li> Full hydration: React/Angular re-renders the entire component tree client-side to attach event
+                    </li>
+                    <li>listeners</li>
+                    <li> Hydration mismatch: if server and client render different HTML, React logs a warning and
+                        re-renders</li>
+                    <li>from scratch</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  StaticHTML["Static HTML from Server"] --> Attach["React attaches event listeners"]
+  Attach --> Match{"HTML match initial client render?"}
+  Match -- "No" --> Error["Hydration Mismatch Error"]
+  Match -- "Yes" --> Interactive["Page is interactive"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Partial hydration: only hydrate interactive components — static parts stay as HTML forever
+                            (Astro,</li>
+                        <li>Qwik)</li>
+                        <li>Resumability (Qwik): serialize component state at render time, resume on client with zero
+                        </li>
+                        <li>re-execution</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Accessing browser APIs (window, document, localStorage) during
+                    SSR will crash — always guard with typeof window !== 'undefined'
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q60">
+            <h3>Q60: How do you implement accessibility (a11y) in web apps?</h3>
+            <div class="answer">
+                <div class="one-liner">Semantic HTML + ARIA roles where needed + keyboard navigation + screen reader
+                    testing — accessibility is not an add-on.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Semantic HTML: use <button> not <div onClick> — buttons are natively focusable and</li>
+                    <li>keyboard-accessible</li>
+                    <li> ARIA labels: aria-label, aria-describedby for elements that lack text — bridges gap for screen
+                        readers</li>
+                    <li> Focus management: trap focus in modals, restore focus on modal close</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  DOM["Semantic HTML DOM"] --> AccessibilityTree["a11y Tree"]
+  AccessibilityTree --> ScreenReader["Screen Reader / Assistive Tech"]
+  Styles["CSS / Visuals"] -. "Ignored by" .-> ScreenReader
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>WCAG 2.1 AA: minimum standard for most products — covers color contrast, keyboard nav, and
+                        </li>
+                        <li>screen reader compatibility</li>
+                        <li>Test with screen readers: VoiceOver (Mac), NVDA (Windows), and automated tools like axe-core
+                            or</li>
+                        <li>Lighthouse</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> ARIA overuse is harmful — 'no ARIA is better than bad ARIA';
+                    semantic HTML elements already have correct roles built in
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q61">
+            <h3>Q61: How do you handle internationalization (i18n) in modern SPAs?</h3>
+            <div class="answer">
+                <div class="one-liner">Externalize all strings to locale files, use a library for
+                    interpolation/pluralization, and handle RTL layouts for Arabic/Hebrew.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> React: react-i18next — useTranslation hook, t('key') for string lookup, locale JSON files per
+                        language</li>
+                    <li> Angular: built-in i18n with @angular/localize or ngx-translate for runtime switching</li>
+                    <li> ICU message format: handles pluralization and gender in translations correctly</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  App["React App (i18next)"] --> Key["Text Node: {t('welcome_msg')}"]
+  Key --> Lookup{"Current Lang Context"}
+  Lookup -- "en" --> EN[("en.json")]
+  Lookup -- "es" --> ES[("es.json")]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>RTL support: CSS logical properties (margin-inline-start vs margin-left) work for both LTR
+                            and RTL</li>
+                        <li>Number, date, and currency formatting: use Intl API (built into browsers) — don't hardcode
+                            formats</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Hardcoding strings or date formats anywhere in component code
+                    makes i18n impossible later — centralize from day one
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q62">
+            <h3>Q62: What are Web Vitals and how do you optimize for them?</h3>
+            <div class="answer">
+                <div class="one-liner">Core Web Vitals: LCP (load), FID/INP (interactivity), CLS (layout shift) —
+                    directly measured by Google and affect SEO.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> LCP (Largest Contentful Paint): optimize with image preloading, CDN, fast server response —
+                        target</li>
+                    <li>
+                        <2.5s< /li>
+                    <li> INP (Interaction to Next Paint): minimize main thread blocking — defer non-critical JS, break
+                        up long</li>
+                    <li>tasks</li>
+                    <li> CLS (Cumulative Layout Shift): reserve space for images/ads with aspect-ratio CSS — target
+                        <0.1< /li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  UX["User Experience Metrics"] --> LCP["LCP (Largest Contentful Paint) - Loading speed"]
+  UX --> FID["INP/FID (Interaction to Next Paint) - Interactivity"]
+  UX --> CLS["CLS (Cumulative Layout Shift) - Visual stability"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Lighthouse in CI: automated Web Vitals scoring on every deploy — fail PR if score drops
+                            below</li>
+                        <li>threshold</li>
+                        <li>Real User Monitoring (RUM) with web-vitals library: measure actual user experience, not just
+                            lab</li>
+                        <li>scores</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Lighthouse score in Chrome DevTools is a lab measurement —
+                    optimize for real-user CrUX data from Google Search Console too
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

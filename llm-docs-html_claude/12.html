@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategy: Choosing Between Prompting, RAG, and Fine-Tuning</title>
+    <style>
+        :root { --bg-body: #f6f6f6; --bg-content: #ffffff; --text-primary: #202122; --text-secondary: #54595d; --accent-primary: #0645ad; --accent-secondary: #d73027; --accent-success: #007d2e; --accent-warning: #d46a2a; --border-color: #a2a9b1; --wiki-bg: #f8f9fa; --font-body: Georgia, serif; --font-code: monospace; --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; --space-sm: 8px; --space-md: 16px; --space-lg: 24px; --radius: 2px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-body); color: var(--text-primary); font-family: var(--font-body); line-height: 1.6; font-size: 15px; padding: var(--space-md); -webkit-font-smoothing: antialiased; }
+        .container { max-width: 900px; margin: 0 auto; background: var(--bg-content); padding: var(--space-lg); border: 1px solid var(--border-color); box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        header { border-bottom: 3px solid var(--accent-primary); padding-bottom: var(--space-md); margin-bottom: var(--space-lg); }
+        h1 { font-size: 1.8rem; color: var(--text-primary); font-weight: normal; margin-bottom: 4px; font-family: var(--font-system); }
+        .subtitle { color: var(--text-secondary); font-size: 0.95rem; font-style: italic; font-family: var(--font-system); }
+        .topic-section { margin-bottom: var(--space-lg); padding-bottom: var(--space-lg); border-bottom: 1px solid #e8e8e8; }
+        .topic-section:last-of-type { border-bottom: none; }
+        h2 { font-size: 1.4rem; color: var(--text-primary); margin-top: var(--space-lg); margin-bottom: var(--space-md); font-weight: normal; font-family: var(--font-system); border-bottom: 2px solid #e8e8e8; padding-bottom: 8px; }
+        h3 { font-size: 1.1rem; color: var(--text-primary); margin-top: var(--space-md); margin-bottom: 8px; font-weight: bold; font-family: var(--font-system); }
+        p { color: var(--text-primary); margin-bottom: var(--space-md); text-align: justify; line-height: 1.8; }
+        strong { color: var(--text-primary); font-weight: bold; }
+        em { font-style: italic; color: var(--text-secondary); }
+        code { background: var(--wiki-bg); padding: 2px 4px; border-radius: var(--radius); font-family: var(--font-code); font-size: 0.9em; color: var(--accent-secondary); }
+        ul, ol { margin-left: 2em; margin-bottom: var(--space-md); }
+        li { margin-bottom: 8px; color: var(--text-primary); line-height: 1.7; }
+        .infobox { background: var(--wiki-bg); border: 1px solid var(--border-color); padding: var(--space-md); margin: var(--space-md) 0; border-left: 4px solid var(--accent-primary); border-radius: var(--radius); }
+        .infobox strong { display: block; margin-bottom: 6px; color: var(--accent-primary); }
+        .pipeline { display: flex; flex-direction: column; gap: 8px; margin: var(--space-md) 0; }
+        .pipeline-stage { padding: 16px; background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%); border-left: 4px solid var(--accent-primary); border-radius: var(--radius); font-family: var(--font-system); color: var(--text-primary); }
+        .pipeline-stage strong { display: block; margin-bottom: 4px; color: var(--accent-primary); }
+        .warning-card { background: #fff1f0; border: 1px solid #ffa6a6; border-left: 4px solid var(--accent-secondary); padding: var(--space-md); margin: var(--space-md) 0; border-radius: var(--radius); }
+        .warning-card strong { color: var(--accent-secondary); display: block; margin-bottom: 6px; }
+        .takeaway-section { background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%); border: 2px solid var(--accent-primary); padding: var(--space-lg); margin-top: var(--space-lg); border-radius: var(--radius); }
+        .takeaway-section h2 { color: var(--accent-primary); margin-top: 0; }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md); }
+        .takeaway-item { padding: var(--space-md); background: white; border-left: 3px solid var(--accent-success); border-radius: var(--radius); }
+        .takeaway-item strong { color: var(--accent-success); display: block; margin-bottom: 6px; font-family: var(--font-system); }
+        @media (max-width: 768px) { .container { padding: var(--space-md); border: none; box-shadow: none; background: var(--bg-body); } h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>Strategy: Choosing Between Prompting, RAG, and Fine-Tuning</h1>
+            <div class="subtitle">Decision Framework for Selecting the Right Approach</div>
+        </div>
+    </header>
+    <!-- Section 1: Strategic Landscape -->
+    <section class="topic-section">
+        <h2>The Strategic Landscape: Techniques for Adapting Language Models</h2>
+        
+        <p>Organizations building language model applications face a fundamental strategic decision: How should we adapt models to our specific needs? The answer determines architecture, cost, timeline, and ultimately, product quality. Three primary approaches have emerged: <strong>prompting</strong> (using models as-is with crafted prompts), <strong>Retrieval-Augmented Generation</strong> or RAG (augmenting models with external information retrieval), and <strong>fine-tuning</strong> (modifying model parameters through additional training). Each approach optimizes different dimensions. Understanding when each is appropriate is crucial to building effective systems that don't waste resources on over-engineered solutions or under-engineer and fail on critical capability gaps.</p>
+
+        <p>The appropriate choice depends on multiple factors: the nature of required adaptations (style, domain knowledge, task format), constraints (latency, cost, computational resources), data availability, and execution timeline. Some problems admit multiple solutions with different trade-offs. A customer support system could route simple questions through low-cost prompting while using fine-tuned models for complex issues. A content generation platform might use prompting for creative writing and RAG for fact-dependent content. Strategic thinking requires understanding capabilities and limitations of each approach.</p>
+
+        <h3>The Adaptation Problem</h3>
+
+        <p>Language models achieve their remarkable capabilities through exposure to vast training data. However, they have knowledge limitations (training data has a cutoff date), domain gaps (general models underperform on specialized fields), and instruction-following inconsistencies (sometimes ignoring constraints in prompts). Organizations need models that know their domain facts (recent company data, proprietary information), follow specific formatting requirements (customer-facing vs. internal communication style), and perform well on specialized tasks. Adaptation techniques address these gaps by injecting domain knowledge or retraining models to internalize required behaviors.</p>
+
+        <div class="infobox">
+            <strong>Key Insight:</strong> Prompting, RAG, and fine-tuning exist on a spectrum from minimal to maximal model modification. Selection depends on required knowledge injection, cost constraints, latency requirements, and data availability.
+        </div>
+    </section>
+
+    <!-- Section 2: Prompting and In-Context Learning -->
+    <section class="topic-section">
+        <h2>Prompting: Maximum Flexibility, Minimum Modification</h2>
+        
+        <p><strong>Prompting</strong> is the simplest approach: use the model as-is by providing carefully constructed prompts that guide behavior. Unlike fine-tuning which modifies model parameters, prompting works entirely through input manipulation. This has profound implications: prompting changes can be deployed instantly (no retraining required), updated continuously (no model versioning issues), and tested cheaply.</p>
+
+        <h3>What Prompting Can Accomplish</h3>
+
+        <p>Effective prompting can: (1) specify output format ("respond in JSON format"), (2) provide style guidance ("use conversational tone"), (3) inject examples ("here are three successful examples of similar tasks"), and (4) impose constraints ("do not mention sensitive topics"). Models trained on diverse internet text have internalized many patterns and can adapt through prompting. A model can switch between professional and casual tone based on prompt instruction. It can follow step-by-step reasoning ("let's think through this carefully") better than generating answers immediately.</p>
+
+        <p>The mechanisms behind prompting effectiveness remain partially mysterious. Models seem to recognize patterns—when shown examples, they extrapolate. When given constraints, they mostly respect them. However, prompting has hard limitations. A model cannot follow examples of tasks fundamentally inconsistent with training data. No prompt convinces a model to output perfect technical content on a specialized domain it has never seen in training. Prompting is pattern matching on steroids, not true learning.</p>
+
+        <h3>Prompting Limitations and When It Fails</h3>
+
+        <p>Prompting provides no mechanism for teaching the model novel information. If your product requires responding to current events with accurate information and the model's training cutoff is month-old data, prompting cannot help. Providing information in the prompt (like current date) helps, but only within context window limits. Prompting also cannot make models strong at non-diverse tasks. If the task is domain-specific and the model lacks training on similar domains, no prompt fixes this. A financial analysis task might work for a model trained on massive internet text, but a niche regulatory question about obscure compliance rules might not, regardless of prompt quality.</p>
+
+        <p>Prompting also struggles with consistency and reliability. Carefully-tuned prompts work well on typical inputs but fail on edge cases or slightly different input distributions. A prompt designed for short questions might produce verbose, off-topic output for longer inputs. These fragilities suggest that prompting is addressing symptoms (output in the wrong format) rather than underlying causes (model hasn't internalized the task).</p>
+
+        <h3>In-Context Learning and Few-Shot Prompting</h3>
+
+        <p><strong>In-context learning</strong>—the model's ability to learn from examples in prompts—is central to prompting effectiveness. Providing even a few examples (few-shot prompting) dramatically improves accuracy. A completely unprompted model asked for sentiment classification might perform poorly; the same model given three examples of positive and negative examples suddenly performs well. In essence, examples activate relevant capabilities without requiring any training.</p>
+
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>Zero-Shot Prompting</strong>
+                <p>Direct instruction without examples. Works for general tasks, struggles on specialized ones.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Few-Shot Prompting</strong>
+                <p>Instruction plus examples. Dramatically improves accuracy by activating relevant patterns.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Chain-of-Thought Prompting</strong>
+                <p>Request step-by-step reasoning before answering. Improves complex reasoning tasks.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Retrieval-Augmented Generation (RAG) -->
+    <section class="topic-section">
+        <h2>RAG: Adding External Knowledge Without Retraining</h2>
+        
+        <p><strong>Retrieval-Augmented Generation (RAG)</strong> addresses prompting's fundamental knowledge limitation: context windows are finite (typically 4K-200K tokens), so you can't include all relevant information in every prompt. RAG systems maintain external knowledge bases (document collections, databases, APIs) and dynamically retrieve relevant information to augment prompts. This extends effective knowledge window dramatically—RAG systems can retrieve from databases with terabytes of information, then synthesize relevant portions for generation.</p>
+
+        <h3>When RAG is Appropriate</h3>
+
+        <p>RAG excels when: (1) required knowledge is not in model training data (proprietary company information, real-time data), (2) knowledge is voluminous (millions of documents) making it impractical to fit in context, and (3) knowledge changes frequently (RAG systems retrieve current information without retraining). RAG is less useful when required knowledge is diverse and scattered across documents—retrieval might miss relevant information—or when knowledge is implicit patterns rather than facts (company culture, artistic style).</p>
+
+        <h3>RAG Advantages and Limitations</h3>
+
+        <p>RAG's key advantages: (1) no retraining required, enabling instant deployment, (2) modular knowledge management—updating training data is trivial, (3) traceable results—users see which documents generated answers, and (4) cost-effective—no expensive model training. Limitations: (1) retrieval quality directly impacts output quality, and poor retrieval causes hallucination, (2) context window is still a constraint for highly complex reasoning requiring synthesis of many documents, and (3) RAG systems require infrastructure investment (vector databases, retrieval pipelines).</p>
+
+        <p>RAG is most effective for retrieval-heavy tasks where the language model's role is mostly synthesis. Customer support questions answering by retrieving relevant documentation work well. Open-ended creative writing where the model must synthesize disparate information works less well.</p>
+
+        <h3>RAG Architecture Challenges</h3>
+
+        <p>Implementing RAG effectively requires solving multiple challenges: (1) <strong>chunking</strong>—breaking documents into retrieval units that preserve meaning without exceeding context, (2) <strong>retrieval quality</strong>—ensuring relevant documents are actually found, (3) <strong>embedding selection</strong>—choosing embeddings appropriate to your domain, (4) <strong>context window management</strong>—deciding what retrieved information to include given finite context, and (5) <strong>grounding</strong>—ensuring generation stays faithful to retrieved documents, not hallucinating.</p>
+
+        <div class="warning-card">
+            <strong>RAG Does Not Replace Knowledge:</strong> RAG systems excel at retrieving stored knowledge but cannot replace training-based learning for implicit patterns. A model generating marketing copy needs internalized tone-and-style knowledge; RAG doesn't teach this.
+        </div>
+    </section>
+
+    <!-- Section 4: Fine-Tuning and Training -->
+    <section class="topic-section">
+        <h2>Fine-Tuning: Teaching Models Through Training</h2>
+        
+        <p><strong>Fine-tuning</strong> means continuing training on your data to modify model parameters. Unlike prompting and RAG which work through input manipulation, fine-tuning changes the model itself. This is more expensive but enables learning of patterns and implicit knowledge.</p>
+
+        <h3>What Fine-Tuning Can Accomplish</h3>
+
+        <p>Fine-tuning teaches models to: (1) learn new facts and domain knowledge that can be internalized, (2) internalize task patterns and specialized capabilities, (3) follow format constraints consistently, (4) adopt specific writing styles and personas, and (5) achieve performance levels on domain-specific metrics unattainable through prompting. A domain expert fine-tuning a model on medical literature can teach nuanced medical reasoning. A company fine-tuning on customer interactions can teach response patterns appropriate to their brand voice.</p>
+
+        <p>Fine-tuning's main advantage is <em>internalization</em>. Rather than requiring information in every prompt, fine-tuned models encode knowledge in parameters. This reduces context consumption (fewer examples or context needed at inference) and often improves inference efficiency. A fine-tuned model might need 10 tokens of instruction where a base model needs 200 tokens of examples to achieve similar performance.</p>
+
+        <h3>Fine-Tuning Limitations and Costs</h3>
+
+        <p>Fine-tuning requires substantial training data (typically thousands to tens of thousands of high-quality examples), computational resources (expensive GPUs for hours or days), and expertise. Organizations must create training datasets, which is labor-intensive. Fine-tuning also introduces <strong>model drift</strong>: as you fine-tune on specific data, generic capabilities sometimes degrade. A model fine-tuned exclusively on legal documents might lose proficiency on general language tasks.</p>
+
+        <p>Perhaps most critically, fine-tuned models are static. Changing behavior requires retraining—days of computation and delay in deployment. Prompting allows behavior changes in seconds. This makes fine-tuning inappropriate for frequently-changing requirements. An evolving content moderation policy might be handled through prompting (update the policy description); handling through fine-tuning would require retraining every time policy changes.</p>
+
+        <h3>Full Fine-Tuning vs. Parameter-Efficient Alternatives</h3>
+
+        <p>Full fine-tuning trains all model parameters, most expensive but most capable. <strong>Parameter-efficient fine-tuning</strong> techniques like LoRA (Low-Rank Adaptation) and QLoRA train only a small percentage of parameters, reducing compute requirements by orders of magnitude. QLoRA enables fine-tuning large models on consumer GPUs. These techniques make fine-tuning more accessible but introduce subtle limitations in expressiveness—some learning patterns require full-parameter training.</p>
+
+        <div class="infobox">
+            <strong>The Trade-Off Curve:</strong> Full fine-tuning is most capable but most expensive. Parameter-efficient methods reduce cost but reduce capability slightly. Prompting + RAG matches full fine-tuning on retrieval tasks but struggles on task-format learning.
+        </div>
+    </section>
+
+    <!-- Section 5: Comparative Analysis and Selection Framework -->
+    <section class="topic-section">
+        <h2>Comparative Analysis and Strategic Selection</h2>
+        
+        <p>How do these approaches actually compare on key dimensions?</p>
+
+        <h3>Knowledge Injection Capability</h3>
+
+        <p><strong>Domain-Specific Facts:</strong> RAG excels. Proprietary information is trivial to inject via retrieval. Fine-tuning works but requires training data and retraining for updates. Prompting works only within context limits. <strong>Implicit Patterns and Styles:</strong> Fine-tuning excels. Learning the tone and implicit norms of a organization requires parameter tuning. RAG and prompting struggle. <strong>Real-Time Information:</strong> RAG excels. Prompting works if information fits context (often doesn't for large amounts). Fine-tuning fails—no way to incorporate real-time data.</p>
+
+        <h3>Cost Comparison</h3>
+
+        <p><strong>Upfront Development Cost:</strong> Prompting is cheapest—just engineering. RAG requires infrastructure investment. Fine-tuning requires data preparation, training resources. <strong>Operational Cost:</strong> Prompting and RAG have minimal per-query costs. Fine-tuned models have zero incremental cost (already trained). <strong>Cost for Change:</strong> Prompting is cheapest—change the prompt. RAG requires updating documents. Fine-tuning is most expensive—retrain. For static applications, fine-tuning wins long-term. For dynamic applications, prompting wins.</p>
+
+        <h3>Latency and Performance</h3>
+
+        <p><strong>Inference Speed:</strong> Fine-tuned models often faster (less context needed). Prompting slower (large contexts). RAG slower (retrieval overhead). <strong>Quality:</strong> Fine-tuned models achieve highest on task-specific metrics. RAG achieves highest on retrieval tasks. Prompting variable depending on task. <strong>Reliability:</strong> Fine-tuned models most consistent. Prompting and RAG more brittle, especially on out-of-distribution inputs.</p>
+
+        <h3>Selection Framework</h3>
+
+        <p><strong>Choose Prompting When:</strong> Task is general-purpose, no specialized knowledge required, and requirement stability is low (frequent changes). <strong>Choose RAG When:</strong> Knowledge is substantial and external (documents, databases), knowledge changes frequently, and grounding matters (users want to see sources). <strong>Choose Fine-Tuning When:</strong> Task is specialized, requirements are stable, training data is available, and you need internalized knowledge or task-specific optimization.</p>
+
+        <p><strong>Choose Combined Approaches When:</strong> Fine-tune base model (optimize for domain), then use RAG on top (inject current knowledge). Or use prompting for simple cases and RAG/fine-tuning for complex ones. Most production systems don't use a single approach but intelligently mix them.</p>
+    </section>
+
+    <!-- Section 6: Practical Implementation Considerations -->
+    <section class="topic-section">
+        <h2>Practical Implementation Considerations</h2>
+        
+        <p>Strategic choice between approaches is only the beginning. Implementation details determine success.</p>
+
+        <h3>Data Collection and Quality</h3>
+
+        <p>Both RAG and fine-tuning require quality data. RAG requires well-organized, searchable documents. Fine-tuning requires high-quality labeled examples. Investing in data quality yields dividends—poor data leads to poor models regardless of approach. Organizations should establish data governance: documentation standards, quality metrics, versioning.</p>
+
+        <h3>Iterative Development and Experimentation</h3>
+
+        <p>The best approach isn't always obvious. Effective organizations prototype with multiple approaches: "Let's try prompting first because it's cheap and fast. If that's insufficient, we'll invest in RAG or fine-tuning." Starting with the cheapest approach and escalating only when necessary avoids over-engineering while maintaining the option to improve if needed.</p>
+
+        <h3>Monitoring and Adaptation</h3>
+
+        <p>After deployment, approaches should be monitored. Is the current approach meeting quality metrics? Is cost acceptable? As data distributions change, the optimal approach might change. Monitoring enables adaptation: if performance degrades, you can add RAG to inject new data, or fine-tune if needed.</p>
+
+        <h3>Cost-Benefit Analysis</h3>
+
+        <p>Organizations should explicitly calculate cost-benefit trade-offs. "Fine-tuning costs $10K in infrastructure and $5K in data preparation, providing 5% quality improvement worth $100K/year in reduced support costs. The investment pays for itself in one month." This kind of analysis prevents over-engineering while justifying necessary investments.</p>
+    </section>
+
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>Prompting is Lowest-Cost:</strong> Start with prompting when possible; instant deployment and easy iteration make it ideal for initial prototyping.
+            </div>
+            <div class="takeaway-item">
+                <strong>RAG Solves Knowledge Injection:</strong> For retrieval-heavy tasks with external knowledge, RAG provides cost-effective alternative to fine-tuning.
+            </div>
+            <div class="takeaway-item">
+                <strong>Fine-Tuning Internalizes Learning:</strong> When implicit patterns and internalized knowledge matter, fine-tuning is worth the cost and effort.
+            </div>
+            <div class="takeaway-item">
+                <strong>Strategic Selection Depends on Context:</strong> Task type, knowledge domain, data availability, cost constraints, and requirement stability all influence appropriate choice.
+            </div>
+            <div class="takeaway-item">
+                <strong>Hybrid Approaches are Common:</strong> Production systems often combine approaches: prompt + RAG, or fine-tune + RAG, rather than choosing single technique.
+            </div>
+            <div class="takeaway-item">
+                <strong>Start Cheap, Escalate When Needed:</strong> Begin with lowest-cost viable approach, monitor performance, and invest in more sophisticated techniques only if necessary.
+            </div>
+        </div>
+    </section>
+</div>
+</body>
+</html>

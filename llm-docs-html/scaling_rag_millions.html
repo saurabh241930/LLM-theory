@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scaling RAG to Millions - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .scaling-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin: 20px 0;
+            padding-left: 20px;
+            border-left: 3px solid var(--wp-accent);
+        }
+
+        .scaling-stage {
+            padding: 15px;
+            background: #f8f9fa;
+            border: 1px solid var(--wp-border);
+            position: relative;
+        }
+
+        .scaling-stage::before {
+            content: "";
+            position: absolute;
+            left: -27px;
+            top: 20px;
+            width: 12px;
+            height: 12px;
+            background: var(--wp-accent);
+            border-radius: 50%;
+        }
+
+        .stage-label {
+            font-weight: bold;
+            color: var(--wp-accent);
+            text-transform: uppercase;
+            font-size: 0.8em;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Scaling RAG to Millions</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Scale Architecture</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <rect x="10" y="25" width="20" height="10" fill="#36c" />
+                    <rect x="40" y="15" width="20" height="20" fill="#36c" />
+                    <rect x="70" y="5" width="20" height="30" fill="#36c" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Peak Traffic</div>
+                    <div class="infobox-value">1M+ Users/Day</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Core Logic</div>
+                    <div class="infobox-value">Multi-LLM Routing</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Persistence</div>
+                    <div class="infobox-value">Semantic Caching</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>In the lifecycle of a production AI application, <strong>Scaling RAG</strong> is the process of
+                transitioning from a simple, single-threaded prototype to a resilient, distributed architecture capable
+                of handling millions of concurrent requests. As scale increases, "Infrastructure itself becomes the
+                product," and the focus shifts from pure accuracy to <strong>cost efficiency, latency, and knowledge
+                    freshness</strong>.</p>
+
+            <h2>The Scaling Evolution</h2>
+            <p>The technical requirements for a RAG system change fundamentally as user volume grows.</p>
+
+            <div class="scaling-timeline animate-on-scroll">
+                <div class="scaling-stage">
+                    <span class="stage-label">&lt;1K Users: Prototype</span>
+                    <p>Simple pipeline. Query → Vector DB → LLM → Answer. Basic fixed-size chunking is enough.</p>
+                </div>
+                <div class="scaling-stage">
+                    <span class="stage-label">1-10K Users: Early Production</span>
+                    <p>Optimization begins. Implement <strong>Semantic Caching</strong> (Redis) to short-circuit
+                        repeated queries and <strong>Hybrid Search</strong> to handle diverse phrasings.</p>
+                </div>
+                <div class="scaling-stage">
+                    <span class="stage-label">10-100K Users: Growth</span>
+                    <p>Stability is key. Add <strong>Message Queues</strong> (Kafka/RabbitMQ) to buffer traffic spikes
+                        and <strong>Evaluation Pipelines</strong> to detect quality drift.</p>
+                </div>
+                <div class="scaling-stage">
+                    <span class="stage-label">1M+ Users: Hyperscale</span>
+                    <p>Cost becomes the primary constraint. Use <strong>Multi-LLM Routers</strong> to send simple
+                        queries to cheap models (GPT-4o mini) and complex ones to premium models.</p>
+                </div>
+            </div>
+
+            <h2>Infrastructure Components</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Scaling Value</th>
+                        <th>Stack Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Semantic Cache</strong></td>
+                        <td>Reduces Latency & Cost</td>
+                        <td>Redis / GPTCache</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Vector DB</strong></td>
+                        <td>Handles Millions of Chunks</td>
+                        <td>Pinecone / Qdrant</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Queue System</strong></td>
+                        <td>Stabilizes Request Spikes</td>
+                        <td>Kafka / AWS SQS</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Model Router</strong></td>
+                        <td>Optimizes Token Spending</td>
+                        <td>Custom LLM Logic</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Implementation: Multi-LLM Routing</h2>
+            <p>A "Router" checks query complexity before selecting the model, significantly reducing API costs.</p>
+
+            <div class="code-block">
+                <span class="comment"># Pseudo-logic for Token Efficiency</span><br>
+                is_complex = check_complexity(query)<br>
+                <span class="keyword">if</span> is_complex:<br>
+                &nbsp;&nbsp;model = <span class="string">"gpt-4o"</span><br>
+                <span class="keyword">else</span>:<br>
+                &nbsp;&nbsp;model = <span class="string">"gpt-4o-mini"</span> <span class="comment"># 10x Cheaper</span>
+            </div>
+
+            <h2>Continuous Re-Indexing</h2>
+            <p>At scale, data is never static. Systems must automate embedding updates so the LLM doesn't hallucinate
+                based on outdated information. This requires an indexing pipeline (Airflow/Dagster) that syncs your
+                knowledge base with the vector store every hour.</p>
+
+            <h2>Real-World Scenario: Global Customer Support</h2>
+            <p>A global electronics giant scales its AI support bot. For simple "Where is my order?" questions, the
+                <strong>Semantic Cache</strong> provides sub-100ms answers. For complex technical troubleshooting, the
+                <strong>Kafka Queue</strong> ensures no request is dropped during peak holiday traffic, while a
+                <strong>Router</strong> ensures only high-value queries use the most expensive reasoning models.
+            </p>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>To audit millions of calls without exploding the budget, the <strong>RSA Sales QA Dashboard</strong> uses
+                <strong>Semantic Caching</strong>. Many insurance agents use identical "Welcome Scripts" and "RSA
+                Disclosure Paragraphs." When the system encounters these redundant segments, it retrieves the audit
+                result from the cache in milliseconds instead of calling an expensive LLM. This scaling strategy has
+                auditors.
+            </p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Semantic Caching for Profits</span>
+                <span class="keyword">from</span> langchain.cache <span class="keyword">import</span> RedisSemanticCache
+
+                set_llm_cache(RedisSemanticCache(
+                redis_url=<span class="string">"redis://localhost:6379"</span>,
+                embedding=embed_model,
+                score_threshold=0.9
+                ))
+
+                <span class="comment"># If an advisor uses a standard disclosure script, the result is cached.</span>
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ Scale decides the architecture, not the model.<br>
+                ✅ Semantic caching is the highest ROI for cost reduction.<br>
+                ✅ Message queues are required for system stability at 100k+ users.<br>
+                ✅ Multi-LLM routing prevents cost explosion at hyperscale.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

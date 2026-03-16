@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Failure Modes and Recovery - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .failure-matrix {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .failure-card {
+            padding: 15px;
+            border: 1px solid var(--wp-border);
+            border-left: 5px solid #f03e3e;
+            background: #fff5f5;
+        }
+
+        .failure-card h3 {
+            margin-top: 0;
+            color: #c92a2a;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Agent Failure Modes</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Reliability Engineering</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <line x1="10" y1="30" x2="90" y2="10" stroke="#f03e3e" stroke-width="3" />
+                    <circle cx="50" cy="20" r="10" fill="none" stroke="#666" stroke-width="1" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Goal</div>
+                    <div class="infobox-value">Zero-Downtime Loops</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Primary Fix</div>
+                    <div class="infobox-value">Max Step Limits</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Monitoring</div>
+                    <div class="infobox-value">Trace Analysis</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>In autonomous agent design, <strong>Agent Failure Modes</strong> are recurring patterns of behavior where
+                a system fails to complete its assigned task or enters a non-productive state. Robust agentic systems
+                must go beyond basic "Try/Catch" blocks and implement <strong>Cognitive Fallbacks</strong>—strategies
+                that inform the LLM of its error and provide the context necessary for self-correction.</p>
+
+            <h2>Categorization of Failures</h2>
+            <div class="failure-matrix animate-on-scroll">
+                <div class="failure-card">
+                    <h3>Infinite Loops</h3>
+                    <p>The agent repeatedly calls the same tool with the same parameters without achieving a
+                        breakthrough state.</p>
+                </div>
+                <div class="failure-card">
+                    <h3>Tool Hallucination</h3>
+                    <p>The reasoning engine invents tool names or schemas that are not supported by the underlying API
+                        environment.</p>
+                </div>
+                <div class="failure-card">
+                    <h3>Context Dilution</h3>
+                    <p>In long-running sessions, the task goal is "lost" as the context window fills with tool results
+                        and logs.</p>
+                </div>
+                <div class="failure-card">
+                    <h3>Wrong Specification</h3>
+                    <p>The agent picks a valid tool but passes malformed or logically incorrect parameters (e.g.,
+                        negative price).</p>
+                </div>
+            </div>
+
+            <h2>Recovery Strategies</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Failure Type</th>
+                        <th>Automated Guardrail</th>
+                        <th>Cognitive Recovery</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Looping</strong></td>
+                        <td>Max iteration limit (N=10)</td>
+                        <td>Prompt to "Try a new strategy"</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hallucination</strong></td>
+                        <td>Tool inventory validation</td>
+                        <td>List valid tools in the error msg</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Timeout</strong></td>
+                        <td>Asynchronous termination</td>
+                        <td>Inform LLM: "Service Unavailable"</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Inaccuracy</strong></td>
+                        <td>Output relevance check</td>
+                        <td>Re-pass the original objective</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>The "Error Visibility" Principle</h2>
+            <div class="side-note">
+                ⚠️ <strong>Critical Rule:</strong> Never silently handle an error in an agent loop. If a tool fails, the
+                error message should be passed <em>into</em> the next "Thought" step so the LLM can reason about
+                <em>why</em> the failure occurred and pivot its strategy.
+            </div>
+
+            <h2>Building Robust Agents</h2>
+            <ul>
+                <li><strong>State Snapshots:</strong> Record the state of work at every step. If the agent fails at step
+                    8, allow a human or another agent to resume from step 7.</li>
+                <li><strong>Schema Constraints:</strong> Use Pydantic or JSON Schema to force the LLM into generating
+                    valid payloads.</li>
+                <li><strong>Few-Shot Recovery:</strong> Include examples in the system prompt of an agent correcting its
+                    own previous tool-call mistake.</li>
+                <li><strong>Human-in-the-Loop (HITL):</strong> Design "Pause Nodes" where the system waits for human
+                    approval for high-risk actions (e.g., spending money or deleting data).</li>
+            </ul>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>During a high-volume audit, the <strong>RSA Sales QA Dashboard</strong> encountered a <strong>Tool
+                    Hallucination</strong> failure where the agent tried to call a non-existent
+                <code>verify_customer_bank_balance()</code> tool. To recover, the system used a <strong>Cognitive
+                    Fallback</strong>: it caught the error, informed the LLM that "Bank access is not a permitted tool,"
+                and provided a list of valid alternatives. The agent then pivoted to using the
+                the entire production pipeline.
+            </p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Cognitive Fallback Loop</span>
+                <span class="keyword">try</span>:
+                action = agent.invoke(query)
+                <span class="keyword">except</span> ToolNotFoundError <span class="keyword">as</span> e:
+                <span class="comment"># Feed error back to LLM to re-evaluate strategy</span>
+                feedback = f<span class="string">"Error: {e}. Valid tools: ['sql_search', 'policy_search']"</span>
+                action = agent.invoke(query + <span class="string">"\n"</span> + feedback)
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ Set a hard limit on the number of steps (Max Steps = 10).<br>
+                ✅ Use JSON Schema to prevent parameter type mismatches.<br>
+                ✅ Feed all errors back to the model as an "Observation."<br>
+                ✅ Separate the "Task Goal" from the "Action Log" to maintain focus.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

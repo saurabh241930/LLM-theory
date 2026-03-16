@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LangGraph & Multi-Agent Systems | LLM Cheat Sheet</title>
+    <style>
+        :root {
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-primary: #0369a1;
+            --accent-secondary: #be185d;
+            --accent-success: #15803d;
+            --accent-warning: #b45309;
+            --accent-danger: #b91c1c;
+            --border-color: #cbd5e1;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--accent-primary);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+            margin-bottom: var(--space-md);
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; }
+        }
+
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+            font-size: 0.9rem;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            min-height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ===== SUPERVISOR PATTERN ANIMATION ===== */
+        .supervisor-diagram {
+            position: relative;
+            width: 130px;
+            height: 130px;
+            margin: 0 auto;
+        }
+
+        .supervisor-node {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-primary);
+            color: white;
+            font-size: 9px;
+            font-weight: bold;
+            text-align: center;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+            box-shadow: 0 0 8px rgba(3, 105, 161, 0.5);
+        }
+
+        .specialist {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-secondary);
+            color: white;
+            font-size: 8px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .specialist-left {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            animation: pulseLeft 2s infinite;
+        }
+
+        .specialist-middle {
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+            animation: pulseMiddle 2s infinite 0.4s;
+        }
+
+        .specialist-right {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            animation: pulseRight 2s infinite 0.8s;
+        }
+
+        @keyframes pulseLeft {
+            0%, 100% { opacity: 0.4; box-shadow: none; }
+            50% { opacity: 1; box-shadow: 0 0 8px var(--accent-secondary); }
+        }
+
+        @keyframes pulseMiddle {
+            0%, 100% { opacity: 0.4; box-shadow: none; }
+            50% { opacity: 1; box-shadow: 0 0 8px var(--accent-secondary); }
+        }
+
+        @keyframes pulseRight {
+            0%, 100% { opacity: 0.4; box-shadow: none; }
+            50% { opacity: 1; box-shadow: 0 0 8px var(--accent-secondary); }
+        }
+
+        /* ===== COLLABORATIVE FLOW ANIMATION ===== */
+        .flow-sequence {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            width: 100%;
+        }
+
+        .flow-node {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #dbeafe;
+            border: 1px solid var(--accent-primary);
+            font-size: 7px;
+            font-weight: bold;
+            animation: nodeFlow 4s infinite;
+        }
+
+        .flow-node:nth-child(1) { animation-delay: 0s; }
+        .flow-node:nth-child(3) { animation-delay: 1s; }
+        .flow-node:nth-child(5) { animation-delay: 2s; }
+        .flow-node:nth-child(7) { animation-delay: 3s; }
+
+        @keyframes nodeFlow {
+            0%, 100% { background: #dbeafe; transform: scale(1); }
+            50% { background: var(--accent-primary); color: white; transform: scale(1.1); }
+        }
+
+        .flow-arrow {
+            font-size: 10px;
+            color: var(--accent-primary);
+            animation: arrowBounce 4s infinite;
+        }
+
+        .flow-arrow:nth-child(2) { animation-delay: 0.5s; }
+        .flow-arrow:nth-child(4) { animation-delay: 1.5s; }
+        .flow-arrow:nth-child(6) { animation-delay: 2.5s; }
+
+        @keyframes arrowBounce {
+            0%, 100% { opacity: 0.3; transform: translateX(0); }
+            50% { opacity: 1; transform: translateX(2px); }
+        }
+
+        /* Compare Grid */
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin: 6px 0;
+        }
+
+        .compare-item {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 6px;
+            font-size: 0.8rem;
+        }
+
+        .compare-item.langchain {
+            border-left: 3px solid var(--accent-warning);
+            background: #fffbeb;
+        }
+
+        .compare-item.langgraph {
+            border-left: 3px solid var(--accent-primary);
+            background: #f0f9ff;
+        }
+
+        .compare-item strong { display: block; margin-bottom: 2px; }
+
+        /* Grid Grid */
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            margin: 6px 0;
+        }
+
+        .component-item {
+            background: #f0f9ff;
+            border: 1px solid var(--accent-primary);
+            border-radius: 3px;
+            padding: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .component-item strong { display: block; margin-bottom: 2px; color: var(--accent-primary); }
+
+        /* Memory Grid */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 4px;
+            margin: 6px 0;
+        }
+
+        .memory-item {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .memory-item.short {
+            border-left: 3px solid var(--accent-primary);
+            background: #f0f9ff;
+        }
+
+        .memory-item.long {
+            border-left: 3px solid var(--accent-secondary);
+            background: #ffe2f0;
+        }
+
+        .memory-item.shared {
+            border-left: 3px solid var(--accent-success);
+            background: #f0fdf4;
+        }
+
+        .memory-item strong { display: block; margin-bottom: 2px; }
+
+        /* Code Block */
+        .code-block {
+            background: #1e293b;
+            color: #cbd5e1;
+            padding: 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            margin: 4px 0;
+            overflow-x: auto;
+            line-height: 1.3;
+        }
+
+        /* Multi-agent cards */
+        .agent-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin: 6px 0;
+        }
+
+        .agent-card {
+            background: #f0fdf4;
+            border: 1px solid var(--accent-success);
+            border-radius: 3px;
+            padding: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .agent-card strong { color: var(--accent-success); }
+
+        /* Takeaway Box */
+        .takeaway {
+            background: #f0fdf4;
+            border: 2px solid var(--accent-success);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            margin-top: 20px;
+        }
+
+        .takeaway h3 {
+            color: var(--accent-success);
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+        }
+
+        .takeaway ul { list-style: none; }
+        .takeaway li {
+            padding: 3px 0 3px 18px;
+            position: relative;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+
+        .takeaway li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--accent-success);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LangGraph & Multi-Agent Systems</h1>
+            <p class="subtitle">Framework for stateful agent architectures</p>
+            <span class="badge">CHEAT SHEET</span>
+        </header>
+
+        <!-- Section 1: What is LangGraph -->
+        <div class="topic-section">
+            <div>
+                <h2>1. What is LangGraph?</h2>
+                <p><strong>LangGraph</strong> = Graph-based state machine for agents. Better than LangChain for complex workflows.</p>
+                <p style="margin-top: 6px;"><strong>LangChain:</strong> Linear chains (A→B→C)</p>
+                <p style="font-size: 0.9rem; color: #666;">Limited state, hard to loop back</p>
+                <p style="margin-top: 6px;"><strong>LangGraph:</strong> Graph execution with state (loops possible)</p>
+                <p style="font-size: 0.9rem; color: #666;">Full control, multi-step, conditional routing</p>
+                <div class="insight">LangGraph = Explicit state control + graph routing</div>
+            </div>
+            <div class="diagram-box">
+                <div class="compare-grid">
+                    <div class="compare-item langchain">
+                        <strong>LangChain</strong>
+                        Linear flow
+                        <br>Limited state
+                    </div>
+                    <div class="compare-item langgraph">
+                        <strong>LangGraph</strong>
+                        Graph flow
+                        <br>Full state
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Key Components -->
+        <div class="topic-section">
+            <div>
+                <h2>2. Key Components: Nodes, Edges, State</h2>
+                <p><strong>Node:</strong> Function processing state. Calls LLM, tools, or decisions.</p>
+                <p><strong>Edge:</strong> Connection between nodes. Can be conditional or direct.</p>
+                <p><strong>State:</strong> Central data (messages, results, context). All nodes see it.</p>
+                <div class="insight" style="margin-top: 6px;">State is shared → all agents access same facts</div>
+                <p style="margin-top: 6px; font-size: 0.8rem;"><strong>Example state:</strong> messages[], current_task, tool_results</p>
+            </div>
+            <div class="diagram-box">
+                <div class="component-grid">
+                    <div class="component-item">
+                        <strong>Node</strong>
+                        Function
+                        <br>Processes state
+                    </div>
+                    <div class="component-item">
+                        <strong>Edge</strong>
+                        Connection
+                        <br>Routes data
+                    </div>
+                    <div class="component-item">
+                        <strong>State</strong>
+                        Shared data
+                        <br>All nodes see
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Simple Agent -->
+        <div class="topic-section">
+            <div>
+                <h2>3. Simple Agent: The Loop</h2>
+                <p><strong>Flow:</strong> Start → LLM (decide) → Tool (execute) → Loop</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;">Step 1: LLM reads state, decides action</p>
+                <p style="font-size: 0.8rem;">Step 2: Tool executes, adds result to state</p>
+                <p style="font-size: 0.8rem;">Step 3: Loop back (conditional edge) until done</p>
+                <p style="font-size: 0.8rem;">Step 4: Return final answer</p>
+                <div class="code-block">
+graph.add_node("llm", llm_function)
+graph.add_node("tool", tool_function)
+graph.add_edge("llm", "tool")
+graph.add_edge("tool", "llm")  # Loop back
+                </div>
+            </div>
+            <div class="diagram-box">
+                <div class="flow-sequence">
+                    <div class="flow-node">LLM</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-node">Tool</div>
+                    <div class="flow-arrow">↑</div>
+                    <div class="flow-node">Loop</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Supervisor Pattern -->
+        <div class="topic-section">
+            <div>
+                <h2>4. Supervisor Pattern: Route to Specialists</h2>
+                <p><strong>Problem:</strong> One agent can't specialize. Solution: Route to experts</p>
+                <p style="margin-top: 6px;"><strong>Supervisor LLM:</strong> Reads query, decides routing</p>
+                <p><strong>Specialist Agents:</strong> Code expert, math expert, research expert</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;">Query → Supervisor picks best specialist → Specialist solves → Return answer</p>
+                <div class="insight">Each specialist has own tools and prompts</div>
+            </div>
+            <div class="diagram-box">
+                <div class="supervisor-diagram">
+                    <div class="supervisor-node">Supervisor</div>
+                    <div class="specialist specialist-left">Code</div>
+                    <div class="specialist specialist-middle">Math</div>
+                    <div class="specialist specialist-right">Research</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5: Collaborative Pattern -->
+        <div class="topic-section">
+            <div>
+                <h2>5. Collaborative Pattern: Sequential Agents</h2>
+                <p><strong>Flow:</strong> Agent A → Agent B → Agent C → Answer</p>
+                <p style="margin-top: 6px;">Each agent refines previous work. No supervisor bottleneck.</p>
+                <p><strong>Example:</strong> Researcher gathers → Analyst filters → Writer summarizes</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;"><strong>Key:</strong> All agents share state, see full history, pass refined results</p>
+                <div class="insight">Better for sequential refinement workflows</div>
+            </div>
+            <div class="diagram-box">
+                <div class="flow-sequence">
+                    <div class="flow-node">A</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-node">B</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-node">C</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-node">End</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 6: Multi-Agent Example -->
+        <div class="topic-section">
+            <div>
+                <h2>6. Research Assistant Workflow</h2>
+                <p><strong>Task:</strong> "Compare React vs Vue frameworks"</p>
+                <div style="margin-top: 6px;">
+                    <p style="font-size: 0.8rem;"><strong>1. Researcher:</strong> Search web for comparisons, gather links</p>
+                    <p style="font-size: 0.8rem;"><strong>2. Analyzer:</strong> Read summaries, extract differences (performance, learning curve)</p>
+                    <p style="font-size: 0.8rem;"><strong>3. Synthesizer:</strong> Combine into structured comparison</p>
+                </div>
+                <p style="margin-top: 6px; font-size: 0.8rem;"><strong>State contains:</strong> query, research_results[], analysis, final_answer</p>
+            </div>
+            <div class="diagram-box">
+                <div class="agent-cards">
+                    <div class="agent-card">
+                        <strong>🔍</strong><br>
+                        Researcher<br>
+                        Searches web
+                    </div>
+                    <div class="agent-card">
+                        <strong>📝</strong><br>
+                        Analyzer<br>
+                        Filters key info
+                    </div>
+                    <div class="agent-card">
+                        <strong>⚙️</strong><br>
+                        Synthesizer<br>
+                        Creates summary
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 7: Memory Systems -->
+        <div class="topic-section">
+            <div>
+                <h2>7. Memory: How Agents Remember</h2>
+                <p><strong>Short-term:</strong> Recent messages (last 10) - current context</p>
+                <p><strong>Long-term:</strong> Vector DB - learned facts across sessions</p>
+                <p><strong>Shared:</strong> Global state - all agents read/write same facts</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;"><strong>Implementation:</strong> Store in state dict, use vector search for semantic retrieval</p>
+                <div class="insight">Shared state = all agents on same page</div>
+            </div>
+            <div class="diagram-box">
+                <div class="memory-grid">
+                    <div class="memory-item short">
+                        <strong>Short</strong>
+                        Current 10 messages
+                    </div>
+                    <div class="memory-item long">
+                        <strong>Long</strong>
+                        Vector DB facts
+                    </div>
+                    <div class="memory-item shared">
+                        <strong>Shared</strong>
+                        State dict
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Takeaway -->
+        <div class="takeaway">
+            <h3>🎯 Key Takeaways</h3>
+            <ul>
+                <li><strong>LangGraph</strong> = Stateful graph execution (better than LangChain chains)</li>
+                <li><strong>Nodes</strong> process state, <strong>Edges</strong> route between them</li>
+                <li><strong>Supervisor pattern</strong> routes to specialists (best for domain-specific questions)</li>
+                <li><strong>Collaborative pattern</strong> passes results sequentially (best for refinement)</li>
+                <li><strong>State is shared</strong> across all agents (defines what agents can access)</li>
+                <li><strong>Three memory layers:</strong> Short (context), Long (vector DB), Shared (state)</li>
+                <li>Always define clear state schema so all agents understand available data</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

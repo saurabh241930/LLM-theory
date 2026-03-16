@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReAct (Reason + Act) Pattern | LLM Cheat Sheet</title>
+    <style>
+        :root {
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-primary: #0369a1;
+            --accent-secondary: #be185d;
+            --accent-success: #15803d;
+            --accent-warning: #b45309;
+            --accent-danger: #b91c1c;
+            --border-color: #cbd5e1;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--accent-primary);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+            margin-bottom: var(--space-md);
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; }
+            body { padding: 4px; }
+        }
+
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+            font-size: 0.9rem;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            min-height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ===== REACT LOOP ANIMATION ===== */
+        .react-loop {
+            position: relative;
+            width: 130px;
+            height: 130px;
+            margin: 0 auto;
+        }
+
+        .loop-step {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .loop-step.thought {
+            background: var(--accent-primary);
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: cycleThought 8s infinite;
+        }
+
+        .loop-step.action {
+            background: var(--accent-secondary);
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            animation: cycleAction 8s infinite;
+        }
+
+        .loop-step.observe {
+            background: var(--accent-success);
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: cycleObserve 8s infinite;
+        }
+
+        .loop-step.answer {
+            background: var(--accent-warning);
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            animation: cycleAnswer 8s infinite;
+        }
+
+        @keyframes cycleThought {
+            0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--accent-primary); }
+            20% { opacity: 1; }
+            25% { opacity: 0.4; box-shadow: none; }
+            80% { opacity: 0.4; }
+        }
+
+        @keyframes cycleAction {
+            0% { opacity: 0.4; }
+            25% { opacity: 1; box-shadow: 0 0 10px var(--accent-secondary); }
+            45% { opacity: 1; }
+            50% { opacity: 0.4; box-shadow: none; }
+        }
+
+        @keyframes cycleObserve {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; box-shadow: 0 0 10px var(--accent-success); }
+            70% { opacity: 1; }
+            75% { opacity: 0.4; box-shadow: none; }
+        }
+
+        @keyframes cycleAnswer {
+            0% { opacity: 0.4; }
+            75% { opacity: 1; box-shadow: 0 0 10px var(--accent-warning); }
+            90% { opacity: 1; }
+            100% { opacity: 0.4; box-shadow: none; }
+        }
+
+        /* Flow arrows */
+        svg.loop-arrows {
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .arrow-animate { animation: arrowPulse 8s infinite; }
+
+        @keyframes arrowPulse {
+            0% { stroke-dasharray: 2, 3; stroke-dashoffset: 0; }
+            100% { stroke-dasharray: 2, 3; stroke-dashoffset: -50; }
+        }
+
+        /* Comparison Grid */
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin: 6px 0;
+        }
+
+        .compare-item {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 6px;
+            font-size: 0.8rem;
+        }
+
+        .compare-item.good {
+            border-left: 3px solid var(--accent-success);
+            background: #f0fdf4;
+        }
+
+        .compare-item.bad {
+            border-left: 3px solid var(--accent-danger);
+            background: #fef2f2;
+        }
+
+        .compare-item strong { display: block; margin-bottom: 2px; }
+
+        /* Multi-step flow */
+        .flow-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            margin: 6px 0;
+        }
+
+        .step-item {
+            background: #dbeafe;
+            border: 1px solid var(--accent-primary);
+            border-radius: 3px;
+            padding: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+            position: relative;
+            animation: stepPulse 6s infinite;
+        }
+
+        .step-item:nth-child(1) { animation-delay: 0s; }
+        .step-item:nth-child(2) { animation-delay: 2s; }
+        .step-item:nth-child(3) { animation-delay: 4s; }
+
+        @keyframes stepPulse {
+            0%, 30% { background: #dbeafe; transform: scale(1); }
+            50% { background: #0369a1; color: white; transform: scale(1.05); }
+            70%, 100% { background: #dbeafe; transform: scale(1); }
+        }
+
+        .step-item strong { display: block; font-size: 0.8rem; margin-bottom: 1px; }
+
+        /* Code Box */
+        .code-block {
+            background: #1e293b;
+            color: #cbd5e1;
+            padding: 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            margin: 4px 0;
+            overflow-x: auto;
+            line-height: 1.3;
+        }
+
+        .code-block .keyword { color: #f59e0b; }
+        .code-block .function { color: #60a5fa; }
+        .code-block .string { color: #34d399; }
+
+        /* Best Practices Grid */
+        .practices-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 4px;
+            margin: 6px 0;
+        }
+
+        .practice-item {
+            background: #f0fdf4;
+            border-left: 3px solid var(--accent-success);
+            padding: 6px;
+            border-radius: 2px;
+            font-size: 0.8rem;
+        }
+
+        .practice-item strong { color: var(--accent-success); }
+
+        /* Pitfall Grid */
+        .pitfall-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin: 6px 0;
+        }
+
+        .pitfall-item {
+            background: #fef2f2;
+            border: 1px solid var(--accent-danger);
+            border-radius: 3px;
+            padding: 6px;
+            font-size: 0.8rem;
+        }
+
+        .pitfall-item strong { color: var(--accent-danger); display: block; margin-bottom: 2px; }
+
+        /* Takeaway Box */
+        .takeaway {
+            background: #f0fdf4;
+            border: 2px solid var(--accent-success);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            margin-top: 20px;
+        }
+
+        .takeaway h3 {
+            color: var(--accent-success);
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+        }
+
+        .takeaway ul { list-style: none; }
+        .takeaway li {
+            padding: 3px 0 3px 18px;
+            position: relative;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+
+        .takeaway li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--accent-success);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ReAct Pattern</h1>
+            <p class="subtitle">Reason + Act = Step-by-Step Problem Solving</p>
+            <span class="badge">CHEAT SHEET</span>
+        </header>
+
+        <!-- Section 1: What is ReAct -->
+        <div class="topic-section">
+            <div>
+                <h2>1. What is ReAct?</h2>
+                <p><strong>ReAct = Reason + Act</strong> loop. Agents solve problems step-by-step:</p>
+                <ul>
+                    <li><strong>Reason:</strong> LLM thinks about problem</li>
+                    <li><strong>Act:</strong> Call a tool</li>
+                    <li><strong>Observe:</strong> See result</li>
+                    <li><strong>Repeat:</strong> Until done</li>
+                </ul>
+                <p style="margin-top: 6px;"><strong>Task example:</strong> "What's weather in NYC tomorrow?"</p>
+                <div class="insight">Handles multi-step problems better than blind tool calling</div>
+            </div>
+            <div class="diagram-box">
+                <div class="react-loop">
+                    <svg class="loop-arrows" viewBox="0 0 130 130">
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                <polygon points="0 0, 10 3, 0 6" fill="#0369a1" />
+                            </marker>
+                        </defs>
+                        <path d="M 65 35 Q 95 65 65 95" stroke="#0369a1" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" class="arrow-animate" />
+                        <path d="M 95 65 Q 65 95 35 65" stroke="#0369a1" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" class="arrow-animate" />
+                        <path d="M 35 65 Q 5 35 65 35" stroke="#0369a1" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" class="arrow-animate" />
+                    </svg>
+                    <div class="loop-step thought">Thought</div>
+                    <div class="loop-step action">Action</div>
+                    <div class="loop-step observe">Observe</div>
+                    <div class="loop-step answer">Answer</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Four Key Components -->
+        <div class="topic-section">
+            <div>
+                <h2>2. Four Key Components</h2>
+                <p><strong>Thought:</strong> LLM explains what's needed</p>
+                <p style="font-size: 0.8rem; color: #666; margin-bottom: 6px;">"Need weather API for NYC"</p>
+                <p><strong>Action:</strong> Tool to call + parameters</p>
+                <p style="font-size: 0.8rem; color: #666; margin-bottom: 6px;">get_weather(city="NYC", days=1)</p>
+                <p><strong>Observation:</strong> Tool result</p>
+                <p style="font-size: 0.8rem; color: #666; margin-bottom: 6px;">"High 72°F, Low 60°F, Sunny"</p>
+                <p><strong>Final Answer:</strong> Human-friendly response</p>
+                <p style="font-size: 0.8rem; color: #666; margin-bottom: 6px;">"Tomorrow sunny, 72°F high"</p>
+            </div>
+            <div class="diagram-box">
+                <div class="flow-steps">
+                    <div class="step-item">
+                        <strong style="color: #0369a1;">💭</strong><br>
+                        Thought
+                    </div>
+                    <div class="step-item">
+                        <strong style="color: #be185d;">🔧</strong><br>
+                        Action
+                    </div>
+                    <div class="step-item">
+                        <strong style="color: #15803d;">👁️</strong><br>
+                        Observe
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: ReAct vs Simple Calling -->
+        <div class="topic-section">
+            <div>
+                <h2>3. ReAct vs Simple Function Calling</h2>
+                <p><strong>Simple approach:</strong> Ask LLM → call one tool → done</p>
+                <p style="font-size: 0.8rem; color: #666;">❌ Fails on multi-step problems</p>
+                <p style="margin-top: 6px;"><strong>ReAct approach:</strong> Reason → act → observe → repeat</p>
+                <p style="font-size: 0.8rem; color: #666;">✅ Handles complex tasks with recovery</p>
+                <div class="compare-grid">
+                    <div class="compare-item bad">
+                        <strong>❌ Simple</strong>
+                        One tool call
+                        <br>No recovery
+                    </div>
+                    <div class="compare-item good">
+                        <strong>✅ ReAct</strong>
+                        Multi-step loop
+                        <br>Error recovery
+                    </div>
+                </div>
+            </div>
+            <div class="diagram-box">
+                <div style="text-align: center; font-size: 0.8rem; width: 100%;">
+                    <div style="background: #fef2f2; padding: 6px; border-radius: 3px; margin-bottom: 6px; border-left: 3px solid #b91c1c;">
+                        <strong style="color: #b91c1c;">Simple</strong><br>
+                        Call → Result
+                    </div>
+                    <div style="background: #f0fdf4; padding: 6px; border-radius: 3px; border-left: 3px solid #15803d;">
+                        <strong style="color: #15803d;">ReAct</strong><br>
+                        Think → Call<br>
+                        Observe → Loop
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Real Example -->
+        <div class="topic-section">
+            <div>
+                <h2>4. Real Example: Compare Laptop Prices</h2>
+                <p><strong>Task:</strong> "Find cheaper: Amazon or BestBuy?"</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;"><strong>Step 1:</strong> Search Amazon ($999)</p>
+                <p style="font-size: 0.8rem;"><strong>Step 2:</strong> Search BestBuy ($899)</p>
+                <p style="font-size: 0.8rem;"><strong>Step 3:</strong> Compare → BestBuy is cheaper</p>
+                <p style="font-size: 0.8rem;"><strong>Step 4:</strong> Add to BestBuy cart</p>
+                <p style="font-size: 0.8rem;"><strong>Step 5:</strong> Return answer</p>
+                <div class="insight">Think first, then act. Observe before next action.</div>
+            </div>
+            <div class="diagram-box">
+                <div style="width: 100%; text-align: center;">
+                    <div style="font-size: 0.75rem; display: grid; gap: 4px;">
+                        <div style="background: #dbeafe; padding: 4px; border-radius: 2px;">1. Search Amazon</div>
+                        <div style="color: #0369a1; font-size: 0.7rem;">↓</div>
+                        <div style="background: #dbeafe; padding: 4px; border-radius: 2px;">2. Search BestBuy</div>
+                        <div style="color: #0369a1; font-size: 0.7rem;">↓</div>
+                        <div style="background: #f0fdf4; padding: 4px; border-radius: 2px; border: 1px solid #15803d;">Result: Add to cart</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5: Implementation Pattern -->
+        <div class="topic-section">
+            <div>
+                <h2>5. Implementation Pattern</h2>
+                <p style="margin-bottom: 4px;"><strong>Core loop:</strong></p>
+                <div class="code-block">
+while steps &lt; MAX_STEPS:
+  response = llm.complete(messages)
+  
+  if "Final Answer" in response:
+    return response
+  
+  action = parse_action(response)
+  result = execute_tool(action)
+  
+  messages += {
+    "role": "user",
+    "content": f"Observation: {result}"
+  }
+                </div>
+                <p style="font-size: 0.8rem; margin-top: 4px;"><strong>Key:</strong> Always set max_steps to prevent infinite loops</p>
+            </div>
+            <div class="diagram-box">
+                <div style="width: 100%; text-align: center; font-size: 0.75rem;">
+                    <div style="background: #dbeafe; padding: 6px; border-radius: 3px; margin-bottom: 2px;">Initialize</div>
+                    <div style="color: #0369a1; margin: 2px 0;">↓</div>
+                    <div style="background: #dbeafe; padding: 6px; border-radius: 3px; margin-bottom: 2px;">LLM Think</div>
+                    <div style="color: #0369a1; margin: 2px 0;">↓</div>
+                    <div style="background: #dbeafe; padding: 6px; border-radius: 3px; margin-bottom: 2px;">Execute Tool</div>
+                    <div style="color: #0369a1; margin: 2px 0;">↓</div>
+                    <div style="background: #dbeafe; padding: 6px; border-radius: 3px; margin-bottom: 2px;">Loop Back</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 6: Best Practices -->
+        <div class="topic-section">
+            <div>
+                <h2>6. Best Practices</h2>
+                <div class="practices-grid">
+                    <div class="practice-item"><strong>✓ Set max_steps:</strong> Prevent infinite loops (10-15 steps typical)</div>
+                    <div class="practice-item"><strong>✓ Format observations:</strong> Clear JSON output from tools</div>
+                    <div class="practice-item"><strong>✓ Log execution:</strong> Track reasoning for debugging</div>
+                    <div class="practice-item"><strong>✓ Error recovery:</strong> Try different tool if one fails</div>
+                    <div class="practice-item"><strong>✓ Clear tool descriptions:</strong> Help LLM pick right tool</div>
+                </div>
+            </div>
+            <div class="diagram-box">
+                <div style="width: 100%; font-size: 0.75rem;">
+                    <div style="background: #f0fdf4; padding: 6px; border-left: 3px solid #15803d; border-radius: 2px; margin-bottom: 4px;">
+                        <strong>✓ Max Steps</strong><br>
+                        Safe limit (10)
+                    </div>
+                    <div style="background: #f0fdf4; padding: 6px; border-left: 3px solid #15803d; border-radius: 2px;">
+                        <strong>✓ Good Tools</strong><br>
+                        Clear descriptions
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 7: Common Pitfalls -->
+        <div class="topic-section">
+            <div>
+                <h2>7. Common Pitfalls</h2>
+                <div class="pitfall-grid">
+                    <div class="pitfall-item">
+                        <strong>Infinite Loops</strong>
+                        Calling same tool repeatedly
+                    </div>
+                    <div class="pitfall-item">
+                        <strong>Wrong Tools</strong>
+                        Poor tool descriptions
+                    </div>
+                    <div class="pitfall-item">
+                        <strong>Bad Format</strong>
+                        Observations not JSON
+                    </div>
+                    <div class="pitfall-item">
+                        <strong>No Recovery</strong>
+                        Crashes on first error
+                    </div>
+                </div>
+            </div>
+            <div class="diagram-box">
+                <div style="width: 100%; text-align: center; font-size: 0.75rem;">
+                    <div style="background: #fef2f2; padding: 6px; border-radius: 3px; border-left: 3px solid #b91c1c;">
+                        <strong style="color: #b91c1c;">❌ Pitfalls:</strong><br>
+                        No step limit<br>
+                        Silent failures<br>
+                        Unclear tools
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Takeaway -->
+        <div class="takeaway">
+            <h3>🎯 Key Takeaways</h3>
+            <ul>
+                <li><strong>ReAct Loop</strong> = Thought → Action → Observation → Repeat</li>
+                <li><strong>Multi-step problems</strong> need reasoning between tool calls</li>
+                <li><strong>Always set max_steps</strong> to prevent infinite loops</li>
+                <li><strong>Clear tool descriptions</strong> help LLM pick the right one</li>
+                <li><strong>Format observations clearly</strong> (JSON) for LLM to understand</li>
+                <li><strong>Log every step</strong> for debugging when things go wrong</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

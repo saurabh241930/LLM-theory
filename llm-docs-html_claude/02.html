@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tokenization & Context Windows: Complete Guide</title>
+    <style>
+        :root {
+            /* Wikipedia-style Palette */
+            --bg-body: #f6f6f6;
+            --bg-content: #ffffff;
+            --text-primary: #202122;
+            --text-secondary: #54595d;
+            --accent-primary: #0645ad;
+            --accent-secondary: #d73027;
+            --accent-success: #007d2e;
+            --accent-warning: #d46a2a;
+            --border-color: #a2a9b1;
+            --wiki-bg: #f8f9fa;
+            
+            /* Typography */
+            --font-body: Georgia, serif;
+            --font-code: monospace;
+            --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --radius: 2px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            font-size: 15px;
+            padding: var(--space-md);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-content);
+            padding: var(--space-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        /* Header - Wikipedia Style */
+        header {
+            border-bottom: 3px solid var(--accent-primary);
+            padding-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text-primary);
+            font-weight: normal;
+            margin-bottom: 4px;
+            font-family: var(--font-system);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Content Sections */
+        .topic-section {
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-lg);
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .topic-section:last-of-type {
+            border-bottom: none;
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            margin-top: var(--space-lg);
+            margin-bottom: var(--space-md);
+            font-weight: normal;
+            font-family: var(--font-system);
+            border-bottom: 2px solid #e8e8e8;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-top: var(--space-md);
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-family: var(--font-system);
+        }
+
+        p {
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+            text-align: justify;
+            line-height: 1.8;
+        }
+
+        strong { 
+            color: var(--text-primary); 
+            font-weight: bold; 
+        }
+
+        em {
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        code {
+            background: var(--wiki-bg);
+            padding: 2px 4px;
+            border-radius: var(--radius);
+            font-family: var(--font-code);
+            font-size: 0.9em;
+            color: var(--accent-secondary);
+        }
+
+        ul, ol {
+            margin-left: 2em;
+            margin-bottom: var(--space-md);
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+
+        /* Info Box */
+        .infobox {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-left: 4px solid var(--accent-primary);
+            border-radius: var(--radius);
+        }
+
+        /* Figure Container */
+        .figure-container {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            text-align: center;
+            border-radius: var(--radius);
+            position: relative;
+        }
+
+        .figure-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideRight {
+            from {
+                opacity: 0;
+                transform: translateX(-15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes floatIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Token Display */
+        .token-blocks {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: var(--space-md) 0;
+        }
+
+        .token-block {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+            border: 2px solid var(--accent-primary);
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-family: var(--font-code);
+            font-weight: bold;
+            color: var(--text-primary);
+            animation: floatIn 0.6s ease-out forwards;
+        }
+
+        .token-block:nth-child(1) { animation-delay: 0s; }
+        .token-block:nth-child(2) { animation-delay: 0.15s; }
+        .token-block:nth-child(3) { animation-delay: 0.3s; }
+        .token-block:nth-child(4) { animation-delay: 0.45s; }
+
+        /* Processing Pipeline */
+        .pipeline-flow {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: var(--space-md) 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .pipeline-box {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+            border: 2px solid var(--accent-primary);
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-family: var(--font-system);
+            text-align: center;
+            color: var(--text-primary);
+            position: relative;
+            animation: slideRight 0.6s ease-out forwards;
+        }
+
+        .pipeline-box:nth-child(1) { animation-delay: 0s; }
+        .pipeline-box:nth-child(3) { animation-delay: 0.2s; }
+        .pipeline-box:nth-child(5) { animation-delay: 0.4s; }
+
+        .pipeline-arrow {
+            color: var(--accent-primary);
+            font-size: 1.4rem;
+            animation: slideRight 0.6s ease-out forwards;
+        }
+
+        .pipeline-arrow:nth-child(2) { animation-delay: 0.1s; }
+        .pipeline-arrow:nth-child(4) { animation-delay: 0.3s; }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--space-md) 0;
+            background: var(--bg-content);
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #e8f0ff 0%, #f0f4ff 100%);
+            color: var(--text-primary);
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid var(--accent-primary);
+            font-weight: bold;
+            font-family: var(--font-system);
+        }
+
+        .comparison-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .comparison-table tr:hover {
+            background: var(--wiki-bg);
+        }
+
+        /* Context Window Visual */
+        .context-window {
+            border: 3px dashed var(--accent-primary);
+            border-radius: 4px;
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            background: linear-gradient(135deg, rgba(6, 69, 173, 0.05) 0%, rgba(6, 69, 173, 0.02) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .context-label {
+            position: absolute;
+            top: -12px;
+            left: 12px;
+            background: var(--bg-content);
+            padding: 0 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--accent-primary);
+            font-family: var(--font-system);
+        }
+
+        /* Token Stream */
+        .token-stream {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin: var(--space-md) 0;
+        }
+
+        .token-item {
+            width: 16px;
+            height: 16px;
+            background: var(--accent-primary);
+            border-radius: 2px;
+            animation: floatIn 0.4s ease-out forwards;
+            opacity: 0;
+        }
+
+        .token-item:nth-child(n) {
+            animation-delay: calc(0.03s * var(--item-index, 1));
+        }
+
+        /* Warning Box */
+        .warning-box {
+            background: #fff1f0;
+            border: 1px solid #ffa6a6;
+            border-left: 4px solid var(--accent-secondary);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-radius: var(--radius);
+        }
+
+        /* Takeaway Section */
+        .takeaway-section {
+            background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%);
+            border: 2px solid var(--accent-primary);
+            padding: var(--space-lg);
+            margin-top: var(--space-lg);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-section h2 {
+            color: var(--accent-primary);
+            margin-top: 0;
+        }
+
+        .takeaway-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .takeaway-item {
+            padding: var(--space-md);
+            background: white;
+            border-left: 3px solid var(--accent-success);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-item strong {
+            color: var(--accent-success);
+            display: block;
+            margin-bottom: 6px;
+            font-family: var(--font-system);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--space-md);
+                border: none;
+                box-shadow: none;
+                background: var(--bg-body);
+            }
+            h1 { font-size: 1.4rem; }
+            h2 { font-size: 1.1rem; }
+            .pipeline-flow { flex-direction: column; gap: 8px; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Tokenization & Context Windows</h1>
+            <div class="subtitle">How Language Models Break Down Text and Process Information Within Hard Memory Limits</div>
+        </div>
+    </header>
+
+    <!-- Section 1: What is a Token -->
+    <section class="topic-section">
+        <h2>Tokens: The Atomic Unit of Language Models</h2>
+        
+        <p>Language models do not process text character by character or even word by word. Instead, they work with <strong>tokens</strong>&mdash;variable-length chunks of text that serve as the fundamental unit of computation. A token might consist of a single character, part of a word, a complete word, or even multiple words with punctuation, depending on how the tokenizer is designed</p>
+
+        <p>Consider the word "hello." In most tokenizers, it will be represented as a single token. However, a complex word like "unfortunately" might require two tokens: "un" and "fortunately." This variable-length segmentation reflects a fundamental compromise: the vocabulary of a tokenizer is finite (typically 50,000 to 200,000 tokens), so infrequent character sequences must be broken into smaller pieces.</p>
+
+        <p>Under the hood, language models never actually "see" the text directly. The tokenizer first converts text into a sequence of token <strong>IDs</strong>&mdash;integer indices into the model's vocabulary. The model then uses an embedding layer to convert these IDs into high-dimensional vectors. This two-step process of string → tokenID → vector is invisible to users but absolutely critical to understanding how these systems work.</p>
+
+        <div class="infobox">
+            <strong>Critical Insight:</strong> The speed and cost of language model inference scale linearly with the number of tokens. Minimizing tokens is essential for production systems.
+        </div>
+
+        <h3>Tokenization Example</h3>
+
+        <div class="figure-container">
+            <div class="token-blocks">
+                <div class="token-block">Hello</div>
+                <div class="token-block">,</div>
+                <div class="token-block">world</div>
+                <div class="token-block">!</div>
+            </div>
+            <div class="figure-label">Figure 1: The phrase "Hello, world!" tokenized into four separate units. Note how punctuation is often assigned its own token.</div>
+        </div>
+    </section>
+
+    <!-- Section 2: How Tokenization Works -->
+    <section class="topic-section">
+        <h2>The Tokenization Pipeline</h2>
+        
+        <p>Tokenization occurs in a distinct preprocessing phase before text enters the language model. Different tokenizers employ different strategies, but most modern models use one of two approaches: <strong>Byte-Pair Encoding (BPE)</strong> or <strong>WordPiece tokenization</strong>.</p>
+
+        <h3>Byte-Pair Encoding (BPE)</h3>
+
+        <p>BPE begins with raw bytes and iteratively merges the most frequently-occurring adjacent byte pairs into new tokens. A tokenizer might learn that the bytes for "th" appear together so often that they should be merged into a single token. Over thousands of merge operations, the algorithm builds a vocabulary that balances frequency (common sequences become single tokens) with coverage (rare sequences can still be represented).</p>
+
+        <h3>WordPiece Tokenization</h3>
+
+        <p>WordPiece, used by BERT and similar models, starts with words and breaks them into subword units based on learned frequencies. It begins with character-level tokens and merges them, but maintains the assumption that word boundaries are significant. A word that doesn't exist in the vocabulary is prefixed with "##" to indicate it's a continuation.</p>
+
+        <div class="figure-container">
+            <div class="pipeline-flow">
+                <div class="pipeline-box">Raw Text</div>
+                <div class="pipeline-arrow">→</div>
+                <div class="pipeline-box">Tokenizer<br><small>Vocabulary Lookup</small></div>
+                <div class="pipeline-arrow">→</div>
+                <div class="pipeline-box">Token IDs<br><small>[1245, 34, 892, ...]</small></div>
+            </div>
+            <div class="figure-label">Figure 2: The tokenization pipeline converts human-readable text into the numerical sequences that language models actually process.</div>
+        </div>
+
+        <p>Once tokenization is complete, the sequence of token IDs flows into the language model, where each ID is converted into a high-dimensional embedding vector. The entire computational engine of the model operates on these embeddings, not on the original text.</p>
+    </section>
+
+    <!-- Section 3: Different Tokenizers -->
+    <section class="topic-section">
+        <h2>Tokenizer Variance and Its Implications</h2>
+        
+        <p>A critical practical detail that often catches practitioners off guard: different models use different tokenizers, and identical prompts produce different token counts across models. This variance has direct financial and performance implications, especially in cloud-based API environments where billing is token-based.</p>
+
+        <h3>Why Token Counts Vary</h3>
+
+        <p>OpenAI's GPT models, Anthropic's Claude, and Meta's Llama each developed their own tokenizers optimized for their training data and architectural considerations. A tokenizer trained primarily on English text might represent single English letters efficiently but require multiple tokens for less common scripts. Space characters are handled differently&mdash;some tokenizers include spaces with the preceding word, others treat them as separate tokens.</p>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Model Family</th>
+                    <th>Tokens/Words Ratio</th>
+                    <th>Vocabulary Size</th>
+                    <th>Characteristics</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>GPT-4 / GPT-3.5</strong></td>
+                    <td>~1.3</td>
+                    <td>100,000+</td>
+                    <td>Optimized for efficiency; subword units</td>
+                </tr>
+                <tr>
+                    <td><strong>Claude (Anthropic)</strong></td>
+                    <td>~1.2</td>
+                    <td>100,000</td>
+                    <td>Slightly more efficient for English</td>
+                </tr>
+                <tr>
+                    <td><strong>Llama 2</strong></td>
+                    <td>~1.2</td>
+                    <td>32,000</td>
+                    <td>Smaller vocabulary, sometimes requires more tokens</td>
+                </tr>
+                <tr>
+                    <td><strong>Palm / Gemini</strong></td>
+                    <td>~1.35</td>
+                    <td>256,000+</td>
+                    <td>Larger vocabulary can handle diverse text</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>For a 100-word prompt, you might expect approximately 130 tokens. But actual counts could range from 120 to 150 depending on the tokenizer. When operating at scale with millions of API calls, this variance compounds into significant cost differences and affects latency calculations.</p>
+    </section>
+
+    <!-- Section 4: Context Windows -->
+    <section class="topic-section">
+        <h2>Context Windows: The Hard Memory Limit</h2>
+        
+        <p>Every language model has a <strong>context window</strong>&mdash;a maximum number of tokens it can process simultaneously. This is a hard limit imposed by the model architecture itself. The transformer architecture's attention mechanism has computational complexity that grows quadratically with sequence length, making longer contexts exponentially more expensive.</p>
+
+        <p>The context window encompasses everything: the system prompt that defines the model's behavior, the conversation history, the user's current query, and the space reserved for the model's response. All of these components compete for the same fixed token budget.</p>
+
+        <h3>Common Context Window Sizes</h3>
+
+        <ul>
+            <li><strong>GPT-3.5-turbine:</strong> 4,096 tokens (approximately 3,000 words)</li>
+            <li><strong>GPT-4:</strong> 8,192 tokens standard, 32,768 tokens with 32K variant (limited availability)</li>
+            <li><strong>Claude 2:</strong> 100,000 tokens (approximately 75,000 words)</li>
+            <li><strong>Gemini Pro:</strong> 32,000 tokens</li>
+            <li><strong>Llama 2-70B:</strong> 4,096 tokens</li>
+        </ul>
+
+        <div class="figure-container">
+            <div class="context-window">
+                <div class="context-label">Total Context Window</div>
+                <div style="margin: var(--space-md) 0;">
+                    <div style="background: linear-gradient(to right, #e8f5ff 0%, #e8f5ff 15%, #fff1f0 15%, #fff1f0 25%, #fffaeb 25%, #fffaeb 60%, #f0f9ff 60%, #f0f9ff 100%); height: 40px; border-radius: 4px; display: flex; align-items: center; gap: 8px; padding: 0 8px;">
+                        <div style="flex: 0.15; text-align: center; font-size: 0.8rem; font-weight: bold; color: #0645ad;">System</div>
+                        <div style="flex: 0.10; text-align: center; font-size: 0.8rem; font-weight: bold; color: #d73027;">Query</div>
+                        <div style="flex: 0.35; text-align: center; font-size: 0.8rem; font-weight: bold; color: #d46a2a;">History</div>
+                        <div style="flex: 0.40; text-align: center; font-size: 0.8rem; font-weight: bold; color: #0645ad;">Response Space</div>
+                    </div>
+                </div>
+            </div>
+            <div class="figure-label">Figure 3: Context window allocation showing how the fixed token budget is divided among system instructions, user query, conversation history, and space for the model's response.</div>
+        </div>
+
+        <p>Exceeding the context window produces catastrophic failure modes: either the API returns an error, or the system silently truncates older context, causing the model to lose crucial information necessary for coherent response generation. This truncation often happens in multi-turn conversations where historical context gets progressively eliminated to make room for new messages.</p>
+    </section>
+
+    <!-- Section 5: Optimization Strategies -->
+    <section class="topic-section">
+        <h2>Token Optimization and Context Management</h2>
+        
+        <p>Given that tokens directly determine latency and cost, and context windows impose hard limits, sophisticated applications must implement token optimization strategies. Three primary approaches dominate:</p>
+
+        <h3>Strategy 1: Summarization</h3>
+
+        <p>Pre-process documents offline to extract summaries before they enter the model's context. A 10,000-token document can typically be summarized to 3-5% of its original length while retaining the essential information. For historical conversation context, rolling summaries gradually replace old turn-by-turn exchanges with consolidated summaries, freeing tokens for new interactions.</p>
+
+        <h3>Strategy 2: Retrieval-Augmented Generation (RAG)</h3>
+
+        <p>Instead of including all relevant documents, retrieve only the most semantically similar chunks from a vector database. This allows applications to access knowledge bases orders of magnitude larger than the context window, retrieving only the relevant portions. A system might have access to millions of documents but include only 2-3 relevant ones in any given query.</p>
+
+        <h3>Strategy 3: Prompt Compression</h3>
+
+        <p>Carefully craft prompts to eliminate redundant words while preserving essential information. Stop words, articles, and verbose explanations can typically be removed without impacting instructions. Some advanced systems use AI-powered prompt compression that selects the most semantically important tokens while maintaining grammatical validity.</p>
+
+        <div class="figure-container">
+            <svg style="width: 100%; height: 180px; max-width: 400px; margin: var(--space-md) auto; display: block;" viewBox="0 0 400 180">
+                <!-- Strategy 1 -->
+                <rect x="10" y="20" width="110" height="140" fill="#f0f4ff" stroke="#0645ad" stroke-width="2" rx="4"/>
+                <text x="65" y="45" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#202122">Summarization</text>
+                <text x="65" y="75" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#54595d">100K → 5K</text>
+                <text x="65" y="130" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#54595d">Offline</text>
+                <text x="65" y="150" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#54595d">Extract Summary</text>
+                
+                <!-- Strategy 2 -->
+                <rect x="145" y="20" width="110" height="140" fill="#f0f4ff" stroke="#0645ad" stroke-width="2" rx="4"/>
+                <text x="200" y="45" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#202122">RAG</text>
+                <text x="200" y="75" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#54595d">Search DB</text>
+                <text x="200" y="130" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#54595d">Include Only</text>
+                <text x="200" y="150" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#54595d">Relevant Chunks</text>
+                
+                <!-- Strategy 3 -->
+                <rect x="280" y="20" width="110" height="140" fill="#f0f4ff" stroke="#0645ad" stroke-width="2" rx="4"/>
+                <text x="335" y="45" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#202122">Compression</text>
+                <text x="335" y="75" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#54595d">Remove Fluff</text>
+                <text x="335" y="130" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#54595d">Keep Essential</text>
+                <text x="335" y="150" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#54595d">Reduce Tokens</text>
+            </svg>
+            <div class="figure-label">Figure 4: Three complementary strategies for optimizing token usage in production systems.</div>
+        </div>
+    </section>
+
+    <!-- Section 6: Special Tokens -->
+    <section class="topic-section">
+        <h2>Special Tokens and Hidden Overhead</h2>
+        
+        <p>Beyond visible text, language models use invisible <strong>special tokens</strong> to structure conversations and delineate roles. These tokens consume from the context window budget but are typically invisible to end users, creating hidden overhead that practitioners must account for.</p>
+
+        <h3>Common Special Tokens</h3>
+
+        <ul>
+            <li><code>&lt;|im_start|&gt;</code> and <code>&lt;|im_end|&gt;</code>: Delimit individual turns in multi-turn conversations</li>
+            <li><code>&lt;|system|&gt;</code>: Marks the beginning of the system prompt section</li>
+            <li><code>&lt;|user|&gt;</code> and <code>&lt;|assistant|&gt;</code>: Distinguish between roles in conversations</li>
+            <li>Padding tokens: Added to ensure batch processing uses uniform lengths</li>
+        </ul>
+
+        <p>A seemingly simple three-turn conversation might actually require 6-8 special tokens in addition to the visible text tokens. A system prompt of 10 natural language words plus the <code>&lt;|system|&gt;</code> and end markers might require 15 total tokens. This overhead compounds significantly in applications with many turns or large system prompts.</p>
+
+        <div class="infobox">
+            <strong>Practical Recommendation:</strong> Always add a 10-15% buffer to token estimates to account for special tokens, punctuation, and formatting characters. Real-world token counts typically exceed simple estimates.
+        </div>
+    </section>
+
+    <!-- Section 7: RAG and Token Budgeting -->
+    <section class="topic-section">
+        <h2>Token Budgeting in RAG Systems</h2>
+        
+        <p>Retrieval-Augmented Generation systems must carefully balance between context richness and token constraints. A naive approach might retrieve the 10 most similar document chunks, but if each chunk is 500 tokens and the context window is 4,096 tokens, those chunks alone consume 78% of available context, leaving minimal space for the query and model output.</p>
+
+        <p>Effective RAG systems implement intelligent budgeting:</p>
+
+        <ul>
+            <li><strong>Reserve Output Space:</strong> Always allocate tokens for the expected response. A system generating outputs up to 500 tokens must reserve this space.</li>
+            <li><strong>Limit Retrieved Chunks:</strong> Even if 10 chunks score well, retrieve only 2-3 if space is constrained. Quality of top results matters more than quantity.</li>
+            <li><strong>Chunk Size Tuning:</strong> Smaller chunks (256 tokens) maximize retrieval flexibility but might lose context. Larger chunks (1024+) preserve coherence but dominate the context window.</li>
+            <li><strong>Dynamic Budgeting:</strong> Some systems compute required output space dynamically based on query complexity, then allocate remaining space to retrieval.</li>
+        </ul>
+
+        <p>Advanced RAG systems even compress retrieved chunks by removing redundant passages, preserving only the sentences directly relevant to answering the query. This might reduce 500-token chunks to 200-token compressed versions while maintaining answer quality.</p>
+    </section>
+
+    <!-- Section 8: Common Pitfalls -->
+    <section class="topic-section">
+        <h2>Tokenization and Context Pitfalls</h2>
+        
+        <div class="warning-box">
+            <strong>Pitfall 1: Underestimating Token Counts</strong>
+            Simple word-count heuristics (dividing word count by 1.3-1.4) often underestimate actual token counts by 10-20%, especially for code, structured data, or non-English text. Always use official tokenizers for accurate counts.
+        </div>
+
+        <div class="warning-box">
+            <strong>Pitfall 2: Forgetting Special Token Overhead</strong>
+            System prompts, role markers, and turn delimiters add invisible tokens. A 10-word system prompt might require 15-20 tokens after tokenization and special markers. This overhead often surprises developers.
+        </div>
+
+        <div class="warning-box">
+            <strong>Pitfall 3: Using Outdated Token Counts</strong>
+            When upgrading to a new model version, token counts may change. An API endpoint that worked perfectly with GPT-3 might fail silently with GPT-4 if context calculation wasn't updated. Always requote after model upgrades.
+        </div>
+
+        <div class="warning-box">
+            <strong>Pitfall 4: Ignoring Token Variance Across Tokenizers</strong>
+            The same prompt produces different token counts in different models (variance of 15-30%). Cross-model applications must test with each tokenizer independently rather than assuming consistent counts.
+        </div>
+    </section>
+
+    <!-- Takeaway Section -->
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>Tokens ≠ Words:</strong> Variable-length units that average 1.2-1.4 per English word but vary significantly based on content type and tokenizer choice.
+            </div>
+            <div class="takeaway-item">
+                <strong>Context Windows Are Hard Limits:</strong> The maximum tokens (input + output) is fixed by architecture. Exceeding it causes errors or silent truncation.
+            </div>
+            <div class="takeaway-item">
+                <strong>Different Models, Different Tokenizers:</strong> Identical text produces different token counts across models. Always verify with the specific model's tokenizer.
+            </div>
+            <div class="takeaway-item">
+                <strong>Optimization is Essential:</strong> Summarization, RAG retrieval, and prompt compression are not optional&mdash;they're necessary for production systems.
+            </div>
+            <div class="takeaway-item">
+                <strong>Special Tokens Add Hidden Overhead:</strong> System markers, role indicators, and turn delimiters consume budget but remain invisible to users.
+            </div>
+            <div class="takeaway-item">
+                <strong>Budget Carefully in RAG:</strong> Divide context window among query, history, documents, and output space. Naive approaches waste budget retrieving too many documents.
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>

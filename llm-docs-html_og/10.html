@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NL-to-SQL: Compact Cheat Sheet</title>
+    <style>
+        :root {
+            /* Light Mode Palette (Consistent) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --accent-danger: #b91c1c; /* Red */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        .code-block {
+            background: #1e293b; color: #cbd5e1; padding: 6px; border-radius: 4px; font-family: monospace; font-size: 0.7rem; margin: 4px 0; overflow-x: auto;
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Basic Translation Flow */
+        .trans-flow { width: 100%; display: flex; align-items: center; justify-content: space-between; position: relative; }
+        .tf-node { 
+            text-align: center; font-size: 0.65rem; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; z-index: 2; width: 28%;
+        }
+        .tf-conn { flex: 1; height: 2px; background: #cbd5e1; position: relative; margin: 0 4px; }
+        .tf-packet { 
+            position: absolute; width: 6px; height: 6px; background: var(--accent-primary); border-radius: 50%; top: -2px; left: 0;
+            animation: flowRight 3s infinite ease-in-out;
+        }
+        .tf-packet.return { background: var(--accent-success); animation-delay: 1.5s; }
+        @keyframes flowRight { 0% { left: 0; } 45% { left: 100%; } 55% { left: 100%; opacity: 0; } 100% { left: 0; opacity: 0; } }
+
+        /* 2. Pipeline Grid */
+        .pipe-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; width: 100%; }
+        .pg-step { 
+            padding: 6px; background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.65rem; text-align: center; display: flex; flex-direction: column; justify-content: center; opacity: 0.4; transition: 0.3s;
+        }
+        .pg-num { font-weight: bold; color: var(--accent-primary); margin-bottom: 2px; }
+        .pg-step.active { border-color: var(--accent-primary); background: #f0f9ff; opacity: 1; box-shadow: 0 0 4px rgba(3, 105, 161, 0.2); }
+
+        /* 3. Schema Retrieval (Filter) */
+        .schema-layout { display: flex; width: 100%; height: 100%; gap: 10px; }
+        .sl-query { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; background: #f1f5f9; border-radius: 4px; padding: 4px; }
+        .sl-list { flex: 2; display: flex; flex-direction: column; gap: 4px; }
+        .sl-item { 
+            padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.65rem; display: flex; justify-content: space-between; background: #fff;
+        }
+        .scan-line { 
+            position: absolute; top: 0; left: 35%; width: 2px; height: 100%; background: var(--accent-primary); opacity: 0.5; z-index: 10;
+            animation: scanList 4s infinite ease-in-out;
+        }
+        @keyframes scanList { 0%, 100% { top: 0; opacity: 0.2; } 50% { top: 100%; opacity: 1; } }
+        
+        .sl-item.hit { border-color: var(--accent-success); background: #f0fdf4; color: var(--accent-success); }
+        .sl-item.miss { opacity: 0.4; text-decoration: line-through; }
+
+        /* 4. Error Loop (Self-Healing) */
+        .error-loop-visual { position: relative; width: 140px; height: 140px; margin: 0 auto; }
+        .el-node { 
+            position: absolute; width: 40px; padding: 4px; text-align: center; font-size: 0.6rem; background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; z-index: 2;
+        }
+        .el-llm { top: 50%; left: 0; transform: translateY(-50%); border-color: var(--accent-primary); }
+        .el-db { top: 50%; right: 0; transform: translateY(-50%); }
+        .el-error { top: 100%; left: 50%; transform: translate(-50%, 0); background: #fff1f2; color: var(--accent-danger); border-color: var(--accent-danger); }
+        
+        .el-packet {
+            position: absolute; width: 8px; height: 8px; border-radius: 50%; z-index: 5; top: 50%; left: 40px; margin-top: -4px;
+        }
+        /* Trajectory: LLM -> DB -> Error -> LLM -> DB -> Success */
+        .anim-packet {
+            offset-path: path('M 40 70 Q 70 70 100 70 Q 120 100 100 110 Q 80 120 60 110 Q 30 90 40 70 Q 70 70 100 70');
+            animation: movePath 6s infinite linear;
+        }
+        @keyframes movePath { 0% { offset-distance: 0%; background: var(--accent-primary); } 40% { background: var(--accent-danger); } 60% { background: var(--accent-danger); } 100% { offset-distance: 100%; background: var(--accent-success); } }
+
+        /* 5. Security (Split) */
+        .sec-split { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+        .sec-row { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; position: relative; height: 30px; }
+        .sr-code { 
+            flex: 1; padding: 2px 4px; background: #1e293b; color: #cbd5e1; border-radius: 2px; font-family: monospace; font-size: 0.6rem; border: 1px solid #334155;
+        }
+        .sr-shield { 
+            width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--bg-card-alt); border: 1px solid #cbd5e1; z-index: 2;
+        }
+        .sr-status { width: 60px; font-weight: bold; text-align: right; }
+        
+        .sr-pass { border-color: var(--accent-success); color: var(--accent-success); }
+        .sr-block { border-color: var(--accent-danger); color: var(--accent-danger); }
+
+        .sr-bullet {
+            position: absolute; width: 6px; height: 6px; border-radius: 50%; top: 50%; left: 0; margin-top: -3px;
+            animation: flowSplit 2.5s infinite linear;
+        }
+        .sr-pass .sr-bullet { background: var(--accent-success); }
+        .sr-block .sr-bullet { background: var(--accent-danger); }
+        
+        @keyframes flowSplit { 0% { left: 0; } 85% { left: 85%; } 100% { left: 85%; opacity: 0; } }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body onload="initAnimations()">
+
+<div class="container">
+    <header>
+        <div>
+            <h1>10. NL-to-SQL</h1>
+            <div class="subtitle">Natural Language to SQL • Pipeline • Error Loops</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>What is NL-to-SQL?</h2>
+            <p>User asks in English → LLM converts to SQL → Database executes → Results returned.</p>
+            <div class="insight">
+                💡 Bridges non-technical users and complex database structures.
+            </div>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Translation Flow</span>
+            <div class="trans-flow">
+                <div class="tf-node">User<br>"Revenue Q4?"</div>
+                <div class="tf-conn"><div class="tf-packet"></div></div>
+                <div class="tf-node" style="border-color: var(--accent-primary);">LLM<br>Generates SQL</div>
+                <div class="tf-conn"><div class="tf-packet return"></div></div>
+                <div class="tf-node" style="border-color: var(--accent-success);">Result<br>"$2.1M"</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>The Full Pipeline</h2>
+            <ol style="font-size: 0.8rem; padding-left: 15px;">
+                <li><strong>User Question:</strong> "Orders in March?"</li>
+                <li><strong>Schema Retrieval:</strong> Find relevant tables (sales, orders).</li>
+                <li><strong>Prompt Build:</strong> Schema + Few-Shot Examples.</li>
+                <li><strong>SQL Gen:</strong> LLM writes the query.</li>
+                <li><strong>Validate/Execute:</strong> Run safely on DB.</li>
+                <li><strong>Format:</strong> Return result as natural language.</li>
+            </ol>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">6-Step Process</span>
+            <div class="pipe-grid">
+                <div class="pg-step" id="pg1"><div class="pg-num">1</div>User</div>
+                <div class="pg-step" id="pg2"><div class="pg-num">2</div>Schema</div>
+                <div class="pg-step" id="pg3"><div class="pg-num">3</div>Prompt</div>
+                <div class="pg-step" id="pg4"><div class="pg-num">4</div>SQL Gen</div>
+                <div class="pg-step" id="pg5"><div class="pg-num">5</div>Execute</div>
+                <div class="pg-step" id="pg6"><div class="pg-num">6</div>Result</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>Schema Retrieval</h2>
+            <p>Large DBs have 100+ tables. Passing all to the LLM is impossible (Context Window).</p>
+            <p><strong>Solution:</strong> Embed table descriptions, vector search for relevant tables, then pass only those to LLM.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Filtering Tables</span>
+            <div class="schema-layout">
+                <div class="sl-query">Query:<br>"Revenue"</div>
+                <div class="sl-list" id="schemaList">
+                    <!-- JS will populate -->
+                </div>
+                <div class="scan-line"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Error Handling (Self-Healing)</h2>
+            <p>LLMs make typos or syntax errors. Don't fail once.</p>
+            <p><strong>Retry Loop:</strong> Catch SQL Error → Feed back to LLM with error message → LLM fixes query → Retry.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Retry Loop</span>
+            <div class="error-loop-visual">
+                <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none;">
+                     <!-- Path matches the CSS offset-path -->
+                     <path d="M 40 70 Q 70 70 100 70 Q 120 100 100 110 Q 80 120 60 110 Q 30 90 40 70 Q 70 70 100 70" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="4 4"/>
+                </svg>
+                <div class="el-packet anim-packet"></div>
+                
+                <div class="el-node el-llm">LLM Agent</div>
+                <div class="el-node el-db">DB</div>
+                <div class="el-node el-error">Error!<br>"Unknown col"</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>Security & Validation</h2>
+            <p>Never trust LLM SQL blindly. Always validate for dangerous keywords (DROP, DELETE, INSERT) before execution.</p>
+            <p><strong>Best Practice:</strong> Use a read-only DB user for the NL-to-SQL agent.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Safe vs. Dangerous</span>
+            <div class="sec-split">
+                <div class="sec-row sr-pass">
+                    <div class="sr-code">SELECT * FROM users</div>
+                    <div class="sr-conn" style="flex:1; height:2px; background:#cbd5e1; position:relative;"><div class="sr-bullet"></div></div>
+                    <div class="sr-shield">🛡️</div>
+                    <div class="sr-status">Safe</div>
+                </div>
+                <div class="sec-row sr-block">
+                    <div class="sr-code">DROP TABLE users</div>
+                    <div class="sr-conn" style="flex:1; height:2px; background:#cbd5e1; position:relative;"><div class="sr-bullet"></div></div>
+                    <div class="sr-shield" style="background:#fee2e2; border-color:#fca5a1;">🚫</div>
+                    <div class="sr-status">Blocked</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Pipeline:</strong> Query -> Schema -> Prompt -> SQL -> Validate -> Execute.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Context Management:</strong> For large DBs, retrieve only relevant schema (Vector/Keyword search).</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Self-Healing:</strong> Use a retry loop to fix SQL syntax/typo errors automatically.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Security:</strong> Validate SQL, block dangerous operations, use read-only users.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    // 1. Pipeline Animation (Cycling steps)
+    function animatePipeline() {
+        const steps = [
+            document.getElementById('pg1'),
+            document.getElementById('pg2'),
+            document.getElementById('pg3'),
+            document.getElementById('pg4'),
+            document.getElementById('pg5'),
+            document.getElementById('pg6')
+        ];
+        let idx = 0;
+        
+        setInterval(() => {
+            steps.forEach(s => s.classList.remove('active'));
+            steps[idx].classList.add('active');
+            idx = (idx + 1) % steps.length;
+        }, 800);
+    }
+
+    // 2. Schema Retrieval (Simulating the scan and filter)
+    function animateSchema() {
+        const list = document.getElementById('schemaList');
+        const tables = [
+            { name: 'sales', cols: 'amount, region', score: 0.95 },
+            { name: 'logs', cols: 'time, error', score: 0.15 },
+            { name: 'customers', cols: 'id, region', score: 0.88 },
+            { name: 'config', cols: 'key, value', score: 0.10 }
+        ];
+
+        // Render items
+        tables.forEach(t => {
+            const el = document.createElement('div');
+            el.className = 'sl-item';
+            el.id = 'sl-' + t.name;
+            el.innerHTML = `<span>${t.name}</span> <span>(${t.score})</span>`;
+            list.appendChild(el);
+        });
+
+        // Animation Loop
+        setInterval(() => {
+            // Reset
+            tables.forEach(t => {
+                const el = document.getElementById('sl-' + t.name);
+                el.className = 'sl-item';
+            });
+
+            // Simulate scan completing
+            setTimeout(() => {
+                tables.forEach(t => {
+                    const el = document.getElementById('sl-' + t.name);
+                    if(t.score > 0.5) el.classList.add('hit');
+                    else el.classList.add('miss');
+                });
+            }, 1000); // 1s scan time
+        }, 3000);
+    }
+
+    function initAnimations() {
+        animatePipeline();
+        animateSchema();
+    }
+</script>
+
+</body>
+</html>

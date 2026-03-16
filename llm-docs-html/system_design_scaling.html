@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Design</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .trap {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-left: 4px solid #ffc107;
+            margin-top: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>System Design Scaling</h1>
+        <div class="subtitle">High Availability & Traffic Management</div>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="mermaid" style="margin-bottom: 2em;">
+            flowchart TD
+            Client((Clients)) --> LB[Load Balancer]
+            LB --> API1[API Server 1]
+            LB --> API2[API Server 2]
+            LB --> API3[API Server N]
+
+            API1 --> Cache[(Redis Cache)]
+            API2 --> Cache
+
+            API1 --> PrimaryDB[(Primary DB - Writes)]
+            API2 --> ReplicaDB[(Read Replica)]
+
+            PrimaryDB -. Replicates .-> ReplicaDB
+        </div>
+        <div class="qa-container" id="q14">
+            <h3>Q14: Design a scalable file upload and processing system</h3>
+            <div class="answer">
+                <div class="one-liner">Pre-signed S3 URLs for direct uploads, SQS trigger for async processing, status
+                    polling or WebSocket for feedback.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Client requests pre-signed S3 URL from API → uploads directly to S3 (bypasses backend, saves
+                    </li>
+                    <li>bandwidth)</li>
+                    <li> S3 event triggers SQS message → Lambda or worker picks up and processes (resize, parse, index)
+                    </li>
+                    <li> Processing status stored in DB; client polls or receives push notification via WebSocket/SNS
+                    </li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Client -- "1. Request Upload URL" --> API
+  API -- "2. Returns Pre-signed URL" --> Client
+  Client -- "3. Direct Upload" --> S3[("S3 Bucket")]
+  S3 -- "4. S3 Event Trigger" --> SQS[("SQS Queue")]
+  SQS --> Worker["Processing Worker"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Chunked multipart upload for large files — S3 supports up to 5TB via multipart API</li>
+                        <li>Virus scanning integration: run ClamAV or AWS Macie before making file available to
+                            downstream</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Never stream large file uploads through your API server — it
+                    blocks threads and adds unnecessary latency
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q15">
+            <h3>Q15: How do you approach capacity planning for a new service?</h3>
+            <div class="answer">
+                <div class="one-liner">Start with SLA targets → estimate peak RPS → derive resource needs → add headroom
+                    → validate with load testing.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Define p99 latency SLA and availability target first — these drive all other decisions</li>
+                    <li> Back-of-envelope: peak RPS × avg response time = concurrency needed (Little's Law)</li>
+                    <li> Load test at 2x expected peak before launch — verify auto-scaling kicks in correctly</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Req["Expected Traffic"] --> Little["Little's Law: N = CPU * T"]
+  Little --> Node["Calc Required Nodes"]
+  Node --> Test["Load Test at Peak x2"]
+  Test --> ASG["Configure Auto-Scaling Group"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Track CPU, memory, connection pool, and DB query time as the four leading indicators of</li>
+                        <li>saturation</li>
+                        <li>USE method (Utilization, Saturation, Errors) for systematic bottleneck identification</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't capacity plan for average load — design for peak + 50%
+                    headroom; averages are misleading for bursty workloads
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q16">
+            <h3>Q16: What is eventual consistency and when is it acceptable?</h3>
+            <div class="answer">
+                <div class="one-liner">Eventual consistency means replicas converge to the same state given no new
+                    updates — acceptable when staleness is tolerable.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Examples where OK: social media feed, product recommendations, analytics dashboards</li>
+                    <li> Examples where NOT OK: financial balances, inventory deduction, authentication tokens</li>
+                    <li> BASE (Basically Available, Soft state, Eventually consistent) vs ACID — different guarantees
+                        for</li>
+                    <li>different needs</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart LR
+  ClientA["Client A (US)"] --> Replica1[("Replica US")]
+  ClientB["Client B (EU)"] --> Replica2[("Replica EU")]
+  Replica1 -- "Async Sync" --> Replica2
+  Replica2 -- "Async Sync" --> Replica1
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Conflict resolution strategies: last-write-wins (LWW), vector clocks, CRDTs for automatic
+                            merging</li>
+                        <li>Read-your-own-writes consistency: route user's reads to the same replica they just wrote to
+                        </li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't say 'eventual consistency is fine' without qualifying what
+                    staleness window is acceptable to the business
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q17">
+            <h3>Q17: How would you design a real-time leaderboard?</h3>
+            <div class="answer">
+                <div class="one-liner">Redis Sorted Sets for O(log N) rank updates and range queries — scores are
+                    atomic, reads are instant.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> ZADD for score updates, ZRANK for rank lookup, ZRANGE for top-N — all O(log N)</li>
+                    <li> Partition by time window (daily, weekly, all-time) using separate sorted sets</li>
+                    <li> Persistent storage in Postgres for historical data; Redis is the live cache</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Client["Game Client"] --> API["Score API"]
+  API -- "ZADD score" --> Redis[("Redis Sorted Set")]
+  API -- "ZRANGE 0 10" --> Redis
+  Redis -- "Top 10 List" --> API
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>At massive scale, partition by score range across Redis shards — shard 1 handles scores
+                            0-1M,</li>
+                        <li>shard 2 handles 1M-2M etc.</li>
+                        <li>Lua script in Redis for atomic score-update + rank-check in one round trip</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't use SQL ORDER BY + COUNT for real-time rank — full table
+                    scan at scale is unacceptable
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q18">
+            <h3>Q18: Explain idempotency in APIs and how to implement it</h3>
+            <div class="answer">
+                <div class="one-liner">An idempotent operation produces the same result if called once or N times —
+                    critical for payment and retry-safe APIs.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Client sends an Idempotency-Key header (UUID) with each request</li>
+                    <li> Server stores key + response in Redis with TTL; on duplicate request, returns cached response
+                    </li>
+                    <li>without reprocessing</li>
+                    <li> Especially critical for payment APIs — prevents double-charging on network retry</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Client -- "POST /charge Header: Idem-Key=123" --> API
+  API --> Check{"Key in Redis?"}
+  Check -- "Yes" --> Return["Return Cached 200 OK"]
+  Check -- "No" --> Process["Process Payment"]
+  Process --> Cache["Store Result in Redis"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Idempotency key scope: per-user or global — design based on whether two users can send same
+                        </li>
+                        <li>key</li>
+                        <li>Database-level: use UPSERT with unique constraint on idempotency key for persistence</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> GET and DELETE are naturally idempotent; POST is not — you must
+                    implement it explicitly for POST/PATCH
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q19">
+            <h3>Q19: How do you design for multi-tenancy in a SaaS application?</h3>
+            <div class="answer">
+                <div class="one-liner">Three models: shared DB + shared schema (row-level), shared DB + separate schema,
+                    or separate DB per tenant — tradeoffs in cost vs isolation.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Row-level: tenant_id column on every table + Row Level Security (Postgres RLS) —
+                        cost-efficient</li>
+                    <li>but blast radius risk</li>
+                    <li> Schema per tenant: strong isolation, easier backup/restore per tenant — moderate cost</li>
+                    <li> DB per tenant: maximum isolation for enterprise/regulated — highest cost and ops overhead</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  subgraph Multi DB - Physical Isolation
+    DB_A[("Tenant A DB")]
+    DB_B[("Tenant B DB")]
+  end
+  subgraph Single DB - Logical Isolation
+    Table["Table: Data with tenant_id"]
+  end
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Hybrid: shared DB for small tenants, dedicated DB for enterprise tenants (tiered isolation)
+                        </li>
+                        <li>Connection pooling (PgBouncer) is critical in shared models — one pool per tenant schema
+                        </li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Forgetting tenant_id in a query is a data leak — use
+                    middleware/ORM hooks to enforce tenant scope automatically
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q20">
+            <h3>Q20: How do you implement distributed caching and avoid cache stampede?</h3>
+            <div class="answer">
+                <div class="one-liner">Cache-aside pattern with Redis; prevent stampede using probabilistic early
+                    expiration or a lock-based single-fill approach.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Cache-aside: app checks Redis, on miss fetches from DB and populates cache</li>
+                    <li> Cache stampede: many requests hit DB simultaneously on cache expiry — solved with mutex lock
+                        or</li>
+                    <li>probabilistic refresh before expiry</li>
+                    <li> Cache invalidation strategies: TTL-based, write-through, write-behind, or event-driven
+                        invalidation</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  App["Application"] --> Cache[("Redis")]
+  Cache -- "Miss (Lock acquired)" --> DB[("Primary DB")]
+  DB --> Populate["Populate Cache"]
+  Cache -- "Hit" --> App
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Redis cluster for horizontal scaling; consistent hashing determines which shard owns each
+                            key</li>
+                        <li>Bloom filter to avoid caching 'negative' lookups (non-existent keys) — prevents cache
+                            pollution</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Cache invalidation is the hardest problem — 'just use TTL' is
+                    acceptable but stale data window must be explicitly accepted
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q21">
+            <h3>Q21: Design a webhook delivery system</h3>
+            <div class="answer">
+                <div class="one-liner">Async queue-based delivery with retries, exponential backoff, signature
+                    verification, and delivery log.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> On event: write to outbox → relay publishes to queue → worker makes HTTP POST to customer</li>
+                    <li>endpoint</li>
+                    <li> Retry with exponential backoff (1s, 2s, 4s, ... up to 24hr) on non-2xx responses</li>
+                    <li> HMAC-SHA256 signature on payload — customer verifies to prevent spoofing</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart LR
+  App["Internal System"] --> Queue[("Webhook Queue")]
+  Queue --> Worker["Worker Node"]
+  Worker -- "HMAC Post" --> Customer["Customer Endpoint"]
+  Customer -- "500 Error" --> Retry["Exp Backoff + Retry"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Dead letter queue after max retries — alert customer and allow manual replay</li>
+                        <li>Circuit breaker per endpoint: if customer endpoint fails consistently, pause delivery and
+                            notify</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't make webhook delivery synchronous — customer endpoints can
+                    be slow or down; always decouple with a queue
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q22">
+            <h3>Q22: How do you handle secrets management in a microservices environment?</h3>
+            <div class="answer">
+                <div class="one-liner">Centralized secrets store (AWS Secrets Manager, HashiCorp Vault) with short-lived
+                    credentials and automatic rotation.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Never hardcode secrets in code or environment files committed to version control</li>
+                    <li> AWS Secrets Manager: store DB passwords, API keys — inject at runtime via SDK or ECS task role
+                    </li>
+                    <li> Vault: dynamic secrets — generates short-lived DB credentials on demand, auto-revokes after
+                        TTL</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Service["Microservice"] --> Vault["HashiCorp Vault"]
+  Vault -- "Dynamic Creds (TTL=1hr)" --> Service
+  Service --> DB[("Database")]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>IAM roles for service-to-service auth on AWS — no static keys needed between AWS services
+                        </li>
+                        <li>Secret zero problem: how does Vault client authenticate to Vault? — solved via trusted
+                            platform</li>
+                        <li>identity (EC2 instance profile)</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Storing secrets in env vars in Docker images is a common mistake
+                    — they appear in image layers and process lists
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q23">
+            <h3>Q23: Explain the Sidecar pattern in microservices</h3>
+            <div class="answer">
+                <div class="one-liner">A helper container deployed alongside the main service container, handling
+                    cross-cutting concerns like logging, proxy, and auth.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Sidecar runs in the same pod (Kubernetes) — shares network and storage with main container
+                    </li>
+                    <li> Common sidecars: Envoy proxy (Istio), log shipper (Fluentd), secret injector (Vault agent)
+                    </li>
+                    <li> Decouples infrastructure concerns from business logic — main service stays clean</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart LR
+  subgraph Kubernetes Pod
+    Main["Main App Container"]
+    Sidecar["Envoy / Fluentd Sidecar"]
+    Main <--> Sidecar
+  end
+  Sidecar <--> External["External World / Logs"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Service mesh uses sidecars at scale — every pod gets an Envoy sidecar for mTLS, circuit
+                            breaking,</li>
+                        <li>and observability</li>
+                        <li>Ambassador pattern: a variant where sidecar handles outbound traffic specifically</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Sidecar adds resource overhead per pod — weigh the benefit of
+                    decoupling vs cost at high pod density
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q24">
+            <h3>Q24: How would you implement full-text search in a large application?</h3>
+            <div class="answer">
+                <div class="one-liner">Elasticsearch or OpenSearch as dedicated search index — sync from primary DB via
+                    CDC or event stream.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Inverted index: Elasticsearch maps terms to document IDs — O(1) lookup for any term</li>
+                    <li> Sync strategy: Debezium CDC from Postgres → Kafka → Elasticsearch consumer maintains index
+                    </li>
+                    <li> Relevance tuning: BM25 scoring, field boosting (title > body), and synonym dictionaries</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  App["App Server"] --> Postgres[("Postgres Primary")]
+  Postgres -- "CDC (Debezium)" --> Kafka[("Kafka")]
+  Kafka --> ES[("Elasticsearch")]
+  App -- "Search Queries" --> ES
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Fuzzy search, autocomplete (edge n-gram tokenizer), and multi-language analysis built into
+                            ES</li>
+                        <li>Index lifecycle management: hot-warm-cold tiers for cost optimization on time-series indices
+                        </li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't use LIKE '%term%' in SQL for full-text search — it's a full
+                    table scan and kills performance at scale
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q25">
+            <h3>Q25: What is the difference between horizontal and vertical scaling?</h3>
+            <div class="answer">
+                <div class="one-liner">Vertical scaling adds resources to one machine; horizontal scaling adds more
+                    machines — horizontal is preferred for cloud-native systems.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Vertical: bigger instance (CPU, RAM) — simple but has hardware ceiling and requires downtime
+                    </li>
+                    <li> Horizontal: more instances behind a load balancer — no ceiling, zero-downtime scaling, but
+                        requires</li>
+                    <li>stateless services</li>
+                    <li> Stateless services scale horizontally easily; stateful services need sticky sessions or
+                        external</li>
+                    <li>session store (Redis)</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart LR
+  subgraph Horizontal
+    S1["Server 1"]
+    LB["Load Balancer"] --> S1
+    LB --> S2["Server 2"]
+    LB --> S3["Server 3"]
+  end
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Database horizontal scaling: read replicas (scale reads), sharding (scale writes) —
+                            different</li>
+                        <li>techniques</li>
+                        <li>Auto Scaling Groups on AWS: scale out on CPU > 70%, scale in on CPU < 30% — define
+                                cooldown</li>
+                        <li>periods</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Horizontal scaling doesn't automatically help if the bottleneck
+                    is the DB — scale the DB tier separately
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q26">
+            <h3>Q26: How do you design an audit logging system?</h3>
+            <div class="answer">
+                <div class="one-liner">Immutable append-only event log capturing who did what, when, and what changed —
+                    stored separately from business data.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Capture: actor, action, target entity ID, before/after state, timestamp, request ID</li>
+                    <li> Write to append-only store — never update or delete audit logs (compliance requirement in
+                        BFSI)</li>
+                    <li> Separate storage from business DB — high write volume shouldn't impact transactional
+                        performance</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart LR
+  Service["Any Service"] -- "Log Event" --> Kafka[("Kafka (Immutable)")]
+  Kafka --> S3[("S3 WORM Storage")]
+  Kafka --> ES[("Search Index (Dashboards)")]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>WORM storage (S3 Object Lock) for tamper-proof compliance logs</li>
+                        <li>Kafka as audit log backbone — immutable, ordered, replayable; consumers build various views
+                        </li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't log sensitive data (PII, passwords) in audit logs — log
+                    entity IDs and action types, not raw values
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

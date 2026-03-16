@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>When to Fine-Tune vs RAG - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .lever-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .lever-card {
+            padding: 15px;
+            border: 1px solid var(--wp-border);
+            text-align: center;
+            background: #f8f9fa;
+        }
+
+        .lever-card h3 {
+            color: var(--wp-accent);
+            margin-top: 0;
+        }
+
+        .lever-card.active {
+            border-color: var(--wp-accent);
+            background: #eef2ff;
+        }
+
+        .decision-tree {
+            padding: 20px;
+            background: #fff;
+            border: 1px solid var(--wp-border);
+            margin: 20px 0;
+            font-family: sans-serif;
+        }
+
+        .tree-node {
+            margin: 10px 0;
+            padding-left: 20px;
+            border-left: 2px solid #36c;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .animate-active .tree-node {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.4s ease-out;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>When to Fine-Tune</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Optimization Matrix</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <circle cx="20" cy="20" r="5" fill="#36c" />
+                    <circle cx="50" cy="20" r="5" fill="#36c" />
+                    <circle cx="80" cy="20" r="5" fill="#36c" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Levers</div>
+                    <div class="infobox-value">Prompt, RAG, FT</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Hierarchy</div>
+                    <div class="infobox-value">Knowledge vs Behavior</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Strategy</div>
+                    <div class="infobox-value">ROI-Based Selection</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>In the development of LLM-based applications, <strong>When to Fine-Tune</strong> (often contrasted with
+                <strong>Prompting</strong> and <strong>Retrieval-Augmented Generation</strong>) is a critical
+                architectural decision. Each of these "levers" offers a different trade-off between implementation cost,
+                latency, and model performance. Choosing the wrong lever can lead to technical debt, unnecessary
+                computational expenses, and sub-optimal user experiences.
+            </p>
+
+            <h2>The Three Levers of Optimization</h2>
+            <div class="lever-grid animate-on-scroll">
+                <div class="lever-card">
+                    <h3>Prompting</h3>
+                    <p><strong>Cost:</strong> Zero<br><strong>Time:</strong> Seconds<br><strong>Use:</strong>
+                        Instruction Following</p>
+                </div>
+                <div class="lever-card active">
+                    <h3>RAG</h3>
+                    <p><strong>Cost:</strong> Moderate<br><strong>Time:</strong> Hours<br><strong>Use:</strong> External
+                        Knowledge</p>
+                </div>
+                <div class="lever-card">
+                    <h3>Fine-Tuning</h3>
+                    <p><strong>Cost:</strong> High<br><strong>Time:</strong> Days/Weeks<br><strong>Use:</strong> Style &
+                        Behavior</p>
+                </div>
+            </div>
+
+            <h2>Comparison Matrix</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Dimension</th>
+                        <th>Prompting</th>
+                        <th>RAG</th>
+                        <th>Fine-Tuning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Core Purpose</strong></td>
+                        <td>Contextual Guidance</td>
+                        <td>Knowledge Injection</td>
+                        <td>Behavioral Alignment</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Update Frequency</strong></td>
+                        <td>Real-time</td>
+                        <td>Minute-by-minute</td>
+                        <td>Static (Months)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Knowledge Cutoff</strong></td>
+                        <td>Fixed (Training)</td>
+                        <td>Dynamic (Real-time)</td>
+                        <td>Restricted</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Inference Cost</strong></td>
+                        <td>Low</td>
+                        <td>Medium (Context length)</td>
+                        <td>Low (Standard tokens)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Diagnostic Decision Tree</h2>
+            <div class="decision-tree animate-on-scroll">
+                <div class="tree-node">Does the model lack <strong>KNOWLEDGE</strong> about your specific domain?
+                    <div class="tree-node" style="border-color: #37b24d;">YES → <strong>RAG</strong> is the optimal
+                        solution.</div>
+                </div>
+                <div class="tree-node" style="transition-delay: 0.2s;">Is the <strong>STYLE or FORMAT</strong> more
+                    important than the facts?
+                    <div class="tree-node" style="border-color: #f03e3e;">YES → <strong>Fine-Tuning</strong> is likely
+                        required.</div>
+                </div>
+                <div class="tree-node" style="transition-delay: 0.4s;">Can the problem be solved with <strong>FEW-SHOT
+                        EXAMPLES</strong>?
+                    <div class="tree-node" style="border-color: var(--wp-accent);">YES → Stick to
+                        <strong>Prompting</strong>.
+                    </div>
+                </div>
+            </div>
+
+            <h2>When RAG is Best</h2>
+            <p>RAG is the primary choice for applications where information changes frequently, such as customer support
+                bots for product catalogs or internal legal document search. It provides a <strong>Traceability</strong>
+                layer (allowing users to see citations) that fine-tuning cannot offer.</p>
+
+            <h2>When Fine-Tuning is Mandatory</h2>
+            <ul>
+                <li><strong>Constraint Enforcement:</strong> Ensuring the model never mentions a competitor or always
+                    stays in a specific persona (e.g., Shakespearean English).</li>
+                <li><strong>Task Specialization:</strong> Training a smaller, cheaper model to perform as well as a
+                    larger model on a narrow task (e.g., medical code classification).</li>
+                <li><strong>Latency Sensitivity:</strong> Reducing prompt length by baking frequently used instructions
+                    directly into the model's weights.</li>
+            </ul>
+
+            <h2>Cost-Benefit Analysis</h2>
+            <div class="side-note">
+                ⚠️ <strong>Anti-Pattern:</strong> Jumping to Fine-Tuning before building a robust RAG baseline. Studies
+                show that 80-90% of business use cases are solved by RAG, with Fine-Tuning only adding the final
+                "polish" or behavioral nuance.
+            </div>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>When building the <strong>RSA Sales QA Dashboard</strong>, the team had to choose between RAG and
+                Fine-Tuning. For the <strong>"Policy Knowledge"</strong> (e.g., "What does the $50 RSA plan cover?"),
+                they chose <strong>RAG</strong> because policy details change quarterly and require exact citations.
+                However, for <strong>"Behavioral Tone"</strong> (ensuring the bot provides feedback in a supportive,
+                coaching style rather than a punitive one), they chose to <strong>Fine-Tune</strong> a smaller model.
+                This hybrid approach keeps the facts accurate via RAG while ensuring a consistent, corporate-aligned
+                coaching persona via Fine-Tuning.</p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Hybrid RAG vs FT Routing</span>
+                <span class="keyword">def</span> <span class="class-name">audit_router</span>(query):
+                <span class="keyword">if</span> is_fact_based(query):
+                <span class="keyword">return</span> rag_pipeline.query(query, collection=<span
+                    class="string">"rsa_policy_v4"</span>)
+                <span class="keyword">else</span>:
+                <span class="keyword">return</span> fine_tuned_model.generate(query, system_prompt=<span
+                    class="string">"Supportive Coach"</span>)
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ Use Prompting for initial discovery and basic constraints.<br>
+                ✅ Use RAG for all knowledge-heavy, dynamic document tasks.<br>
+                ✅ Use Fine-Tuning for specific styles, behaviors, and cost/latency reduction.<br>
+                ✅ Most production systems use a <strong>Hybrid</strong> of all three levers.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

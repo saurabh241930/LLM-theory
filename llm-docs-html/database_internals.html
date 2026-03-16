@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+        .one-liner { font-weight: bold; margin-bottom: 10px; }
+        .trap { background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin-top: 10px; }
+        .depth { background-color: #e2e3e5; padding: 10px; border-left: 4px solid #6c757d; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="subtitle">ACID, Indexes & Transactions</div>
+    </header>
+
+    <div class="content-wrapper">
+
+        <div class="qa-container" id="q73">
+            <h3>Q73: Compare Redis data structures and their use cases</h3>
+            <div class="answer">
+                <div class="one-liner">String for caching, Hash for objects, List for queues, Set for unique membership, Sorted Set for leaderboards, Stream for event log.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> String: simple key-value cache — SETEX key 3600 value for TTL-based caching</li>
+                    <li> Hash: store object fields — HSET user:1 name 'Saurabh' email '...' — efficient for partial updates</li>
+                    <li> Sorted Set: ZADD leaderboard score member — ZRANGE for top-N, ZRANK for rank lookup</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  Redis[("Redis")] --> STR["Strings (Cache, Counters)"]
+  Redis --> HASH["Hashes (Object storage)"]
+  Redis --> LIST["Lists (Message queues, Recent items)"]
+  Redis --> SET["Sets (Unique tags, Intersections)"]
+  Redis --> ZSET["Sorted Sets (Leaderboards)"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Redis Stream: append-only log with consumer groups — lightweight Kafka alternative for event</li>
+                        <li>sourcing</li>
+                        <li>Lua scripts: execute multiple commands atomically — prevents race conditions without</li>
+                        <li>MULTI/EXEC overhead</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Storing large objects in Redis as serialized JSON blobs loses the granular update benefit of Hash — use Hash for structured objects
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q74">
+            <h3>Q74: How do you handle slow queries in production?</h3>
+            <div class="answer">
+                <div class="one-liner">Enable slow query log → EXPLAIN ANALYZE → add index or rewrite query → verify with load test.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Postgres: pg_stat_statements extension captures slow queries with cumulative stats — find top</li>
+                    <li>offenders</li>
+                    <li> EXPLAIN ANALYZE: shows actual execution plan — look for Seq Scan on large tables as the first</li>
+                    <li>sign of missing index</li>
+                    <li> Index creation: CREATE INDEX CONCURRENTLY — non-blocking in Postgres, won't lock table in</li>
+                    <li>production</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Monitor["APM / Slow Query Log"] --> Identify["Find Query taking > 1s"]
+  Identify --> Explain["Run EXPLAIN ANALYZE"]
+  Explain --> SeqScan{"Is it a Seq Scan on massive table?"}
+  SeqScan -- "Yes" --> Fix["Add B-Tree or Hash Index"]
+  SeqScan -- "No" --> Fix2["Vacuum analyze / Reindex"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Query planner statistics: ANALYZE table to update column statistics — planner makes better</li>
+                        <li>decisions with current stats</li>
+                        <li>pg_stat_user_tables: track sequential scans per table — high seq scan count = missing index on</li>
+                        <li>frequently filtered column</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Adding an index blindly without EXPLAIN first is guesswork — always verify the planner uses the new index with EXPLAIN ANALYZE
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q75">
+            <h3>Q75: What is a database transaction and what are ACID properties?</h3>
+            <div class="answer">
+                <div class="one-liner">A transaction is a unit of work that is Atomic, Consistent, Isolated, and Durable — all or nothing, correct, concurrent-safe, and persistent.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Atomicity: all statements succeed or all are rolled back — no partial updates</li>
+                    <li> Consistency: transaction brings DB from one valid state to another — constraints are enforced</li>
+                    <li> Isolation: concurrent transactions don't see each other's intermediate state — isolation level controls</li>
+                    <li>this</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Tx["Transaction Begins"] --> A["Atomicity (All or Nothing)"]
+  Tx --> C["Consistency (Valid state only)"]
+  Tx --> I["Isolation (Concurrent Tx don't interfere)"]
+  Tx --> D["Durability (Survives crashes once committed)"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Durability: committed transactions survive crashes — WAL (Write-Ahead Log) ensures this in</li>
+                        <li>Postgres</li>
+                        <li>Savepoints: partial rollback within a transaction — rollback to savepoint without rolling back entire</li>
+                        <li>transaction</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Long transactions held open (waiting on external API calls) lock rows and cause contention — keep transactions short and tight
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q76">
+            <h3>Q76: How do you implement optimistic vs pessimistic locking?</h3>
+            <div class="answer">
+                <div class="one-liner">Optimistic: version field, fail on conflict (no lock held); pessimistic: SELECT FOR UPDATE holds row lock until commit.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Optimistic: UPDATE ... WHERE id=1 AND version=5 — if 0 rows updated, conflict detected; retry or</li>
+                    <li>error</li>
+                    <li> Pessimistic: SELECT ... FOR UPDATE — row locked until transaction commits; other transactions</li>
+                    <li>wait</li>
+                    <li> Optimistic is better for low-conflict scenarios (most reads, occasional writes) — no blocking</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  subgraph Pessimistic Locking
+    T1["Tx1: SELECT FOR UPDATE"] --> Lock["Row Locked in DB"]
+    T2["Tx2: SELECT FOR UPDATE"] -. "Blocks waiting for Tx1" .-> Lock
+  end
+  subgraph Optimistic Locking
+    T3["Tx3: Read v=1"] --> Update1["UPDATE ... WHERE v=1 SET v=2"]
+    T4["Tx4: Read v=1"] --> Update2["UPDATE ... WHERE v=1 SET v=2 (FAILS)"]
+  end
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Deadlock risk with pessimistic locking: two transactions lock rows in opposite order — Postgres</li>
+                        <li>detects and rolls back one</li>
+                        <li>Optimistic locking with Hibernate/SQLAlchemy: @Version annotation auto-manages version field</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Optimistic locking under high contention (many concurrent writers on same row) causes too many retries — use pessimistic there
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q77">
+            <h3>Q77: How do you implement full-text search in PostgreSQL?</h3>
+            <div class="answer">
+                <div class="one-liner">tsvector + tsquery with GIN index — native Postgres full-text search, no external service needed for moderate scale.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> tsvector: pre-processed searchable document — to_tsvector('english', 'The quick brown fox')</li>
+                    <li> tsquery: search expression — to_tsquery('quick & fox') matches documents with both words</li>
+                    <li> GIN index on tsvector column: fast full-text search without Elasticsearch for smaller datasets</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Text["Raw Text: 'The quick brown fox'"] --> TSVector["to_tsvector() -> 'brown':3 'fox':4 'quick':2"]
+  TSVector --> GIN["GIN Index (Inverted Index)"]
+  Query["User Search: 'jumping foxes'"] --> TSQuery["to_tsquery('fox')"]
+  TSQuery --> Match{"@@ matches GIN Index"} --> Result["Returns Row"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Weighted search: assign different weights to title (A) vs body (D) — title matches rank higher</li>
+                        <li>ts_rank() for relevance scoring — ORDER BY rank DESC gives most relevant results first</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Postgres FTS is great up to tens of millions of rows — beyond that, or if you need fuzzy search and faceting, Elasticsearch is better
+                </div>
+            </div>
+        </div>
+
+            </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Function Calling and Tool Use - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .tool-loop-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border: 1px solid var(--wp-border);
+        }
+
+        .loop-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+
+        .animate-active .loop-step {
+            opacity: 1;
+            transform: translateX(0);
+            transition: all 0.4s ease-out;
+        }
+
+        .loop-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--wp-accent);
+            color: #fff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .schema-box {
+            background: #202124;
+            color: #51cf66;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85em;
+            margin: 15px 0;
+            border-left: 4px solid #36c;
+        }
+
+        .schema-key {
+            color: #fcc419;
+        }
+
+        .schema-val {
+            color: #a5d6ff;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Function Calling</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Function Calling</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <rect x="5" y="10" width="40" height="20" rx="2" fill="#eef2ff" stroke="#36c" />
+                    <path d="M 45 20 L 65 20" stroke="#36c" stroke-width="2" marker-end="url(#arrow)" />
+                    <circle cx="80" cy="20" r="10" fill="#36c" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Also Known As</div>
+                    <div class="infobox-value">Tool Use</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Capability</div>
+                    <div class="infobox-value">Agency, Real-time Access</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Output</div>
+                    <div class="infobox-value">Structured JSON</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p><strong>Function Calling</strong> (also known as <strong>Tool Use</strong>) is a capability provided by
+                modern Large Language Models (LLMs) that allows them to interact with external systems. Instead of
+                purely generating conversational text, the model identifies when it needs to use a pre-defined "tool"
+                (like an API, database query, or calculator) and generates a structured request—typically in JSON
+                format—detailing the specific function and its required parameters.</p>
+
+            <h2>Conceptual Motivation</h2>
+            <p>Pre-trained LLMs are "knowledge-static," meaning their information is frozen at the time of their
+                training. Function calling bridges this gap by enabling:</p>
+            <ul>
+                <li><strong>Real-time Data Access:</strong> Fetching live weather, stock prices, or news.</li>
+                <li><strong>Reliable Calculations:</strong> Delegating math to a code execution environment rather than
+                    relying on the LLM's probability-based logic.</li>
+                <li><strong>Proprietary Actions:</strong> Authenticating with a server to send an email, update a CRM
+                    record, or query an internal database.</li>
+            </ul>
+
+            <h2>Defining the Tool Schema</h2>
+            <p>For an LLM to use a tool, it must be provided with a precise definition of the tool's interface. This is
+                most commonly implemented using <strong>JSON Schema</strong>.</p>
+
+            <div class="schema-box">
+                {<br>
+                &nbsp;&nbsp;<span class="schema-key">"name"</span>: <span class="schema-val">"get_weather"</span>,<br>
+                &nbsp;&nbsp;<span class="schema-key">"description"</span>: <span class="schema-val">"Fetch current
+                    weather for a specific city."</span>,<br>
+                &nbsp;&nbsp;<span class="schema-key">"parameters"</span>: {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="schema-key">"properties"</span>: {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="schema-key">"city"</span>: { <span
+                    class="schema-key">"type"</span>: <span class="schema-val">"string"</span>, <span
+                    class="schema-key">"description"</span>: <span class="schema-val">"e.g. 'Paris, FR'"</span> }<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;},<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="schema-key">"required"</span>: [<span
+                    class="schema-val">"city"</span>]<br>
+                &nbsp;&nbsp;}<br>
+                }
+            </div>
+
+            <h2>The Execution Loop</h2>
+            <p>Function calling is not a single generation step but a multi-turn conversation loop.</p>
+
+            <div class="tool-loop-container animate-on-scroll">
+                <div class="loop-step" style="transition-delay: 0.1s;">
+                    <div class="loop-icon">1</div>
+                    <div><strong>User:</strong> "What's the weather in London?"</div>
+                </div>
+                <div class="loop-step" style="transition-delay: 0.3s;">
+                    <div class="loop-icon">2</div>
+                    <div><strong>LLM Output:</strong> { "function": "get_weather", "args": {"city": "London"} }</div>
+                </div>
+                <div class="loop-step" style="transition-delay: 0.5s;">
+                    <div class="loop-icon">3</div>
+                    <div><strong>System:</strong> Calls Weather-API. Returns: "14°C, Foggy"</div>
+                </div>
+                <div class="loop-step" style="transition-delay: 0.7s;">
+                    <div class="loop-icon">4</div>
+                    <div><strong>LLM Output:</strong> "The current weather in London is 14°C and foggy."</div>
+                </div>
+            </div>
+
+            <h2>Programming Implementation</h2>
+            <p>Most modern LLM SDKs (OpenAI, Anthropic, LangChain) have native support for orchestrating these shifts
+                between text and tool calls.</p>
+
+            <div class="code-block">
+                <span class="keyword">response</span> = client.chat.completions.create(<br>
+                &nbsp;&nbsp;model=<span class="string">"gpt-4o"</span>,<br>
+                &nbsp;&nbsp;messages=[{<span class="string">"role"</span>: <span class="string">"user"</span>, <span
+                    class="string">"content"</span>: <span class="string">"Fetch order ID 123"</span>}],<br>
+                &nbsp;&nbsp;tools=my_tools<br>
+                )<br>
+                <span class="comment"># LLM returns a structured tool call object, not text.</span>
+            </div>
+
+            <h2>Real-World Case Study: Support Agent</h2>
+            <p>In a customer support scenario, a single user request like <em>"I want to return my order"</em> triggers
+                a cascade of tools:</p>
+            <ol>
+                <li><strong>query_order(id):</strong> Confirms the order exists and is within the return window.</li>
+                <li><strong>check_return_policy(item):</strong> Validates if the specific item (e.g. "electronics") has
+                    special constraints.</li>
+                <li><strong>generate_label():</strong> Triggers a backend process to create a shipping label.</li>
+                <li><strong>notify_user():</strong> Final text generated by the LLM confirming the process is complete.
+                </li>
+            </ol>
+
+            <h2>Common Pitfalls</h2>
+            <ul>
+                <li><strong>Hallucinated Parameters:</strong> The LLM creates arguments that don't exist in the schema
+                    (e.g. inventing a 'user_id' parameter).</li>
+                <li><strong>Vague Descriptions:</strong> Providing descriptions like "Gets data" instead of "Fetches
+                    historical stock prices for a ticker." High-quality descriptions are the "prompts" for tool choice.
+                </li>
+                <li><strong>Missing Required Fields:</strong> The model identifies the tool but fails to extract the
+                    necessary information from the user's prompt.</li>
+                <li><strong>Circular Dependencies:</strong> Poorly instructed agents calling one tool to trigger another
+                    in an infinite loop.</li>
+            </ul>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>The <strong>RSA Sales QA Dashboard</strong> uses function calling to turn the auditing bot from a passive
+                reader into an active auditor. For example, if the bot detects a potential sale in the transcript, it
+                calls the <code>match_sale_record(advisor_id, timestamp)</code> tool to verify if that sale was actually
+                logged in the company's internal CRM. If the transcript shows a "Successful RSA Sale" but the function
+                returns "No Record Found," the dashboard automatically flags the conversation for "Potential
+                Unauthorized Sale" or "Unlogged Transaction."</p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Sales Verification Tool</span>
+                verify_sale_tool = {
+                <span class="string">"name"</span>: <span class="string">"match_sale_record"</span>,
+                <span class="string">"description"</span>: <span class="string">"Check CRM for an RSA sale on a specific
+                    date"</span>,
+                <span class="string">"parameters"</span>: {
+                <span class="string">"properties"</span>: {
+                <span class="string">"advisor_id"</span>: {<span class="string">"type"</span>: <span
+                    class="string">"string"</span>},
+                <span class="string">"timestamp"</span>: {<span class="string">"type"</span>: <span
+                    class="string">"string"</span>}
+                },
+                <span class="string">"required"</span>: [<span class="string">"advisor_id"</span>, <span
+                    class="string">"timestamp"</span>]
+                }
+                }
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ Function calling enables agency and real-time computation.<br>
+                ✅ Accurate Tool Descriptions are the most important part of the schema.<br>
+                ✅ The system must handle the API call—the LLM only <em>decides</em> to call it.<br>
+                ✅ Structured JSON output ensures consistency for downstream applications.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

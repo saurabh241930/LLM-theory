@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReAct Pattern: Reasoning and Acting in Agent Loops</title>
+    <style>
+        :root { --bg-body: #f6f6f6; --bg-content: #ffffff; --text-primary: #202122; --text-secondary: #54595d; --accent-primary: #0645ad; --accent-secondary: #d73027; --accent-success: #007d2e; --accent-warning: #d46a2a; --border-color: #a2a9b1; --wiki-bg: #f8f9fa; --font-body: Georgia, serif; --font-code: monospace; --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; --space-sm: 8px; --space-md: 16px; --space-lg: 24px; --radius: 2px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-body); color: var(--text-primary); font-family: var(--font-body); line-height: 1.6; font-size: 15px; padding: var(--space-md); -webkit-font-smoothing: antialiased; }
+        .container { max-width: 900px; margin: 0 auto; background: var(--bg-content); padding: var(--space-lg); border: 1px solid var(--border-color); box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        header { border-bottom: 3px solid var(--accent-primary); padding-bottom: var(--space-md); margin-bottom: var(--space-lg); }
+        h1 { font-size: 1.8rem; color: var(--text-primary); font-weight: normal; margin-bottom: 4px; font-family: var(--font-system); }
+        .subtitle { color: var(--text-secondary); font-size: 0.95rem; font-style: italic; font-family: var(--font-system); }
+        .topic-section { margin-bottom: var(--space-lg); padding-bottom: var(--space-lg); border-bottom: 1px solid #e8e8e8; }
+        .topic-section:last-of-type { border-bottom: none; }
+        h2 { font-size: 1.4rem; color: var(--text-primary); margin-top: var(--space-lg); margin-bottom: var(--space-md); font-weight: normal; font-family: var(--font-system); border-bottom: 2px solid #e8e8e8; padding-bottom: 8px; }
+        h3 { font-size: 1.1rem; color: var(--text-primary); margin-top: var(--space-md); margin-bottom: 8px; font-weight: bold; font-family: var(--font-system); }
+        p { color: var(--text-primary); margin-bottom: var(--space-md); text-align: justify; line-height: 1.8; }
+        strong { color: var(--text-primary); font-weight: bold; }
+        em { font-style: italic; color: var(--text-secondary); }
+        code { background: var(--wiki-bg); padding: 2px 4px; border-radius: var(--radius); font-family: var(--font-code); font-size: 0.9em; color: var(--accent-secondary); }
+        ul, ol { margin-left: 2em; margin-bottom: var(--space-md); }
+        li { margin-bottom: 8px; color: var(--text-primary); line-height: 1.7; }
+        .infobox { background: var(--wiki-bg); border: 1px solid var(--border-color); padding: var(--space-md); margin: var(--space-md) 0; border-left: 4px solid var(--accent-primary); border-radius: var(--radius); }
+        .infobox strong { display: block; margin-bottom: 6px; color: var(--accent-primary); }
+        .pipeline { display: flex; flex-direction: column; gap: 8px; margin: var(--space-md) 0; }
+        .pipeline-stage { padding: 16px; background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%); border-left: 4px solid var(--accent-primary); border-radius: var(--radius); font-family: var(--font-system); color: var(--text-primary); }
+        .pipeline-stage strong { display: block; margin-bottom: 4px; color: var(--accent-primary); }
+        .warning-card { background: #fff1f0; border: 1px solid #ffa6a6; border-left: 4px solid var(--accent-secondary); padding: var(--space-md); margin: var(--space-md) 0; border-radius: var(--radius); }
+        .warning-card strong { color: var(--accent-secondary); display: block; margin-bottom: 6px; }
+        .takeaway-section { background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%); border: 2px solid var(--accent-primary); padding: var(--space-lg); margin-top: var(--space-lg); border-radius: var(--radius); }
+        .takeaway-section h2 { color: var(--accent-primary); margin-top: 0; }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md); }
+        .takeaway-item { padding: var(--space-md); background: white; border-left: 3px solid var(--accent-success); border-radius: var(--radius); }
+        .takeaway-item strong { color: var(--accent-success); display: block; margin-bottom: 6px; font-family: var(--font-system); }
+        @media (max-width: 768px) { .container { padding: var(--space-md); border: none; box-shadow: none; background: var(--bg-body); } h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>ReAct Pattern: Reasoning and Acting in Agent Loops</h1>
+            <div class="subtitle">Enabling Agents to Reason, Plan, and Act Iteratively</div>
+        </div>
+    </header>
+    <!-- Section 1: Introduction to ReAct -->
+    <section class="topic-section">
+        <h2>ReAct: Enabling Reasoning and Acting in Agent Loops</h2>
+        
+        <p><strong>ReAct</strong> (Reasoning + Acting) is a pattern for enabling language models to solve complex problems by alternating between thinking about what to do and taking actions. Rather than generating final answers directly, ReAct systems have the model generate reasoning steps, recognize when external tool use is needed, invoke tools, observe results, and reason about next steps in a loop. This pattern dramatically improves performance on tasks requiring planning, interaction with external systems, and iterative refinement.</p>
+
+        <p>The power of ReAct emerges from exposing reasoning. Traditional language models generate outputs in a single pass. ReAct systems generate visible reasoning—intermediate thoughts and plans—which can be inspected, validated, and corrected. When an intermediate reasoning step is wrong, the loop can be directed toward correction rather than compounding error downstream. This creates more reliable and interpretable AI systems.</p>
+
+        <h3>The Original ReAct Contribution</h3>
+
+        <p>The ReAct pattern was formalized in research showing that prompting language models to produce both thoughts (reasoning steps) and actions (tool invocations) together dramatically outperforms either alone. For example, when solving math word problems, prompting the model to show reasoning before answering yielded ~60% accuracy. Prompting the model to use a calculator tool when needed yielded ~65% accuracy. Combining both with ReAct structure (reason, then decide when to use calculator, observe results, continue reasoning) achieved ~85% accuracy. The combination is more than additive—the synergy comes from using reasoning to decide when tools help and using tool results to refine reasoning.</p>
+
+        <div class="infobox">
+            <strong>Key Insight:</strong> ReAct's power derives from interleaving reasoning and action, enabling the model to iteratively refine both its understanding and its plans based on intermediate results.
+        </div>
+    </section>
+
+    <!-- Section 2: Core Components of ReAct Systems -->
+    <section class="topic-section">
+        <h2>Core Components: Thoughts, Actions, Observations</h2>
+        
+        <p>ReAct systems operationalize reasoning and acting through three core components, repeated in loops until task completion.</p>
+
+        <h3>Thoughts: Making Reasoning Explicit</h3>
+
+        <p><strong>Thoughts</strong> are reasoning steps the model generates before acting. Rather than jumping to actions, the model is prompted to think first: "I need to find the current population of Brazil. Let me search for this information." This explicit reasoning serves multiple purposes: (1) it guides the model's own behavior—thinking through the problem helps generate better actions, (2) it enables human oversight—readers can see the model's logic and spot errors, and (3) it often improves accuracy simply through forcing articulated reasoning.</p>
+
+        <p>The structure of thoughts matters. Some systems use natural language thoughts (any reasoning text), others structure thoughts more formally (step 1, step 2, etc.). Some systems include multiple thought formats: immediate thoughts (what to do next), longer-term planning (overall strategy), and correction thoughts (observations that the current approach won't work). This flexibility enables models to express different types of reasoning in appropriate formats.</p>
+
+        <h3>Actions: Specifying What to Do</h3>
+
+        <p><strong>Actions</strong> are structured requests for tool invocations or information retrieval. A thought might be "I need to search for information about climate change." The action translates this into a structured request: ACTION: search("climate change effects on marine ecosystems"). The structure enables parsing and execution. Actions might be: (1) tool invocations (call a function), (2) API calls (query an external service), (3) database queries (retrieve information), or (4) information retrieval (search documents).</p>
+
+        <p>Effective action specification is crucial. Actions must be unambiguous—the system executing actions must understand what information is requested. Some systems use natural language actions (the executor uses language understanding to execute), others use structured formats (JSON, specific command syntax). Structured formats reduce ambiguity but require more engineering.</p>
+
+        <h3>Observations: Incorporating Results</h3>
+
+        <p><strong>Observations</strong> are results returned from actions. After invoking a search action, the observation might be search results. After consulting a calculator, the observation is the computed value. Observations are fed back into the reasoning loop—the model sees results and generates new thoughts in response. This closes the feedback loop: reasoning informs actions, actions generate observations, observations inform refined reasoning.</p>
+
+        <p>How observations are presented affects downstream reasoning. Verbose observations with irrelevant information waste context and might distract the model. Terse observations might omit crucial details. Effective systems curate observations: return the 3-5 most relevant search results rather than 50, summarize complex information into key facts, and highlight unexpected findings that warrant investigation.</p>
+
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>Thought</strong>
+                <p>Model generates reasoning step: "What is needed next?"</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Action</strong>
+                <p>Model specifies tool invocation: "Search for X" or "Calculate Y"</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Observation</strong>
+                <p>System executes action and returns results to the model</p>
+            </div>
+        </div>
+
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>Repeat or Conclude</strong>
+                <p>Model uses observation to generate next thought, looping until task complete or maximum steps reached.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Prompting Patterns for ReAct -->
+    <section class="topic-section">
+        <h2>Effective ReAct Prompting Patterns</h2>
+        
+        <p>Getting ReAct systems to work well requires careful prompt engineering. The prompts must establish the format clearly, provide examples, and set expectations for when to conclude.</p>
+
+        <h3>Format Specification and Examples</h3>
+
+        <p>Prompts should specify the exact format for thoughts, actions, and observations. For example: "Generate thoughts in the format: Thought: [your reasoning]. Generate actions in the format: Action: search([query]). I will provide observations in the format: Observation: [results]." Following specification with examples greatly improves adherence: showing 1-2 complete trajectories (problem → thought → action → observation → thought → action → observation → final answer) trains the model to follow the pattern.</p>
+
+        <p>The format balance matters. Too rigid formats (e.g., exactly 3 thoughts per action) constrain flexibility for problems of varied complexity. Too loose formats (anything goes) result in inconsistent output that's hard to parse. Most effective systems provide structure (defined format for thoughts/actions/observations) while allowing variability in quantity and timing.</p>
+
+        <h3>Stop Conditions and Termination Logic</h3>
+
+        <p>ReAct loops could theoretically continue indefinitely—new thoughts leading to new actions indefinitely exploring. Systems must specify termination conditions: maximum number of steps, achieving a success criterion, recognizing that additional actions won't help. Clear stop conditions in prompts help: "Stop when you have found a definitive answer or determined that the answer cannot be found with available tools."</p>
+
+        <h3>Tool Description and Availability</h3>
+
+        <p>The model must understand what tools are available and when to use them. Prompt specification includes: "You have access to the following tools: [search tool - retrieves information from internet, calculator tool - computes mathematical expressions]. Use these tools when you need their specific capabilities." Clear tool descriptions with examples of usage dramatically improve appropriate tool invocation. Vague descriptions lead to tool misuse or failure to invoke tools when helpful.</p>
+
+        <h3>Few-Shot Prompting for Consistency</h3>
+
+        <p>Providing examples of the entire ReAct trajectory—thoughts, actions, observations, conclusions—for similar problems enables in-context learning. The model learns the task format and solution patterns from examples. For complex reasoning tasks, providing 1-3 examples often suffices; for diverse tasks, more examples provide better coverage of expected behaviors.</p>
+
+        <div class="warning-card">
+            <strong>Prompt Complexity Trade-off:</strong> More detailed prompts improve adherence but consume context. Very long prompts leave less room for the actual reasoning loop and problem solving. Balance between specification and concision.
+        </div>
+    </section>
+
+    <!-- Section 4: Managing the Reasoning Loop -->
+    <section class="topic-section">
+        <h2>Loop Management and State Tracking</h2>
+        
+        <p>Implementing ReAct systems requires managing the reasoning loop—tracking state, maintaining context, and orchestrating transitions between thinking and acting.</p>
+
+        <h3>Context Management and Loop History</h3>
+
+        <p>As loops progress, context windows fill with thoughts, actions, and observations. For long reasoning chains, context becomes exhausted, preventing the model from considering all previous reasoning. Systems manage this through: (1) summarization—periodically summarize past reasoning and observations into concise summaries, (2) hierarchical reasoning—divide complex problems into sub-problems, reason over each, then synthesize, or (3) memory management—store intermediate results in external memory rather than context. Balancing context usage between problem context (what's being solved) and reasoning history (how it's being solved) is crucial.</p>
+
+        <h3>Error Handling and Correction</h3>
+
+        <p>Tools fail or return unexpected results. A search might return no results. A calculator might receive malformed input. ReAct systems must handle failures gracefully: (1) inform the model of the error, (2) enable the model to reason about alternatives, or (3) automatically retry with modified parameters. When tools fail repeatedly, systems should recognize dead ends and either suggest user clarification or conclude that the problem cannot be solved with available tools.</p>
+
+        <h3>Loop Limits and Safeguards</h3>
+
+        <p>Without safeguards, loops could run indefinitely. Systems implement step limits: maximum of 10 or 20 iterations, preventing runaway execution. Additionally, some systems implement loop detection: if the model repeats similar thoughts and actions without progress, the loop is terminated with a "stuck" conclusion. These safeguards prevent resource exhaustion and wasted computation.</p>
+
+        <h3>Orchestration and State Management</h3>
+
+        <p>Managing the ReAct loop requires: (1) parsing model output to extract thoughts, actions, and any final answer, (2) executing actions (tool invocations), (3) formulating observations, (4) determining whether to continue looping or terminate, and (5) if continuing, providing the model with the new observation and current state. This orchestration logic is error-prone; systems should validate that actions are executable before attempting execution, handle errors gracefully, and provide clear feedback when problems occur.</p>
+    </section>
+
+    <!-- Section 5: Advanced ReAct Techniques -->
+    <section class="topic-section">
+        <h2>Advanced Patterns and Extensions</h2>
+        
+        <p>Beyond basic ReAct, several extensions and patterns enhance capabilities and reliability.</p>
+
+        <h3>Plan-Then-Act Pattern</h3>
+
+        <p>Basic ReAct generates plans incrementally (one step at a time). Extensions generate full plans before acting. The model might generate: "Step 1: Search for X. Step 2: Extract Y from search results. Step 3: Calculate Z using extracted Y. Step 4: Verify result makes sense." Then, the model executes the plan step by step. This pattern reduces backtracking because the full plan is visible upfront; if the plan seems infeasible, it can be revised before expensive execution.</p>
+
+        <h3>Multi-Agent ReAct Patterns</h3>
+
+        <p>Multiple agents can reason and act in coordination. One agent might be a researcher generating thoughts about what information is needed; another might be an executor performing actions; a third might be a validator checking results. These agents interact through shared observations and communication, enabling specialization and more robust reasoning. Multi-agent systems are more complex but can handle harder problems.</p>
+
+        <h3>Reflection and Self-Correction</h3>
+
+        <p>Advanced systems add reflection steps: after generating an answer, the model reviews its own reasoning and checks for errors. "Does my answer make sense? Have I considered alternative interpretations? Are there errors in my logic?" This self-critique loop often uncovers mistakes the model would otherwise miss. Some systems implement multiple reflection passes: generate answer, reflect, identify errors, generate corrected answer.</p>
+
+        <h3>Deterministic Hybrid Systems</h3>
+
+        <p>Pure language model reasoning is probabilistic and sometimes unreliable. Hybrid systems combine language models with deterministic components: the model reasons about what computation to perform, then a deterministic system performs it. For math problems, the model decides which mathematical operations to apply, then a symbolic math system executes them precisely. This combines language understanding flexibility with computational certainty.</p>
+
+        <div class="infobox">
+            <strong>ReAct Emerging Patterns:</strong> As practitioners build ReAct systems, new patterns emerge. Retrieval-AugmentedReAct (incorporating RAG with ReAct loops), Hierarchical ReAct (decomposing complex problems into subroutines), and Grounded ReAct (ensuring observations truly ground reasoning rather than the model hallucinating observations) are active research directions.
+        </div>
+    </section>
+
+    <!-- Section 6: Evaluation and Debugging ReAct Systems -->
+    <section class="topic-section">
+        <h2>Evaluating and Improving ReAct Performance</h2>
+        
+        <p>ReAct systems are complex. Evaluating and debugging them requires systematic approaches.</p>
+
+        <h3>Trajectory Analysis</h3>
+
+        <p>Successful execution leaves a history—the complete thought-action-observation trajectory. Examining successful and failed trajectories reveals patterns. Successful examples might show clear reasoning, appropriate tool use, and logical progression. Failed examples might show: hallucinating tools that don't exist, repeating same actions without progress, or reasoning that doesn't match actions taken. Analyzing trajectories enables targeted improvements.</p>
+
+        <h3>Bottleneck Identification</h3>
+
+        <p>Failures can occur at multiple points: poor reasoning (model generates wrong thoughts), tool misuse (model invokes wrong tools or with wrong parameters), observation processing (model misinterprets results), or termination failures (reaches maximum steps before solving). Identifying where failures occur enables targeted fixes. If most failures are observation processing errors, improving that component pays dividends. If failures are reasoning errors, prompting improvements help.</p>
+
+        <h3>Metrics</h3>
+
+        <p>Basic metrics: Did the system reach a correct answer? Did it exceed maximum steps? Did it use tools appropriately? More nuanced metrics: How many tool invocations were wasted (didn't contribute to solution)? How many reasoning steps were extraneous? What's the efficiency (answer quality per resource consumed)? These metrics help optimize systems.</p>
+
+        <h3>Human Oversight and Validation</h3>
+
+        <p>For critical applications, human validation of ReAct trajectories is essential. Humans can verify: Is the reasoning sound? Are the tool invocations appropriate? Does the conclusion follow from evidence? This provides ground truth for evaluation and identifies failure modes that metrics miss.</p>
+    </section>
+
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>ReAct Synergizes Reasoning and Acting:</strong> Combining visible thoughts with tool use outperforms either alone through iterative refinement.
+            </div>
+            <div class="takeaway-item">
+                <strong>Format Specification is Critical:</strong> Clear, consistent formatting for thoughts, actions, and observations enables reliable parsing and execution.
+            </div>
+            <div class="takeaway-item">
+                <strong>Examples Drive Behavior:</strong> In-context examples of complete ReAct trajectories teach the model the expected pattern and improve consistency.
+            </div>
+            <div class="takeaway-item">
+                <strong>State and Context Management Matter:</strong> Tracking loop state, managing context windows, and preventing infinite loops are essential engineering concerns.
+            </div>
+            <div class="takeaway-item">
+                <strong>Error Handling Enables Robustness:</strong> Graceful failure recovery, tool validation, and sensible defaults make systems reliable in practice.
+            </div>
+            <div class="takeaway-item">
+                <strong>Trajectory Analysis Reveals Improvement Opportunities:</strong> Examining successful and failed reasoning loops identifies bottlenecks for targeted optimization.
+            </div>
+        </div>
+    </section>
+</div>
+</body>
+</html>

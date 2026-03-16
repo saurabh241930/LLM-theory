@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NL-to-SQL (Natural Language to SQL) - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .sql-pipeline-viz {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border: 1px solid var(--wp-border);
+        }
+
+        .pipeline-step {
+            padding: 10px;
+            border: 1px solid var(--wp-border);
+            background: #fff;
+            position: relative;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .animate-active .pipeline-step {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.4s ease-out;
+        }
+
+        .pipeline-step:not(:last-child)::after {
+            content: "↓";
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--wp-accent);
+            font-weight: bold;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .security-alert {
+            background: #fff5f5;
+            border: 1px solid #ffc9c9;
+            color: #c92a2a;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>NL-to-SQL</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">NL-to-SQL</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <text x="50" y="25" text-anchor="middle" font-size="12" fill="#36c">SELECT * FROM...</text>
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Role</div>
+                    <div class="infobox-value">Relational Data Access</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Architecture</div>
+                    <div class="infobox-value">Translation & Execution</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Key Challenge</div>
+                    <div class="infobox-value">Schema Mapping</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p><strong>NL-to-SQL</strong> (Natural Language to SQL) is a specialized application of Large Language
+                Models where an LLM is used to translate a user's natural language request into a valid SQL query. This
+                query is then executed against a relational database, and the raw results are formatted back into
+                natural language for the user. This enables non-technical business users to interact with complex
+                databases without needing to learn SQL syntax.</p>
+
+            <h2>The Translation Pipeline</h2>
+            <p>A robust NL-to-SQL system involves more than just a single prompt; it requires a multi-stage validation
+                and execution process.</p>
+
+            <div class="sql-pipeline-viz animate-on-scroll">
+                <div class="pipeline-step" style="transition-delay: 0.1s;">1. <strong>Question Parsing:</strong>
+                    Extracting intent and key entities.</div>
+                <div class="pipeline-step" style="transition-delay: 0.2s;">2. <strong>Schema Retrieval:</strong>
+                    Filtering relevant tables/columns for context.</div>
+                <div class="pipeline-step" style="transition-delay: 0.3s;">3. <strong>SQL Generation:</strong> LLM
+                    translates prompt to SQL using few-shot examples.</div>
+                <div class="pipeline-step" style="transition-delay: 0.4s;">4. <strong>Security Validation:</strong>
+                    Checking for illegal commands (DROP, DELETE).</div>
+                <div class="pipeline-step" style="transition-delay: 0.5s;">5. <strong>Execution:</strong> Running the
+                    query against the target database.</div>
+                <div class="pipeline-step" style="transition-delay: 0.6s;">6. <strong>Error Handling:</strong> Feeding
+                    DB errors back to LLM for one-shot correction.</div>
+                <div class="pipeline-step" style="transition-delay: 0.7s;">7. <strong>Answer Synthesis:</strong>
+                    Transforming raw table data into readable text.</div>
+            </div>
+
+            <h2>Context Management: Schema Presentation</h2>
+            <p>For an LLM to generate precise SQL, it must understand the database structure (Table names, column names,
+                data types, and primary/foreign key relationships). However, large enterprise databases containing
+                hundreds of tables often exceed the model's context window.</p>
+
+            <div class="side-note">
+                💡 <strong>Strategy:</strong> Use "Schema Ranking" or "Vector Search Retrieval" to only include the top
+                5–10 most relevant tables in the prompt based on the user's question.
+            </div>
+
+            <h2>Few-Shot Learning for SQL</h2>
+            <p>Providing examples (input query + correct output SQL) dramatically improves the model's performance on
+                complex JOINs and aggregations.</p>
+
+            <div class="code-block">
+                <strong>Ex:</strong> "Who is the top customer?"<br>
+                <strong>A:</strong> SELECT name, SUM(amount) FROM orders JOIN customers GROUP BY name ORDER BY 2 DESC
+                LIMIT 1;
+            </div>
+
+            <h2>Implementation Workflow</h2>
+            <p>The system typically uses a "Query-Retry" loop to handle syntax errors.</p>
+            <ul>
+                <li><strong>Initialization:</strong> Load schema metadata.</li>
+                <li><strong>Attempt 1:</strong> Generate SQL and execute.</li>
+                <li><strong>Failure:</strong> If a <span class="code-inline">SQLError</span> occurs, feed the exact
+                    error message back to the LLM (e.g., "Unknown column 'purchases'") and ask for a fix.</li>
+                <li><strong>Success:</strong> Return data.</li>
+            </ul>
+
+            <div class="security-alert">
+                🛡️ <strong>Security Warning:</strong> Never allow an LLM to execute destructive commands. Implement
+                strict pre-execution filters to block <span class="code-inline">DROP</span>, <span
+                    class="code-inline">DELETE</span>, and <span class="code-inline">TRUNCATE</span> operations.
+            </div>
+
+            <h2>Common Pitfalls</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Pitfall</th>
+                        <th>Consequence</th>
+                        <th>Solution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Ambiguous Names</strong></td>
+                        <td>LLM picks the wrong 'ID' column.</td>
+                        <td>Provide detailed column descriptions.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Missing JOINs</strong></td>
+                        <td>Returns disconnected data points.</td>
+                        <td>Include Foreign Key maps in context.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Schema Bloat</strong></td>
+                        <td>Lost context/Hallucination.</td>
+                        <td>Dynamic schema retrieval.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>Management uses the <strong>RSA Sales QA Dashboard</strong> to perform complex analytics using natural
+                language. A manager can ask: <em>"Which advisors in the New York branch sold the most RSA policies but
+                    have more than 3 compliance flags?"</em> The NL-to-SQL pipeline translates this into a multi-table
+                JOIN between the <code>Advisors</code>, <code>Sales</code>, and <code>Compliance_Flags</code> tables.
+                This allows the team to instantly identify high-performing but high-risk agents without waiting for a
+                data analyst to write and run custom SQL scripts.</p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Managerial SQL Agent</span>
+                prompt = f<span class="string">"""Query: {user_question}
+                    Schema: Table Advisors (id, name, branch), Sales (id, advisor_id, product)
+                    Rule: product MUST be 'RSA'
+                    SQL:"""</span>
+
+                <span class="keyword">if</span> <span class="string">"DROP"</span> <span class="keyword">in</span>
+                generated_sql.upper():
+                <span class="keyword">raise</span> SecurityError(<span class="string">"Destructive query
+                    blocked."</span>)
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ NL-to-SQL democratizes data access for non-technical users.<br>
+                ✅ Structured schema context is the "Truth" for the generator.<br>
+                ✅ Few-shot examples are essential for reliable JOIN logic.<br>
+                ✅ Security validation is mandatory before execution.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

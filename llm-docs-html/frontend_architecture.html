@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .trap {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-left: 4px solid #ffc107;
+            margin-top: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="subtitle">Core Rendering & Layout</div>
+    </header>
+
+    <div class="content-wrapper">
+
+        <div class="qa-container" id="q42">
+            <h3>Q42: How does React's reconciliation algorithm work?</h3>
+            <div class="answer">
+                <div class="one-liner">React diffs the virtual DOM tree against the previous snapshot; only nodes that
+                    changed are updated in the real DOM.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Virtual DOM: lightweight JS object tree representing UI — diffing it is O(n) with React's
+                        heuristics</li>
+                    <li> Key prop: tells React which list items are stable across renders — missing keys cause
+                        unnecessary</li>
+                    <li>re-mounts</li>
+                    <li> Fiber architecture (React 16+): reconciliation is interruptible — high-priority updates (user
+                        input) can</li>
+                    <li>preempt renders</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  StateChange["State / Props Change"] --> VDOM_New["New Virtual DOM"]
+  VDOM_Old["Old Virtual DOM"] --> Diffing{"Reconciliation (Diffing)"}
+  VDOM_New --> Diffing
+  Diffing -- "Computes Minimal Mutation" --> DOM["Real DOM"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>React assumes different component types produce different trees — swapping component type
+                        </li>
+                        <li>triggers full subtree re-mount</li>
+                        <li>Concurrent mode: time-slicing breaks rendering into chunks, keeping UI responsive during
+                            heavy</li>
+                        <li>renders</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Using array index as key is dangerous in dynamic lists — index
+                    doesn't identify items, only position; items can mismatch on reorder
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q43">
+            <h3>Q43: When should you use useState vs useReducer?</h3>
+            <div class="answer">
+                <div class="one-liner">useState for simple independent values; useReducer when state logic is complex,
+                    has multiple sub-values, or transitions depend on previous state.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> useState: single value or simple object — straightforward, minimal boilerplate</li>
+                    <li> useReducer: complex state machine — actions make transitions explicit and testable</li>
+                    <li> useReducer enables dispatching the same action from many places without prop drilling</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  subgraph useState
+    Primitive["Primitive Value"] --> SetState["setState()"]
+  end
+  subgraph useReducer
+    Complex["Complex State Object"] --> Dispatch["dispatch({type: ACT})"]
+    Dispatch --> Red["Reducer Function"]
+  end
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Combine useReducer + useContext for app-wide state without Redux — simpler than Redux for
+                        </li>
+                        <li>mid-size apps</li>
+                        <li>Immer.js with useReducer: write mutations that produce immutable state updates — cleaner
+                        </li>
+                        <li>reducer code</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> useState with an object doesn't merge updates like setState in
+                    class components — you must spread previous state manually
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q44">
+            <h3>Q44: Explain React.memo, useMemo, and useCallback — when to use each</h3>
+            <div class="answer">
+                <div class="one-liner">All three prevent unnecessary work — memo for component re-renders, useMemo for
+                    expensive computations, useCallback for stable function references.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> React.memo: wraps component, skips re-render if props haven't changed (shallow comparison)
+                    </li>
+                    <li> useMemo: caches computed value, recomputes only when dependencies change — use for</li>
+                    <li>expensive derivations</li>
+                    <li> useCallback: caches function reference — prevents child re-renders when function is passed as
+                        prop</li>
+                    <li>to memo'd child</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Parent["Parent Re-renders"] --> Child{"Child Component Wrapped in React.memo?"}
+  Child -- "Yes" --> Props{"Props Changed? (uses useCallback)"}
+  Child -- "No" --> Rerender["Child Re-renders"]
+  Props -- "Yes" --> Rerender
+  Props -- "No" --> Skip["Skip Render"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Premature memoization adds complexity — measure first with React DevTools Profiler before
+                        </li>
+                        <li>adding memo</li>
+                        <li>useMemo and useCallback have their own cost (comparison) — only worthwhile if the saved work
+                            is</li>
+                        <li>heavier</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> React.memo doesn't help if parent passes new object/array
+                    literals as props on every render — memoize those objects too
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q45">
+            <h3>Q45: How do you manage global state in React? Compare options.</h3>
+            <div class="answer">
+                <div class="one-liner">Context + useReducer for simple cases; Zustand/Jotai for lightweight atomic
+                    state; Redux Toolkit for complex, large-scale apps.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Context API: built-in, no dependency — but all consumers re-render when any context value</li>
+                    <li>changes (use splitting)</li>
+                    <li> Zustand: minimal boilerplate, selective subscriptions — components only re-render when their
+                        slice</li>
+                    <li>changes</li>
+                    <li> Redux Toolkit: best for large teams — devtools, time-travel debugging, strong conventions</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Context["React Context (Low frequency)"] --> Redux["Redux (High structure / Boilerplate)"]
+  Redux --> Zustand["Zustand (Minimalist / No providers)"]
+  Zustand --> Jotai["Jotai (Atomic / Recoil-like)"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Server state (API data) is different from client state — use React Query or SWR instead of
+                            stuffing it</li>
+                        <li>in Redux</li>
+                        <li>Jotai/Recoil: atom-based state — fine-grained reactivity, each component subscribes to only
+                            what it</li>
+                        <li>needs</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Putting everything in global state is an anti-pattern — server
+                    cache (React Query), URL state (router), and UI state should be separate
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q46">
+            <h3>Q46: What are React hooks rules and why do they exist?</h3>
+            <div class="answer">
+                <div class="one-liner">Only call hooks at the top level (not in loops/conditions) and only in React
+                    functions — ensures hook call order is stable across renders.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> React tracks hooks by call order — if a hook is conditionally called, order changes and state
+                    </li>
+                    <li>mismatches on next render</li>
+                    <li> This is why ESLint plugin (eslint-plugin-react-hooks) enforces the rules automatically</li>
+                    <li> Custom hooks encapsulate stateful logic — reusable across components without changing</li>
+                    <li>component hierarchy</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Comp["Function Component"] --> TopLevel["Hooks must be at Top Level"]
+  Comp --> NoLoop["Cannot be inside loops, conditions, or nested functions"]
+  TopLevel --> Ensure{"Ensures Call Order Independence"}
+  NoLoop --> Ensure
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Under the hood: hooks are stored in a linked list per component fiber; order is the only
+                            index React</li>
+                        <li>has</li>
+                        <li>Custom hook naming convention: must start with 'use' so React and linters can identify and
+                            validate</li>
+                        <li>them</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Calling a hook inside a conditional or loop looks harmless but
+                    silently corrupts state — React gives a cryptic error, not a clear one
+                </div>
+            </div>
+        </div>
+
+                <div class="qa-container" id="q47">
+            <h3>Q47: Explain the Browser Critical Rendering Path and how to optimize it</h3>
+            <div class="answer">
+                <div class="one-liner">The sequence of steps the browser takes to convert HTML, CSS, and JS into pixels on the screen, optimized by minimizing render-blocking resources.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li>  Steps: Parse HTML -> Build DOM -> Parse CSS -> Build CSSOM -> Render Tree -> Layout -> Paint -> Composite</li>
+                    <li>  CSS is render-blocking: the browser won't render processed content until CSSOM is built</li>
+                    <li>  JS is parser-blocking: when the parser encounters a script tag, it pauses HTML parsing to fetch and execute it</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  HTML["HTML"] --> DOM["DOM Tree"]
+  CSS["CSS"] --> CSSOM["CSSOM Tree"]
+  DOM --> RenderTree["Render Tree"]
+  CSSOM --> RenderTree
+  RenderTree --> Layout["Layout"]
+  Layout --> Paint["Paint"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Use `async` (executes when downloaded, without blocking) or `defer` (executes after DOM parsing) for scripts</li>
+                        <li>Preload critical assets using &lt;link rel="preload"&gt; to fetch them early in the lifecycle</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Inlining all CSS/JS avoids network requests but ruins caching and balloons the initial HTML payload.
+                </div>
+            </div>
+        </div>
+
+                <div class="qa-container" id="q48">
+            <h3>Q48: What are Web Workers and Service Workers? How do they differ?</h3>
+            <div class="answer">
+                <div class="one-liner">Web Workers offload heavy CPU tasks to background threads; Service Workers act as network proxies for caching and offline support.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li>  JS is single-threaded. Heavy calculations block the main thread, causing UI freezes</li>
+                    <li>  Web Workers execute scripts in a separate background thread without DOM access, communicating via postMessage</li>
+                    <li>  Service Workers intercept network requests, enabling offline capabilities (PWA), background sync, and push notifications</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Browser["Browser Main Thread (UI)"] -- ".postMessage()" --> WebWorker["Web Worker (Heavy compute)"]
+  Browser -- "Registers" --> ServiceWorker["Service Worker (Network Proxy / Offline)"]
+  ServiceWorker <--> Cache[("Browser Cache API")]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Service workers have a distinct lifecycle: Install -> Wait -> Activate. An activated SW requires a reload to control clients</li>
+                        <li>SharedWorkers can be accessed by multiple scripts across different windows/iframes of the same origin</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Trying to manipulate the DOM or accessing `window` inside any Worker will throw an error since they run in a different global context.
+                </div>
+            </div>
+        </div>
+
+                <div class="qa-container" id="q49">
+            <h3>Q49: Explain CSS Flexbox vs CSS Grid and when to use each</h3>
+            <div class="answer">
+                <div class="one-liner">Flexbox is for 1D layouts (rows or columns), while CSS Grid is for 2D layouts (rows and columns simultaneously).</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li>  Flexbox flows items in a single direction. Best for alignment, distributing space, and wrapping items</li>
+                    <li>  CSS Grid defines a structured grid template, allowing items to span multiple tracks</li>
+                    <li>  Flexbox is content-out (size driven by content), Grid is layout-in (content conforms to grid areas)</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  Flex["Flexbox: 1-Dimensional"] --> Row["Rows OR Columns"]
+  Grid["CSS Grid: 2-Dimensional"] --> GridCells["Rows AND Columns simultaneously"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>You can easily mix them: A grid item can be a flex container. Use Grid for page-level structure and Flexbox for components</li>
+                        <li>minmax() and auto-fit/auto-fill in Grid allow for fully responsive layouts without media queries</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Overusing Grid for simple single-axis alignments adds unnecessary complexity; default to Flexbox until you need a second dimension.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q50">
+            <h3>Q50: Explain RxJS operators you use most and why</h3>
+            <div class="answer">
+                <div class="one-liner">switchMap for latest-only (search), mergeMap for parallel, concatMap for ordered,
+                    forkJoin for parallel completion, debounceTime for input throttling.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> switchMap: cancels previous inner Observable on new emission — perfect for search-as-you-type
+                    </li>
+                    <li>(discard stale results)</li>
+                    <li> debounceTime: waits for pause in emissions before continuing — prevents flooding API on
+                        keystroke</li>
+                    <li> forkJoin: waits for all Observables to complete — use for parallel API calls that all must
+                        succeed</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  ClickStream["Click Event Stream"] --> Map["map()"]
+  Map --> Debounce["debounceTime(300ms)"]
+  Debounce --> SwitchMap["switchMap(API Call)"]
+  SwitchMap --> Result["Subscribe (Update UI)"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>takeUntilDestroyed (Angular 16+) or takeUntil(destroy$): auto-unsubscribe on component
+                            destroy to</li>
+                        <li>prevent memory leaks</li>
+                        <li>catchError inside switchMap: handle individual request errors without killing the outer
+                            Observable</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Subscribing inside subscribe (nested subscriptions) is an
+                    anti-pattern — always flatten with switchMap/mergeMap/concatMap
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q51">
+            <h3>Q51: How do you implement code splitting and bundle optimization in React?</h3>
+            <div class="answer">
+                <div class="one-liner">React.lazy + Suspense for component-level code splitting; analyze bundle with
+                    webpack-bundle-analyzer to find heavy dependencies.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> React.lazy(() => import('./HeavyComponent')): splits HeavyComponent into separate chunk,
+                        loaded</li>
+                    <li>on demand</li>
+                    <li> Suspense fallback: shows loading UI while chunk downloads — prevents blank screen</li>
+                    <li> Tree shaking: import { specificFunction } from 'library' instead of import library — removes
+                        unused</li>
+                    <li>code</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Webpack["Bundler (Webpack/Vite)"] --> Main["main.[hash].js (Core App)"]
+  Webpack --> Vendor["vendor.[hash].js (React, Lodash)"]
+  Webpack --> Async["chunk-auth.[hash].js (Loaded dynamically)"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Dynamic imports for feature flags: if (feature.enabled) { const Module = await
+                            import('./Module') }</li>
+                        <li>Preload key routes:
+                            <link rel='preload'> or webpack magic comment /* webpackPrefetch: true */
+                        </li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Over-splitting creates too many small chunks — more HTTP requests
+                    can be slower than one slightly larger bundle. Profile before splitting.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q52">
+            <h3>Q52: What are common React performance pitfalls and how do you fix them?</h3>
+            <div class="answer">
+                <div class="one-liner">Unnecessary re-renders, expensive computations in render, and large list
+                    rendering are the top three — each has a specific fix.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Unnecessary re-renders: use React DevTools Profiler to identify — fix with React.memo and
+                        stable</li>
+                    <li>prop references</li>
+                    <li> Expensive computations in render: wrap with useMemo — recalculate only when inputs change</li>
+                    <li> Large lists: virtualize with react-window or react-virtual — render only visible rows</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Issue["Unnecessary Re-renders"] --> DevTools["React Profiler Extension"]
+  DevTools --> Identify["Identify component rendering too often"]
+  Identify --> Fix["Apply React.memo / useCallback / useMemo"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Avoid creating objects/functions inline in JSX: &lt;Component onClick={()=&gt; fn()} /&gt; creates
+                                new</li>
+                        <li>function every render</li>
+                        <li>Use production build for performance testing — development mode adds significant overhead
+                        </li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Premature optimization is real — profile first, optimize second.
+                    Most React apps are fast enough without any manual optimization.
+                </div>
+            </div>
+        </div>
+
+            </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+</html>

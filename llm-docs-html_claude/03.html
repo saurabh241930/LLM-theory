@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Engineering: Complete Guide</title>
+    <style>
+        :root {
+            /* Wikipedia-style Palette */
+            --bg-body: #f6f6f6;
+            --bg-content: #ffffff;
+            --text-primary: #202122;
+            --text-secondary: #54595d;
+            --accent-primary: #0645ad;
+            --accent-secondary: #d73027;
+            --accent-success: #007d2e;
+            --accent-warning: #d46a2a;
+            --border-color: #a2a9b1;
+            --wiki-bg: #f8f9fa;
+            
+            /* Typography */
+            --font-body: Georgia, serif;
+            --font-code: monospace;
+            --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --radius: 2px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            font-size: 15px;
+            padding: var(--space-md);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-content);
+            padding: var(--space-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        /* Header - Wikipedia Style */
+        header {
+            border-bottom: 3px solid var(--accent-primary);
+            padding-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text-primary);
+            font-weight: normal;
+            margin-bottom: 4px;
+            font-family: var(--font-system);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Content Sections */
+        .topic-section {
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-lg);
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .topic-section:last-of-type {
+            border-bottom: none;
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            margin-top: var(--space-lg);
+            margin-bottom: var(--space-md);
+            font-weight: normal;
+            font-family: var(--font-system);
+            border-bottom: 2px solid #e8e8e8;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-top: var(--space-md);
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-family: var(--font-system);
+        }
+
+        p {
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+            text-align: justify;
+            line-height: 1.8;
+        }
+
+        strong { 
+            color: var(--text-primary); 
+            font-weight: bold; 
+        }
+
+        em {
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        code {
+            background: var(--wiki-bg);
+            padding: 2px 4px;
+            border-radius: var(--radius);
+            font-family: var(--font-code);
+            font-size: 0.9em;
+            color: var(--accent-secondary);
+        }
+
+        ul, ol {
+            margin-left: 2em;
+            margin-bottom: var(--space-md);
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+
+        /* Info Box */
+        .infobox {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-left: 4px solid var(--accent-primary);
+            border-radius: var(--radius);
+        }
+
+        .infobox strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--accent-primary);
+        }
+
+        /* Figure Container */
+        .figure-container {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            text-align: center;
+            border-radius: var(--radius);
+            position: relative;
+        }
+
+        .figure-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Enhanced Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes flowPulse {
+            0%, 100% {
+                stroke-width: 2;
+                opacity: 1;
+            }
+            50% {
+                stroke-width: 3;
+                opacity: 0.7;
+            }
+        }
+
+        @keyframes floatIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes slideRight {
+            from {
+                opacity: 0;
+                transform: translateX(-15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes shimmer {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        /* Flow Diagram */
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: var(--space-md) 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .flow-box {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+            border: 2px solid var(--accent-primary);
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: var(--text-primary);
+            font-family: var(--font-system);
+            text-align: center;
+            position: relative;
+            animation: floatIn 0.6s ease-out forwards;
+        }
+
+        .flow-box:nth-child(1) { animation-delay: 0s; }
+        .flow-box:nth-child(3) { animation-delay: 0.2s; }
+        .flow-box:nth-child(5) { animation-delay: 0.4s; }
+
+        .flow-arrow {
+            color: var(--accent-primary);
+            font-size: 1.4rem;
+            animation: slideRight 0.6s ease-out forwards;
+        }
+
+        .flow-arrow:nth-child(2) { animation-delay: 0.1s; }
+        .flow-arrow:nth-child(4) { animation-delay: 0.3s; }
+
+        .vector-output {
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            margin-top: 6px;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out 0.5s forwards;
+        }
+
+        /* Vector Map */
+        .vector-map {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            border: 2px dashed var(--border-color);
+            background: radial-gradient(circle at center, #f9f9f9 0%, #ffffff 70%);
+            margin: var(--space-md) auto;
+        }
+
+        .vector-axis {
+            position: absolute;
+            background: var(--text-secondary);
+            opacity: 0.3;
+        }
+
+        .vector-axis-x {
+            width: 100%;
+            height: 1px;
+            bottom: 25%;
+            left: 0;
+        }
+
+        .vector-axis-y {
+            width: 1px;
+            height: 100%;
+            left: 25%;
+            top: 0;
+        }
+
+        .point {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            animation: floatIn 0.5s ease-out forwards;
+        }
+
+        .point-cat {
+            background: var(--accent-primary);
+            top: 35%;
+            left: 40%;
+            box-shadow: 0 0 8px rgba(6, 69, 173, 0.4);
+        }
+
+        .point-feline {
+            background: var(--accent-primary);
+            top: 40%;
+            left: 45%;
+            opacity: 0;
+            animation: floatIn 0.5s ease-out 0.3s forwards;
+            box-shadow: 0 0 8px rgba(6, 69, 173, 0.4);
+        }
+
+        .point-dog {
+            background: var(--accent-warning);
+            top: 65%;
+            left: 25%;
+            opacity: 0.7;
+            animation: floatIn 0.5s ease-out 0.6s forwards;
+        }
+
+        .point-fruit {
+            background: var(--accent-secondary);
+            top: 70%;
+            left: 75%;
+            opacity: 0.7;
+            animation: floatIn 0.5s ease-out 0.9s forwards;
+        }
+
+        /* Connection line */
+        .connector-line {
+            position: absolute;
+            height: 2px;
+            background: var(--accent-primary);
+            transform-origin: left center;
+            top: 37.5%;
+            left: 40%;
+            width: 0;
+            animation: slideRight 0.5s ease-out 1s forwards;
+            opacity: 0.6;
+        }
+
+        /* SVG Chart */
+        .chart-svg {
+            width: 100%;
+            max-width: 280px;
+            margin: var(--space-md) auto;
+            display: block;
+        }
+
+        .chart-vector {
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            animation: flowPulse 2s ease-in-out infinite;
+        }
+
+        /* Grid Animation */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            margin: var(--space-md) 0;
+            padding: var(--space-md);
+            background: var(--wiki-bg);
+            border-radius: var(--radius);
+        }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            background: #e8e8e8;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.4s ease-out forwards;
+            opacity: 0;
+        }
+
+        .grid-cell:nth-child(1) { animation-delay: 0s; }
+        .grid-cell:nth-child(n+2) { animation-delay: calc(0.05s * (var(--cell-index, 1) - 1)); }
+
+        .grid-cluster {
+            background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+            box-shadow: 0 0 8px rgba(7, 125, 46, 0.3);
+        }
+
+        /* Table Styling */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--space-md) 0;
+            background: var(--bg-content);
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #e8f0ff 0%, #f0f4ff 100%);
+            color: var(--text-primary);
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid var(--accent-primary);
+            font-weight: bold;
+            font-family: var(--font-system);
+        }
+
+        .comparison-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .comparison-table tr:hover {
+            background: var(--wiki-bg);
+        }
+
+        /* Processing Pipeline */
+        .pipeline {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: var(--space-md) 0;
+        }
+
+        .pipeline-stage {
+            padding: 16px;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+            border-left: 4px solid var(--accent-primary);
+            border-radius: var(--radius);
+            font-family: var(--font-system);
+            color: var(--text-primary);
+            position: relative;
+            opacity: 0;
+            animation: slideRight 0.5s ease-out forwards;
+        }
+
+        .pipeline-stage:nth-child(1) { animation-delay: 0s; }
+        .pipeline-stage:nth-child(2) { animation-delay: 0.2s; }
+        .pipeline-stage:nth-child(3) { animation-delay: 0.4s; }
+
+        .pipeline-stage strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--accent-primary);
+        }
+
+        /* Warning Card */
+        .warning-card {
+            background: #fff1f0;
+            border: 1px solid #ffa6a6;
+            border-left: 4px solid var(--accent-secondary);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-radius: var(--radius);
+        }
+
+        .warning-card strong {
+            color: var(--accent-secondary);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        /* Takeaway Box */
+        .takeaway-section {
+            background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%);
+            border: 2px solid var(--accent-primary);
+            padding: var(--space-lg);
+            margin-top: var(--space-lg);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-section h2 {
+            color: var(--accent-primary);
+            margin-top: 0;
+        }
+
+        .takeaway-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .takeaway-item {
+            padding: var(--space-md);
+            background: white;
+            border-left: 3px solid var(--accent-success);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-item strong {
+            color: var(--accent-success);
+            display: block;
+            margin-bottom: 6px;
+            font-family: var(--font-system);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--space-md);
+                border: none;
+                box-shadow: none;
+                background: var(--bg-body);
+            }
+            h1 { font-size: 1.4rem; }
+            h2 { font-size: 1.1rem; }
+            .flow-diagram { flex-direction: column; gap: 8px; }
+            .comparison-table { font-size: 0.9rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Prompt Engineering</h1>
+            <div class="subtitle">Crafting Effective Instructions for Language Models: Techniques, Patterns, and Best Practices</div>
+        </div>
+    </header>
+
+    <!-- Section 1: Fundamentals -->
+    <section class="topic-section">
+        <h2>Understanding Prompt Engineering</h2>
+        
+        <p>Prompt engineering is the art and science of crafting instructions that guide language models toward desired outputs. Unlike traditional programming where developers write explicit code to solve problems, prompt engineering involves communicating intent through natural language, allowing the model to interpret and execute tasks based on learned patterns from training data.</p>
+
+        <p>The effectiveness of a language model's response depends critically on how well the prompt articulates the task. A vague instruction like "Write a summary" produces unpredictable results, while a well-structured prompt specifying the output format, length, and style produces consistent, high-quality responses. This precision in communication has become a fundamental skill in working with large language models.</p>
+
+        <p>What makes prompt engineering particularly powerful is that it requires no model retraining or fine-tuning. The model's capabilities already exist within its training; prompt engineering simply unlocks and directs these capabilities toward specific goals. This makes it the fastest and cheapest lever for improving model performance.</p>
+
+        <div class="infobox">
+            <strong>Core Principle:</strong> Effective prompts explicitly specify the task, provide context, demonstrate examples, and clarify output requirements. Ambiguity is the enemy of consistency.
+        </div>
+    </section>
+
+    <!-- Section 2: Prompt Structure -->
+    <section class="topic-section">
+        <h2>The Anatomy of a Well-Structured Prompt</h2>
+        
+        <p>Successful prompts typically follow a consistent structure that addresses multiple dimensions of the task. Each component serves a specific purpose in guiding the model's behavior.</p>
+
+        <h3>System Prompt (Role Definition)</h3>
+        <p>The system prompt establishes the model's persona and operational parameters. Instead of simply asking a question, you first define how the model should think and behave: "You are an expert software architect," or "You are a customer service representative trained in empathetic communication." This priming effect significantly influences response quality and tone.</p>
+
+        <h3>Context and Background</h3>
+        <p>Context provides the information the model needs to understand the domain and constraints. Without context, the model makes assumptions that may not align with your intentions. For example, when asking for code, specify the programming language, target version, and any relevant libraries. When requesting analysis, specify the reader's expertise level and the decision being made.</p>
+
+        <h3>Examples (Few-Shot Learning)</h3>
+        <p>Providing one or more input-output examples demonstrates the exact format and style you expect. This is far more effective than verbal descriptions. If you want JSON output, show a complete JSON example. If you want a specific tone, provide sentences demonstrating that tone. Research consistently shows that few-shot prompting dramatically improves consistency and accuracy.</p>
+
+        <h3>The Current Task</h3>
+        <p>The actual task or question comes last, preceded by clear context. The model now has all necessary information: its role, the domain, examples of desired behavior, and the specific task at hand.</p>
+
+        <h3>Output Specification</h3>
+        <p>Explicitly define output constraints: format (JSON, markdown, plain text), length (word count or section count), and style (formal, casual, technical). The more specific, the better the results. "Write a summary" is vague; "Write a 3-bullet-point summary in casual language" is actionable.</p>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Prompt Component</th>
+                    <th>Purpose</th>
+                    <th>Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>System Prompt</strong></td>
+                    <td>Establish role and tone</td>
+                    <td>You are a technical writer</td>
+                </tr>
+                <tr>
+                    <td><strong>Context</strong></td>
+                    <td>Provide background information</td>
+                    <td>We are building a REST API for e-commerce</td>
+                </tr>
+                <tr>
+                    <td><strong>Examples</strong></td>
+                    <td>Demonstrate desired format/style</td>
+                    <td>Input: "Return policy" → Output: "{...detailed JSON...}"</td>
+                </tr>
+                <tr>
+                    <td><strong>Task</strong></td>
+                    <td>State the specific request</td>
+                    <td>Generate API documentation for the payment endpoint</td>
+                </tr>
+                <tr>
+                    <td><strong>Output Spec</strong></td>
+                    <td>Define format constraints</td>
+                    <td>Use Markdown, include code examples, max 500 words</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Section 3: Zero-Shot vs. Few-Shot -->
+    <section class="topic-section">
+        <h2>Zero-Shot Versus Few-Shot Prompting</h2>
+        
+        <p><strong>Zero-shot prompting</strong> means asking a question without providing examples. The model relies entirely on its training to understand your request and produce an appropriate response. This approach is fast and has minimal token cost, making it ideal for straightforward tasks where ambiguity is low.</p>
+
+        <p>However, for complex outputs—particularly structured data like JSON objects, code snippets, or specific formats—zero-shot often fails or produces inconsistent results. The model may understand what you want conceptually but execute differently than you expect.</p>
+
+        <p><strong>Few-shot prompting</strong> remedies this by providing one or more examples of the task. Even a single example (one-shot) significantly improves accuracy and consistency. The model learns the expected format, edge cases, and style from the examples rather than guessing from the instruction alone.</p>
+
+        <p>Research shows that few-shot prompting typically outperforms zero-shot by 15-40% on complex tasks. The trade-off is increased token usage—examples consume tokens. For tasks run at scale, this cost is usually worth the improved accuracy.</p>
+
+        <div class="infobox">
+            <strong>Practical Guidance:</strong> Use zero-shot for simple, unambiguous tasks. Use few-shot (even one example) for anything with specific output format or style requirements.
+        </div>
+    </section>
+
+    <!-- Section 4: Chain of Thought -->
+    <section class="topic-section">
+        <h2>Chain-of-Thought Reasoning</h2>
+        
+        <p>One of the most powerful discoveries in prompt engineering is that language models perform significantly better when explicitly asked to reason step-by-step. This technique, called <strong>Chain-of-Thought (CoT) prompting</strong>, works by instructing the model to show its work before arriving at a final answer.</p>
+
+        <p>The effect is dramatic for tasks involving logic, mathematics, and complex reasoning. Simply adding "Let's think step by step" or "Explain your reasoning" to a prompt can reduce error rates by 30-50%. The model generates intermediate reasoning steps that decompose the problem, and these steps themselves help guide the model toward correct conclusions.</p>
+
+        <p>This works because generating step-by-step explanations forces the model to commit to intermediate calculations and logical steps, reducing the likelihood of arithmetic errors or logical fallacies that might occur if the model tried to leap directly to an answer.</p>
+
+        <h3>Zero-Shot Chain-of-Thought</h3>
+        <p>Remarkably, you don't need to provide examples of chain-of-thought reasoning. Simply instructing the model to "think step by step" in a zero-shot context often produces strong results. This is called zero-shot CoT and requires no additional prompt engineering beyond the simple instruction.</p>
+
+        <h3>Few-Shot Chain-of-Thought</h3>
+        <p>You can improve further by providing examples where you show intermediate steps. This teaches the model the exact style and depth of reasoning you want. For example, showing 2-3 worked problems with intermediate calculations helps the model match your preferred explanation style.</p>
+
+        <div class="warning-card">
+            <strong>Important Caveat:</strong> Chain-of-thought reasoning works best for problems with deterministic solutions. For creative or subjective tasks, requiring step-by-step reasoning may actually constrain the model unnecessarily.
+        </div>
+    </section>
+
+    <!-- Section 5: Structured Output -->
+    <section class="topic-section">
+        <h2>Constraining Output Format</h2>
+        
+        <p>Many applications require structured output—JSON objects, XML documents, CSV files, or code. Asking the model to produce these formats in natural language instructions works but is error-prone. The model may omit fields, use incorrect syntax, or generate hallucinated keys.</p>
+
+        <p>Modern language model APIs provide explicit mechanisms for enforcing structured output. OpenAI's JSON mode, for instance, guarantees valid JSON by constraining the model's output tokens during generation. The model cannot produce syntactically invalid JSON.</p>
+
+        <p>If your API doesn't support native structured output modes, the next best approach is extremely detailed specification combined with concrete examples. Show exactly what JSON fields are required, what types they should contain, and provide a complete example. Schemas in YAML or JSON format also help.</p>
+
+        <h3>Benefits of Structured Output</h3>
+        <ul>
+            <li><strong>Programmatic Parsing:</strong> Downstream code can reliably parse the output without sophisticated error handling.</li>
+            <li><strong>Validation:</strong> You can validate the output against a schema, rejecting malformed responses immediately.</li>
+            <li><strong>Consistency:</strong> Structured output is more consistent across multiple model calls with similar inputs.</li>
+            <li><strong>Integration:</strong> Structured responses integrate seamlessly with databases, APIs, and data pipelines.</li>
+        </ul>
+
+        <div class="infobox">
+            <strong>Best Practice:</strong> Whenever output must be parsed programmatically, use native structured output features if available, or provide extremely detailed specifications and examples.
+        </div>
+    </section>
+
+    <!-- Section 6: Prompt Chaining -->
+    <section class="topic-section">
+        <h2>Prompt Chaining and Sequential Reasoning</h2>
+        
+        <p>Complex tasks often exceed what a single prompt can handle effectively. Prompt chaining breaks such tasks into a sequence of simpler prompts, where each prompt's output becomes the next prompt's input. This approach mirrors how humans tackle difficult problems—step by step.</p>
+
+        <p>For example, to generate a comprehensive research report, you might chain: (1) extract key points, (2) organize points into sections, (3) write detailed paragraphs for each section, (4) create an executive summary, and (5) format as PDF. Each step is simpler and more focused than the original monolithic task.</p>
+
+        <h3>Advantages of Chaining</h3>
+        <ul>
+            <li><strong>Clarity:</strong> Each prompt has a single, clear objective rather than conflicting requirements.</li>
+            <li><strong>Error Recovery:</strong> If one step fails, you can retry that step without recomputing earlier steps.</li>
+            <li><strong>Quality Control:</strong> You can inspect intermediate outputs and edit them before feeding them to the next step.</li>
+            <li><strong>Transparency:</strong> Each step's work is visible, making debugging and improvement easier.</li>
+        </ul>
+
+        <p>The trade-off is increased latency and token usage. Chaining calls are sequential (you must wait for Step 1 to complete before starting Step 2) and may process the same information multiple times. For real-time applications this is problematic; for batch processing, the improved quality often justifies the cost.</p>
+    </section>
+
+    <!-- Section 7: Common Pitfalls -->
+    <section class="topic-section">
+        <h2>Common Mistakes and How to Avoid Them</h2>
+        
+        <p>Even with understanding of prompt engineering principles, certain patterns consistently cause problems. Awareness of these pitfalls helps you avoid them.</p>
+
+        <h3>Vague Instructions</h3>
+        <p>Prompts like "Summarize this" or "Improve this text" are too open-ended. The model must guess at length, style, audience, and purpose. Instead, specify: "Summarize in 3 bullet points for a busy executive," or "Make the tone more conversational without changing technical accuracy."</p>
+
+        <h3>Insufficient Examples</h3>
+        <p>Without examples, complex output requirements are often misunderstood. Always include at least one example for any task producing structured or stylistically specific output. One example is often sufficient if it's comprehensive.</p>
+
+        <h3>Inconsistent Formatting</h3>
+        <p>If your prompt mixes formal and casual language, or switches between different instructions styles, the model becomes confused. Maintain consistency in voice, formatting, and instruction style throughout.</p>
+
+        <h3>Contradictory Constraints</h3>
+        <p>Requesting "a detailed but concise summary" or "creative but objective analysis" creates conflicting objectives. The model must choose, and your pick may not match the model's preference. Be clear about priorities: "Priority 1: Objectivity. Secondary: Creativity in examples."</p>
+
+        <h3>Poor Token Budgeting</h3>
+        <p>Extremely long system prompts with hundreds of examples consume tokens before your actual task. This increases costs and can even reduce performance if token limits are approached. Keep system context lean; use it for critical information only.</p>
+
+        <h3>Over-Specification</h3>
+        <p>Sometimes simpler prompts work better than overly detailed ones. A 10,000-token prompt isn't always better than a clear 500-token prompt. Aim for conciseness with clarity—provide necessary information without redundancy.</p>
+
+        <div class="warning-card">
+            <strong>Testing Imperative:</strong> Always test your prompt on multiple inputs and varying cases. A prompt that works on one example may fail on others. Iteration is essential.
+        </div>
+    </section>
+
+    <!-- Takeaway Section -->
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>Structure Matters:</strong> Well-organized prompts with distinct sections (role, context, examples, task, output spec) produce dramatically better results than unstructured requests.
+            </div>
+            <div class="takeaway-item">
+                <strong>Examples Are Powerful:</strong> One or two examples of desired output improve consistency and accuracy far more than verbal instruction alone.
+            </div>
+            <div class="takeaway-item">
+                <strong>Explicit Reasoning Helps:</strong> Requesting step-by-step thinking improves accuracy on logical and mathematical tasks by 30-50%, with minimal added complexity.
+            </div>
+            <div class="takeaway-item">
+                <strong>Structures Are Enforceable:</strong> Use native structured output modes when available, or combine detailed specifications with concrete examples for reliable format consistency.
+            </div>
+            <div class="takeaway-item">
+                <strong>Chaining Simplifies Complexity:</strong> Breaking complex tasks into sequential, simpler prompts improves clarity, debuggability, and often quality at the cost of latency and tokens.
+            </div>
+            <div class="takeaway-item">
+                <strong>Iteration Is Necessary:</strong> Prompt engineering is empirical. Test on diverse inputs, measure results, and refine iteratively. Templates and patterns are starting points, not final solutions.
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>

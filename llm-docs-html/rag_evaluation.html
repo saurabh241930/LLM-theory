@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Evaluation & Monitoring - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .metric-radar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric-card {
+            border: 1px solid var(--wp-border);
+            padding: 12px;
+            background: #f8f9fa;
+            position: relative;
+        }
+
+        .metric-card.high {
+            border-left: 4px solid #4caf50;
+        }
+
+        .metric-card.low {
+            border-left: 4px solid #f44336;
+        }
+
+        .metric-score {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--wp-accent);
+            position: absolute;
+            top: 10px;
+            right: 15px;
+        }
+
+        .metric-label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .code-inline {
+            font-family: monospace;
+            background: #eee;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>RAG Evaluation</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Continuous Quality</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <circle cx="50" cy="20" r="15" fill="none" stroke="#36c" stroke-width="2" />
+                    <path d="M 50 5 L 50 35 M 35 20 L 65 20" stroke="#36c" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Role</div>
+                    <div class="infobox-value">Quality Assessment</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Monitoring</div>
+                    <div class="infobox-value">Drift Detection</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Judge</div>
+                    <div class="infobox-value">LLM-as-a-Judge</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>In production RAG systems, <strong>Evaluation & Monitoring</strong> is the systematic measurement of how
+                effectively a pipeline retrieves data and synthesizes responses. At scale, this moves from a "one-time
+                test" to a <strong>Continuous Evaluation Pipeline</strong> that ensures the system remains accurate as
+                documentation and user queries evolve.</p>
+
+            <h2>The RAGAS Metrics</h2>
+            <p>A comprehensive evaluation requires analyzing four distinct dimensions of the RAG pipeline.</p>
+
+            <div class="metric-radar animate-on-scroll">
+                <div class="metric-card high">
+                    <span class="metric-label">Faithfulness</span>
+                    <p>Is the answer derived <em>only</em> from the context? (Prevents hallucinations).</p>
+                    <div class="metric-score">0.95</div>
+                </div>
+                <div class="metric-card low">
+                    <span class="metric-label">Context Recall</span>
+                    <p>Did we retrieve all chunks needed to answer? (Retrieval depth).</p>
+                    <div class="metric-score">0.42</div>
+                </div>
+                <div class="metric-card high">
+                    <span class="metric-label">Answer Relevancy</span>
+                    <p>Does the answer actually address the user's question?</p>
+                    <div class="metric-score">0.88</div>
+                </div>
+                <div class="metric-card high">
+                    <span class="metric-label">Context Precision</span>
+                    <p>Are the retrieved chunks actually relevant?</p>
+                    <div class="metric-score">0.91</div>
+                </div>
+            </div>
+
+            <h2>Evaluation Pipelines</h2>
+            <p>For systems with 1M+ users, manual spot-checks are impossible. Automated pipelines integrate with CI/CD
+                to run evaluation on every code change or data update.</p>
+            <div class="code-block">
+                <span class="comment"># Pseudo-flow: Automated Eval CI</span><br>
+                test_cases = load_golden_dataset()<br>
+                <span class="keyword">for</span> question, ground_truth <span class="keyword">in</span> test_cases:<br>
+                &nbsp;&nbsp;answer = rag_pipeline.get_answer(question)<br>
+                &nbsp;&nbsp;score = llm_judge.score(answer, context, ground_truth)<br>
+                &nbsp;&nbsp;report_metric(<span class="string">"rag_faithfulness"</span>, score)
+            </div>
+
+            <h2>Drift Monitoring</h2>
+            <p>Systems often experience <strong>Retrieval Drift</strong> when new documents are added that confuse
+                existing embeddings. Monitoring involves:</p>
+            <ul>
+                <li><strong>Embedding Skew:</strong> Tracking the average distance between queries and retrieved chunks
+                    over time.</li>
+                <li><strong>Answer Relevance Decay:</strong> Detecting if the LLM starts giving generalized answers
+                    instead of specific ones based on new data.</li>
+            </ul>
+
+            <h2>Real-World Scenario: Finance App</h2>
+            <p>A banking assistant's accuracy is paramount. A <strong>Continuous Evaluation</strong> pipeline detects
+                that a recent tax law update has created "colliding" embeddings with old data. The system alerts
+                engineers to re-index the outdated chunks or fine-tune the embedding model to distinguish between the
+                two legal years.</p>
+
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Symptom</th>
+                        <th>Metric Indicator</th>
+                        <th>Primary Fix</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Hallucinations</strong></td>
+                        <td>Low Faithfulness</td>
+                        <td>Stricter prompt grounding.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Incomplete Answers</strong></td>
+                        <td>Low Context Recall</td>
+                        <td>Increase <span class="code-inline">top-k</span> or use hybrid search.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Noisy Context</strong></td>
+                        <td>Low Context Precision</td>
+                        <td>Add a Reranker.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Off-topic Answers</strong></td>
+                        <td>Low Answer Relevancy</td>
+                        <td>Improve Prompt Engineering.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>For a production dashboard auditing thousands of daily RSA sales, <strong>Continuous Evaluation</strong>
+                is mandatory. The system uses <strong>RAGAS Faithfulness</strong> to ensure that when the AI flags a
+                "Compliance Failure," it is actually citing the call transcript and not hallucinating a legal violation.
+                If the <strong>Context Recall</strong> drops (meaning the system misses actual mentions of RSA), the
+                engineers are alerted to check if the speech-to-text model is failing to transcribe specific insurance
+                acronyms correctly, causing a silent failure in the retrieval pipeline.</p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Faithfulness Evaluation</span>
+                <span class="keyword">from</span> ragas <span class="keyword">import</span> evaluate
+                <span class="keyword">from</span> ragas.metrics <span class="keyword">import</span> faithfulness
+
+                data = {
+                <span class="string">"question"</span>: [<span class="string">"Was RSA mentioned as optional?"</span>],
+                <span class="string">"contexts"</span>: [[<span class="string">"Transcript: Advisor said RSA is a great
+                    mandatory add-on."</span>]],
+                <span class="string">"answer"</span>: [<span class="string">"The advisor correctly stated RSA is
+                    optional."</span>]
+                }
+
+                result = evaluate(dataset, metrics=[faithfulness])
+                <span class="keyword">print</span>(f<span class="string">"Faithfulness Score:
+                    {result['faithfulness']}"</span>)
+                <span class="comment"># Output: 0.1 (Hallucination detected - Answer contradicts context)</span>
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ RAGAS isolates Retrieval errors from Generation errors.<br>
+                ✅ Faithfulness measures grounding; Recall measures retrieval breadth.<br>
+                ✅ Drift monitoring ensures system quality doesn't decay over time.<br>
+                ✅ Continuous Evaluation is required for production-level reliability.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

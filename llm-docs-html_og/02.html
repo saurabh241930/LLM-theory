@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tokenization & Context Windows: Compact Cheat Sheet</title>
+    <style>
+        :root {
+            /* Light Mode Palette (Matching Page 1) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Token Burst */
+        .token-display {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .t-block {
+            background: var(--accent-primary);
+            color: white;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            opacity: 0;
+            transform: scale(0.5);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .t-block:nth-child(1) { animation-delay: 0.1s; }
+        .t-block:nth-child(2) { animation-delay: 0.3s; background: var(--bg-card-alt); color: #333; }
+        .t-block:nth-child(3) { animation-delay: 0.5s; }
+        .t-block:nth-child(4) { animation-delay: 0.7s; background: var(--bg-card-alt); color: #333; }
+
+        @keyframes popIn { to { opacity: 1; transform: scale(1); } }
+
+        /* 2. Pipeline Flow */
+        .pipe-flow { display: flex; align-items: center; gap: 4px; width: 100%; font-size: 0.7rem; }
+        .pf-box { background: var(--bg-card-alt); padding: 4px; border-radius: 3px; border: 1px solid #cbd5e1; flex: 1; text-align: center; position: relative; }
+        .pf-arrow { color: var(--text-secondary); }
+        
+        /* Data packet animation */
+        .packet {
+            position: absolute;
+            width: 6px; height: 6px;
+            background: var(--accent-secondary);
+            border-radius: 50%;
+            top: 50%; left: -10px;
+            transform: translateY(-50%);
+            animation: travel 3s infinite linear;
+        }
+        @keyframes travel {
+            0% { left: 10px; opacity: 1; }
+            30% { left: 33%; opacity: 1; } /* Box 1 */
+            35% { left: 35%; opacity: 0; } /* Inside */
+            65% { left: 65%; opacity: 0; } /* Inside */
+            70% { left: 67%; opacity: 1; } /* Box 2 */
+            100% { left: 95%; opacity: 1; }
+        }
+
+        /* 3. Comparison Bars */
+        .comp-chart { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+        .comp-row { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; }
+        .comp-label { width: 50px; text-align: right; color: var(--text-secondary); }
+        .comp-bar-bg { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .comp-bar-fill { height: 100%; background: var(--accent-primary); width: 0; transition: width 1s ease-out; }
+        .comp-val { width: 20px; font-weight: bold; }
+
+        /* 4. Sliding Window */
+        .window-track {
+            width: 90%; height: 30px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            background: #f1f5f9;
+        }
+        .window-frame {
+            position: absolute;
+            top: 0; bottom: 0; left: 10%; width: 80%;
+            background: rgba(56, 189, 248, 0.1);
+            border-left: 2px dashed var(--accent-primary);
+            border-right: 2px dashed var(--accent-primary);
+        }
+        .token-stream {
+            display: flex; gap: 2px;
+            position: absolute; top: 6px; left: 0;
+            animation: slideStream 4s infinite linear;
+            white-space: nowrap;
+        }
+        .t-small { width: 12px; height: 12px; background: #cbd5e1; border-radius: 2px; display: inline-block; }
+        
+        @keyframes slideStream { from { transform: translateX(0); } to { transform: translateX(-100px); } }
+
+        /* 5. Special Tokens (Ghost) */
+        .ghost-box { position: relative; padding: 10px; font-family: monospace; font-size: 0.8rem; color: #333; }
+        .ghost-tag {
+            position: absolute; font-size: 0.6rem; color: var(--accent-secondary);
+            opacity: 0; transform: scale(1.2);
+            animation: ghostPop 3s infinite;
+        }
+        .gt-start { top: -8px; left: -10px; animation-delay: 0s; }
+        .gt-end { bottom: -8px; right: -10px; animation-delay: 0.5s; }
+        
+        @keyframes ghostPop {
+            0% { opacity: 0; transform: scale(1.2); }
+            20% { opacity: 1; transform: scale(1); }
+            80% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.8); }
+        }
+
+        /* 6. RAG Budget Stack */
+        .budget-stack { width: 100%; display: flex; flex-direction: column-reverse; gap: 1px; border: 1px solid #cbd5e1; height: 100px; }
+        .stack-seg { height: 0; color: white; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; transition: height 1s; }
+        .seg-sys { background: var(--accent-primary); }
+        .seg-query { background: var(--accent-secondary); }
+        .seg-hist { background: var(--accent-warning); }
+        .seg-doc { background: var(--accent-success); }
+
+        /* 7. Pitfalls */
+        .pitfall-box { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; }
+        .p-item { background: #fef2f2; border: 1px solid #fca5a5; padding: 4px; font-size: 0.7rem; color: #991b1b; text-align: center; border-radius: 4px; }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+        /* Trigger animations on load */
+        body .comp-bar-fill { width: var(--w); } /* Set via inline style */
+
+    </style>
+</head>
+<body onload="initAnimations()">
+
+<div class="container">
+    <header>
+        <div>
+            <h1>02. Tokenization & Context Windows</h1>
+            <div class="subtitle">LLM Input Processing • Budgeting • Optimization</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>What is a Token?</h2>
+            <p>The <strong>atomic unit</strong> LLMs read. Not necessarily a word. It can be a part of a word, a whole word, or punctuation.</p>
+            <p>LLMs process <strong>Token IDs</strong>, not characters.</p>
+            <div class="insight">
+                💡 "Hello" might be 1 token, but "f1f5f9" might be 3.
+            </div>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Text to Tokens</span>
+            <div class="token-display">
+                <div class="t-block">Hello</div>
+                <div class="t-block">,</div>
+                <div class="t-block">world</div>
+                <div class="t-block">!</div>
+            </div>
+            <div style="margin-top: 8px; font-size: 0.7rem; color: #64748b;">
+                Variable length segmentation
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>How Tokenization Works</h2>
+            <p>Text passes through a Tokenizer (Vocabulary Lookup) before reaching the LLM.</p>
+            <ul style="font-size: 0.8rem; margin-top: 4px;">
+                <li><strong>Input:</strong> "The quick brown fox"</li>
+                <li><strong>Tokenizer:</strong> Maps words to IDs (e.g., 1, 5, 9, 12).</li>
+                <li><strong>LLM:</strong> Processes the sequence of IDs.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Processing Pipeline</span>
+            <div class="pipe-flow">
+                <div class="pf-box">Raw Text<div class="packet"></div></div>
+                <div class="pf-arrow">→</div>
+                <div class="pf-box">Tokenizer</div>
+                <div class="pf-arrow">→</div>
+                <div class="pf-box">LLM</div>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--accent-secondary); margin-top: 6px;">
+                Data packet animation flow
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>Different Tokenizers</h2>
+            <p>Models use different vocabularies. Same prompt = different token counts and costs.</p>
+            <table class="mini-table" style="margin-top:4px;">
+                <thead><tr><th>Model</th><th>Tokens/Word</th></tr></thead>
+                <tbody>
+                    <tr><td>GPT-4</td><td>~1.3</td></tr>
+                    <tr><td>Claude</td><td>~1.2</td></tr>
+                    <tr><td>Llama 2</td><td>~1.2</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Token Count Variance</span>
+            <div class="comp-chart">
+                <div class="comp-row">
+                    <div class="comp-label">OpenAI</div>
+                    <div class="comp-bar-bg"><div class="comp-bar-fill" style="--w: 60%;"></div></div>
+                    <div class="comp-val">5</div>
+                </div>
+                <div class="comp-row">
+                    <div class="comp-label">Claude</div>
+                    <div class="comp-bar-bg"><div class="comp-bar-fill" style="--w: 80%;"></div></div>
+                    <div class="comp-val">6</div>
+                </div>
+                <div class="comp-row">
+                    <div class="comp-label">Llama</div>
+                    <div class="comp-bar-bg"><div class="comp-bar-fill" style="--w: 60%;"></div></div>
+                    <div class="comp-val">5</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Context Window</h2>
+            <p>The <strong>max tokens</strong> an LLM can process at once (Input + Output). Includes System Prompt, User Message, and History.</p>
+            <p style="font-size: 0.8rem; color: var(--accent-warning);">
+                ⚠️ Exceeding this limit causes ERROR or TRUNCATION.
+            </p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Sliding Window Mechanism</span>
+            <div class="window-track">
+                <div class="token-stream">
+                    <div class="t-small"></div><div class="t-small"></div><div class="t-small"></div><div class="t-small"></div>
+                    <div class="t-small"></div><div class="t-small"></div><div class="t-small"></div><div class="t-small"></div>
+                    <div class="t-small"></div><div class="t-small"></div><div class="t-small"></div><div class="t-small"></div>
+                    <div class="t-small"></div><div class="t-small"></div><div class="t-small"></div><div class="t-small"></div>
+                </div>
+                <div class="window-frame"></div>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--accent-primary); margin-top: 4px;">
+                Only tokens inside the frame are processed
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 5 & 6 -->
+    <section class="topic-section">
+        <div>
+            <h2>Optimization Strategies</h2>
+            <h3>1. Summarization</h3>
+            <p>Long doc (8K) → Summary (500 tokens).</p>
+            <h3>2. Chunking (RAG)</h3>
+            <p>Split into 2K chunks → Retrieve relevant ones.</p>
+            <h3>3. Prompt Compression</h3>
+            <p>Remove fluff/stopwords while keeping meaning.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Strategies</span>
+            <div style="display:flex; flex-direction:column; gap:8px; width:100%; font-size:0.75rem;">
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <span style="color:var(--accent-primary)">📉</span> 
+                    <div style="flex:1; border-bottom:1px solid #cbd5e1; padding-bottom:2px;">Summarize</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <span style="color:var(--accent-primary)">🧩</span> 
+                    <div style="flex:1; border-bottom:1px solid #cbd5e1; padding-bottom:2px;">Chunk & Retrieve</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <span style="color:var(--accent-primary)">⚡</span> 
+                    <div style="flex:1; padding-bottom:2px;">Compress</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 7 -->
+    <section class="topic-section">
+        <div>
+            <h2>Special Tokens</h2>
+            <p>Invisible markers used by the model to structure the conversation.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><code>&lt;|start|&gt;</code> / <code>&lt;|end|&gt;</code></li>
+                <li><code>&lt;|im_start|&gt;</code> (Turn boundaries)</li>
+            </ul>
+            <div class="insight">
+                💡 They consume tokens but are invisible to the user.
+            </div>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Invisible Overhead</span>
+            <div class="ghost-box">
+                <div class="ghost-tag gt-start">&lt;start&gt;</div>
+                Hello World
+                <div class="ghost-tag gt-end">&lt;end&gt;</div>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--accent-secondary); margin-top: 6px;">
+                Total: 1 visible token + 2 special tokens
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 8 -->
+    <section class="topic-section">
+        <div>
+            <h2>RAG Implications (Budgeting)</h2>
+            <p>You must fit Query + Chunks + System + History within the limit.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Bad:</strong> Retrieve 10 chunks → Expensive, hits limit.</li>
+                <li><strong>Good:</strong> Retrieve 3 chunks → Fits, cheap, fast.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Token Budget</span>
+            <div class="budget-stack" id="budgetStack">
+                <div class="stack-seg seg-doc" style="height: 50%;">Docs (50%)</div>
+                <div class="stack-seg seg-sys" style="height: 20%;">System (20%)</div>
+                <div class="stack-seg seg-hist" style="height: 15%;">History (15%)</div>
+                <div class="stack-seg seg-query" style="height: 15%;">Query (15%)</div>
+            </div>
+            <div style="font-size: 0.65rem; color: var(--accent-secondary); margin-top: 4px; width: 100%;">
+                Efficient allocation prevents truncation
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 9 -->
+    <section class="topic-section">
+        <div>
+            <h2>Common Pitfalls</h2>
+            <ul style="font-size: 0.8rem;">
+                <li>Not counting tokens before API call (Surprise errors).</li>
+                <li>Forgetting special token overhead (Buffer needed).</li>
+                <li>Using old tokenizer data (Recount for new models).</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Risks</span>
+            <div class="pitfall-box">
+                <div class="p-item">❌ Not Counting</div>
+                <div class="p-item">❌ Ignoring Specials</div>
+                <div class="p-item">❌ Stale Tokenizer</div>
+                <div class="p-item">❌ Bloat</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Tokens ≠ Words:</strong> Variable length units (1 word ≈ 1.3 tokens).</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Window Limits:</strong> Hard cap on input + output.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Optimization:</strong> Chunking/Summarization is mandatory for long docs.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Budgeting:</strong> Always estimate + buffer for special tokens.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    // Simple script to trigger CSS animations after slight delay for visual effect
+    function initAnimations() {
+        // Trigger budget stack animation
+        const stack = document.getElementById('budgetStack');
+        const segments = stack.querySelectorAll('.stack-seg');
+        
+        // Reset heights to 0 first
+        segments.forEach(seg => {
+            const target = seg.style.height;
+            seg.style.height = '0';
+            setTimeout(() => {
+                seg.style.height = target;
+            }, 100);
+        });
+
+        // Trigger bar chart animation
+        const bars = document.querySelectorAll('.comp-bar-fill');
+        bars.forEach(bar => {
+            const w = bar.style.getPropertyValue('--w');
+            bar.style.width = '0';
+            setTimeout(() => {
+                bar.style.width = w;
+            }, 200);
+        });
+    }
+</script>
+
+</body>
+</html>

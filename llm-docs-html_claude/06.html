@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced RAG: Sophisticated Retrieval and Ranking Techniques</title>
+    <style>
+        :root {
+            /* Wikipedia-style Palette */
+            --bg-body: #f6f6f6;
+            --bg-content: #ffffff;
+            --text-primary: #202122;
+            --text-secondary: #54595d;
+            --accent-primary: #0645ad;
+            --accent-secondary: #d73027;
+            --accent-success: #007d2e;
+            --accent-warning: #d46a2a;
+            --border-color: #a2a9b1;
+            --wiki-bg: #f8f9fa;
+            
+            /* Typography */
+            --font-body: Georgia, serif;
+            --font-code: monospace;
+            --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --radius: 2px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            font-size: 15px;
+            padding: var(--space-md);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-content);
+            padding: var(--space-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        /* Header - Wikipedia Style */
+        header {
+            border-bottom: 3px solid var(--accent-primary);
+            padding-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text-primary);
+            font-weight: normal;
+            margin-bottom: 4px;
+            font-family: var(--font-system);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Content Sections */
+        .topic-section {
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-lg);
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .topic-section:last-of-type {
+            border-bottom: none;
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            margin-top: var(--space-lg);
+            margin-bottom: var(--space-md);
+            font-weight: normal;
+            font-family: var(--font-system);
+            border-bottom: 2px solid #e8e8e8;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-top: var(--space-md);
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-family: var(--font-system);
+        }
+
+        p {
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+            text-align: justify;
+            line-height: 1.8;
+        }
+
+        strong { 
+            color: var(--text-primary); 
+            font-weight: bold; 
+        }
+
+        em {
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        code {
+            background: var(--wiki-bg);
+            padding: 2px 4px;
+            border-radius: var(--radius);
+            font-family: var(--font-code);
+            font-size: 0.9em;
+            color: var(--accent-secondary);
+        }
+
+        ul, ol {
+            margin-left: 2em;
+            margin-bottom: var(--space-md);
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+
+        /* Info Box */
+        .infobox {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-left: 4px solid var(--accent-primary);
+            border-radius: var(--radius);
+        }
+
+        .infobox strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--accent-primary);
+        }
+
+        /* Figure Container */
+        .figure-container {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            text-align: center;
+            border-radius: var(--radius);
+            position: relative;
+        }
+
+        .figure-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Pipeline Stage */
+        .pipeline {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: var(--space-md) 0;
+        }
+
+        .pipeline-stage {
+            padding: 16px;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+            border-left: 4px solid var(--accent-primary);
+            border-radius: var(--radius);
+            font-family: var(--font-system);
+            color: var(--text-primary);
+        }
+
+        .pipeline-stage strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--accent-primary);
+        }
+
+        /* Warning Card */
+        .warning-card {
+            background: #fff1f0;
+            border: 1px solid #ffa6a6;
+            border-left: 4px solid var(--accent-secondary);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-radius: var(--radius);
+        }
+
+        .warning-card strong {
+            color: var(--accent-secondary);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        /* Takeaway Box */
+        .takeaway-section {
+            background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%);
+            border: 2px solid var(--accent-primary);
+            padding: var(--space-lg);
+            margin-top: var(--space-lg);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-section h2 {
+            color: var(--accent-primary);
+            margin-top: 0;
+        }
+
+        .takeaway-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .takeaway-item {
+            padding: var(--space-md);
+            background: white;
+            border-left: 3px solid var(--accent-success);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-item strong {
+            color: var(--accent-success);
+            display: block;
+            margin-bottom: 6px;
+            font-family: var(--font-system);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--space-md);
+                border: none;
+                box-shadow: none;
+                background: var(--bg-body);
+            }
+            h1 { font-size: 1.4rem; }
+            h2 { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Advanced RAG: Sophisticated Retrieval and Ranking Techniques</h1>
+            <div class="subtitle">Beyond Naive RAG: Multi-Stage Retrieval, Reranking, Query Expansion, and Hybrid Search Strategies</div>
+        </div>
+    </header>
+
+    <!-- Section 1: Limitations of Naive RAG Revisited -->
+    <section class="topic-section">
+        <h2>The Limitations Driving Advanced RAG</h2>
+        
+        <p>The naive RAG pipeline, while foundational, suffers from a critical constraint: single-stage retrieval with no reranking. The system retrieves a fixed number of documents using simple cosine similarity and sends those results directly to the language model. This approach fails on complex queries, multi-hop reasoning, and situations where relevant documents are semantically distant from the query.</p>
+
+        <p>Advanced RAG architectures address these limitations through <strong>multi-stage retrieval</strong>, introducing sophisticated retrieval logic that operates in phases. Rather than a single retrieval pass, advanced systems may retrieve many candidates, filter and rerank them, query different retrieval strategies in parallel, or combine retrieval with reasoning loops that refine the search iteratively.</p>
+
+        <p>The motivation is simple: information relevant to answering a query isn't always lexically or semantically similar to the query itself. A question asking "What technology powers the self-driving cars made by the richest person in tech?" requires reasoning that links the query to intermediate facts, then to the final answer—a path that naive vector similarity cannot navigate alone.</p>
+
+        <div class="infobox">
+            <strong>Core Insight:</strong> Advanced RAG recognizes that complex information needs often require orchestration of multiple retrieval and reasoning strategies, not just faster or smarter single-stage retrieval.
+        </div>
+    </section>
+
+    <!-- Section 2: Multi-Stage Retrieval -->
+    <section class="topic-section">
+        <h2>Multi-Stage Retrieval Architecture</h2>
+        
+        <h3>Candidate Generation and Ranking</h3>
+
+        <p>The fundamental pattern in advanced RAG is <strong>candidate generation followed by ranking</strong>. In the first stage, a retriever generates a large candidate set—perhaps 100 or 1000 potential documents. This stage prioritizes recall: it's better to have the correct document in candidates and then filter it out than to miss it entirely.</p>
+
+        <p>The candidate generation stage might use multiple retrieval methods in parallel: dense vector search, sparse BM25 keyword search, and hybrid approaches. Each retriever contributes candidates from its own specialized perspective. Dense retrievers excel at semantic understanding; sparse retrievers excel at exact match and domain terminology. By combining both, the system captures each retriever's strengths.</p>
+
+        <h3>Cross-Encoder Reranking</h3>
+
+        <p>In the second stage, <strong>reranking</strong> filters and orders candidates. Unlike the retriever (which scores documents independently), rerankers evaluate documents <em>in context of the query</em>. A cross-encoder model like DistilBERT-MultiQA takes both query and candidate document as joint input and outputs a relevance score. This joint context allows the reranker to catch nuances that independent document encoding misses.</p>
+
+        <p>Reranking is computationally expensive—scoring 1000 candidates might take a few seconds. But since this happens offline or alongside parallel generation, the cost is often acceptable. Empirically, reranking dramatically improves retrieval precision. A retriever might place a relevant document at position 15, but a reranker moves it to position 3.</p>
+
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>Stage 1: Candidate Generation</strong>
+                <p>Multiple retrievers (dense, sparse, hybrid) generate large candidate pools. Goal: maximize recall, capture diverse perspectives on relevance.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Stage 2: Reranking</strong>
+                <p>Cross-encoder model scores candidates considering both query and document. Goal: achieve high precision, identify truly relevant documents.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Stage 3: Final Selection</strong>
+                <p>Top reranked documents are passed to the language model for generation. Further filtering may occur based on similarity thresholds.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Query Enhancement Techniques -->
+    <section class="topic-section">
+        <h2>Query Enhancement and Expansion</h2>
+        
+        <h3>Query Rewriting</h3>
+
+        <p>Before retrieval, the original query might be reformulated for better retrieval. A <strong>query rewriting</strong> component might expand cryptic queries, decompose complex questions, or paraphrase to capture domain terminology. For instance, "Show me articles about NLP" might be rewritten to "show me articles about natural language processing, computational linguistics, text analysis".</p>
+
+        <p>This can be implemented with LLMs or specialized models. An LLM-based approach feeds the query to a language model with instructions: "Given this user query, generate 3 alternative phrasings that would retrieve the same information from a database." The model generates variants, and each variant is used as a separate retrieval query, with results merged afterward.</p>
+
+        <h3>Multi-Query Retrieval</h3>
+
+        <p><strong>Multi-query retrieval</strong> extends rewriting by automatically parameterizing the query space. Instead of manually deciding how to rewrite, the system generates multiple query interpretations and retrieves for each one. Results from all queries are combined, often by merging or voting on relevance scores.</p>
+
+        <p>This approach is particularly effective for ambiguous questions. "What are the earnings?" could mean earnings per share, quarterly earnings, earnings announcements, or earnings forecasts. By generating multiple interpretations and retrieving for each, the system covers all bases and returns documents relevant to all possible meanings.</p>
+
+        <h3>Sub-Question Generation (Multi-Hop Decomposition)</h3>
+
+        <p>Complex questions are decomposed into simpler questions. "What is the total revenue of all tech companies in the S&P 500?" becomes: 1) Create a list of all S&P 500 companies in the tech sector, 2) Find their revenue. Rather than hoping a single query retrieves documents answering the complex combination, the system breaks the problem into subproblems, retrieves for each, then synthesizes.</p>
+
+        <p>The synthesis step is critical: the language model must reason over results from multiple subqueries, integrate them coherently, and produce a unified answer. This multi-hop pattern is one of the most effective techniques for complex reasoning queries in RAG.</p>
+
+        <div class="infobox">
+            <strong>Practical Pattern:</strong> For questions that inherently decompose (compound facts, aggregations, comparisons), explicit decomposition into subqueries often outperforms single-query retrieval by substantial margins.
+        </div>
+    </section>
+
+    <!-- Section 4: Hybrid Retrieval -->
+    <section class="topic-section">
+        <h2>Hybrid and Semantic Fusion Approaches</h2>
+        
+        <h3>Sparse + Dense Hybrid Retrieval</h3>
+
+        <p><strong>Sparse retrieval</strong>—traditional keyword-based search using BM25 or similar algorithms—excels at matching exact terms and domain vocabulary. <strong>Dense retrieval</strong> using embedding-based similarity excels at capturing semantic meaning. Neither is perfect; combining them is more robust.</p>
+
+        <p>A hybrid retriever offers both queries to the underlying search system: the BM25 query for sparse matching and the embedding query for dense matching. Results from both are merged, often using a combination function that weights sparse and dense scores. The balance between sparse and dense weighting depends on the domain: technical documentation may benefit from higher sparse weighting, while creative or conversational content may favor dense weighting.</p>
+
+        <h3>Reciprocal Rank Fusion</h3>
+
+        <p>When merging results from multiple retrievers, <strong>reciprocal rank fusion (RRF)</strong> is a simple, effective technique. For each document, the system computes its rank in each retriever's result list, then combines ranks using the reciprocal formula: <code>score = 1/(k + rank)</code>, where k is typically 60. Documents appearing in multiple retrievers' top results get high combined scores.</p>
+
+        <p>RRF is robust to individual retriever variations. If one retriever ranks a document highly but another doesn't, RRF gives it moderate combined score rather than extremely high or low. This handles the situation where specialized retrievers (e.g., a financial retriever vs. a general retriever) have different ranking perspectives.</p>
+
+        <h3>Ensemble and Weighted Methods</h3>
+
+        <p>Beyond simple fusion, ensemble methods learn optimal weighting. A machine learning model might train on labeled query-document pairs to predict: given query Q and document D, what is the relevance? This learned scorer can be applied to merge multiple retrievers' results using learned weights rather than fixed or uniform weights.</p>
+    </section>
+
+    <!-- Section 5: Evaluation and Validation -->
+    <section class="topic-section">
+        <h2>Evaluating Advanced RAG Systems</h2>
+        
+        <h3>Retrieval Metrics</h3>
+
+        <p>Evaluating advanced RAG requires careful metric selection. <strong>Recall@K</strong> measures: "Is the relevant document in the top K results?" <strong>Precision@K</strong> measures: "Of the top K results, how many are relevant?" <strong>NDCG (Normalized Discounted Cumulative Gain)</strong> considers ranking quality, penalizing relevant documents appearing lower. <strong>MRR (Mean Reciprocal Rank)</strong> focuses on the rank of the first relevant result.</p>
+
+        <p>Advanced systems typically optimize for <strong>reranking metrics</strong>: how well does the final ranking order documents? A system might have 90% recall@10 (correct doc is in top 10) but 40% NDCG@5 (correct doc is ranked low) if ranking is poor. Reranking effort specifically targets improving ranking quality.</p>
+
+        <h3>End-to-End Generation Quality</h3>
+
+        <p>Retrieval metrics alone are insufficient. The ultimate measure is whether the language model can generate correct answers from retrieved documents. This requires: 1) Does the retrieved context contain the answer?, 2) Can the model produce the answer from that context?. Some advanced RAG systems introduce an <strong>answer generation stage</strong> where the model generates candidate answers from retrieved context, then scores those answers for factual correctness.</p>
+
+        <div class="warning-card">
+            <strong>Evaluation Challenge:</strong> Improving one aspect (e.g., reranking precision) may not improve end-to-end answer quality if other components remain suboptimal. Holistic evaluation of the entire pipeline is necessary.
+        </div>
+    </section>
+
+    <!-- Section 6: Practical Implementation Challenges -->
+    <section class="topic-section">
+        <h2>Implementation Trade-Offs and Operational Challenges</h2>
+        
+        <h3>Latency Considerations</h3>
+
+        <p>Advanced RAG adds complexity which increases latency. Running multiple retrievers in parallel is faster than serial execution, but still slower than naive RAG's single retrieval pass. Reranking adds seconds of computation. Multi-stage retrieval requires orchestration overhead. Production systems must balance quality improvements against latency constraints: a 5-second retrieval pipeline might be unacceptable for real-time applications.</p>
+
+        <p>Partial parallelization helps. While reranking the top candidates, the system can begin prompt construction. Using faster reranker models (smaller, distilled models) reduces latency at some cost to ranking precision. Caching frequently asked questions and their retrieval results bypasses expensive computation.</p>
+
+        <h3>Cost and Resource Scaling</h3>
+
+        <p>Multiple retrievers, rerankers, and LLM calls increase computational cost. A naive RAG system might use one API call per query (embedding + generation); advanced RAG might use: query rewriting, multiple retrievals, reranking, and generation—potentially 10x the computation. For high-volume systems, cost becomes a significant constraint.</p>
+
+        <p>Organizations often optimize by limiting expensive operations to high-confidence scenarios. Complex queries trigger multi-stage retrieval; simple factual queries use a faster naive pipeline. Threshold-based routing minimizes cost while maintaining quality where needed.</p>
+
+        <h3>System Complexity and Maintenance</h3>
+
+        <p>Advanced RAG systems are significantly more complex to build, debug, and maintain than naive systems. Multiple components means multiple points of failure. If a reranker is miscalibrated, it might filter out correct documents. If query rewriting is too aggressive, it might transform specific queries into overly generic ones.</p>
+
+        <p>These systems benefit from comprehensive monitoring, detailed logging, and staged rollout. A new reranker should be validated on historical data before production deployment. Changes to one component often have cascading effects through the pipeline.</p>
+    </section>
+
+    <!-- Takeaway Section -->
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>Multi-Stage Architecture:</strong> Advanced RAG replaces single-pass retrieval with orchestrated stages: candidate generation, reranking, filtering, ensuring both recall and precision.
+            </div>
+            <div class="takeaway-item">
+                <strong>Reranking's Power:</strong> Cross-encoder reranking dramatically improves ranking quality by considering query-document context jointly, not independently.
+            </div>
+            <div class="takeaway-item">
+                <strong>Query Enhancement Matters:</strong> Rewriting, expanding, and decomposing complex queries dramatically improves retrieval quality for non-trivial questions.
+            </div>
+            <div class="takeaway-item">
+                <strong>Hybrid Retrieval Robustness:</strong> Combining sparse and dense retrieval captures complementary strengths, providing more robust relevant document discovery.
+            </div>
+            <div class="takeaway-item">
+                <strong>Evaluation is Complex:</strong> Retrieval metrics alone don't guarantee answer quality; end-to-end evaluation of generation quality is essential.
+            </div>
+            <div class="takeaway-item">
+                <strong>Cost-Quality Trade-off:</strong> Advanced techniques improve quality but add latency and cost; careful architecture balances improvements against operational constraints.
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>
+    <style>
+        :root {
+            /* Light Mode Palette (Consistent) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --accent-danger: #b91c1c; /* Red */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Query Rewrite (Top/Bottom) */
+        .qr-container { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+        .qr-row { display: flex; gap: 4px; align-items: center; position: relative; height: 30px; }
+        .qr-node { 
+            flex: 1; border: 1px solid #cbd5e1; background: #fff; border-radius: 4px; 
+            display: flex; align-items: center; justify-content: center; font-size: 0.6rem; text-align: center;
+        }
+        .qr-bad { border-color: #fca5a5; color: #b91c1c; }
+        .qr-good { border-color: var(--accent-success); color: var(--accent-success); background: #f0fdf4; }
+        .qr-arrow { width: 10px; height: 2px; background: #cbd5e1; position: relative; }
+        .qr-packet { 
+            position: absolute; width: 6px; height: 6px; background: var(--accent-secondary); border-radius: 50%; top: -2px; left: 0; 
+            opacity: 0;
+        }
+        
+        /* Bad Packet Animation */
+        .qr-row.bad .qr-packet { animation: failMove 2s infinite linear; }
+        @keyframes failMove { 
+            0% { left: 0; opacity: 1; } 80% { left: 100%; opacity: 1; } 90% { left: 100%; opacity: 0; } 100% { left: 0; opacity: 0; }
+        }
+
+        /* Good Packet Animation */
+        .qr-row.good .qr-packet { background: var(--accent-success); animation: successMove 2s infinite linear 1s; }
+        @keyframes successMove { 
+            0% { left: 0; opacity: 1; } 80% { left: 100%; opacity: 1; } 90% { left: 100%; opacity: 0; } 100% { left: 0; opacity: 0; }
+        }
+
+        /* 2. HyDE (Typing) */
+        .hyde-flow { display: flex; gap: 4px; width: 100%; align-items: center; }
+        .hd-box { 
+            padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.6rem; text-align: center; flex: 1; background: #fff; position: relative; overflow: hidden;
+        }
+        .hd-ghost { border-style: dashed; color: #94a3b8; }
+        .hd-typing { 
+            background: #f0f9ff; border-color: var(--accent-primary); color: var(--accent-primary);
+        }
+        .hd-text {
+            overflow: hidden; white-space: nowrap; width: 0; display: inline-block;
+            animation: typeText 3s steps(20, end) infinite;
+        }
+        @keyframes typeText { 0% { width: 0; } 50%, 100% { width: 100%; } }
+
+        /* 3. Hybrid Search (Merge) */
+        .hybrid-grid { position: relative; width: 100%; height: 100px; display: flex; justify-content: center; align-items: center; }
+        .hb-node {
+            position: absolute; width: 50px; height: 20px; border: 1px solid #cbd5e1; background: #fff; border-radius: 4px; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; z-index: 2;
+        }
+        .hb-q { top: 50%; left: 10px; transform: translateY(-50%); }
+        .hb-dense { top: 20%; left: 50%; transform: translateX(-50%); border-color: var(--accent-primary); }
+        .hb-sparse { bottom: 20%; left: 50%; transform: translateX(-50%); border-color: var(--accent-warning); }
+        .hb-fusion { top: 50%; right: 10px; transform: translateY(-50%); border-color: var(--accent-success); background: #f0fdf4; }
+
+        .hb-line { position: absolute; background: #cbd5e1; height: 1px; transform-origin: left center; z-index: 1; }
+        .hl-1 { top: 50%; left: 35px; width: 20px; transform: rotate(-45deg); }
+        .hl-2 { top: 50%; left: 35px; width: 20px; transform: rotate(45deg); }
+        .hl-3 { top: 50%; left: 50%; width: 20px; transform: rotate(45deg); }
+        .hl-4 { bottom: 20%; left: 50%; width: 20px; transform: rotate(-45deg); }
+
+        .hb-particle {
+            position: absolute; width: 4px; height: 4px; background: #64748b; border-radius: 50%; z-index: 3;
+        }
+        .hp-1 { animation: splitPath 3s infinite linear; }
+        .hp-2 { animation: splitPath 3s infinite linear; animation-delay: 1.5s; }
+
+        @keyframes splitPath {
+            0% { top: 50%; left: 35px; opacity: 1; }
+            33% { top: 20%; left: 50%; opacity: 1; } /* Dense hit */
+            66% { top: 50%; left: 50%; opacity: 1; } /* Merge */
+            100% { top: 50%; left: calc(100% - 60px); opacity: 0; }
+        }
+
+        /* 4. Pipeline (Sequential) */
+        .pipe-vert { display: flex; flex-direction: column; gap: 4px; width: 90%; }
+        .pv-step {
+            padding: 4px; border-left: 2px solid #cbd5e1; padding-left: 8px; font-size: 0.65rem;
+            opacity: 0.3; transition: 0.3s;
+        }
+        .pv-step.active { opacity: 1; border-color: var(--accent-primary); background: #f0f9ff; font-weight: bold; }
+
+        /* 5. Decision Tree (SVG Path) */
+        .tree-svg { width: 100%; height: 100px; }
+        .tree-path { fill: none; stroke: #cbd5e1; stroke-width: 1.5; stroke-dasharray: 100; stroke-dashoffset: 100; animation: drawTree 4s infinite linear; }
+        @keyframes drawTree { 0% { stroke-dashoffset: 100; } 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 0; } }
+        
+        .tree-node { fill: #fff; stroke: var(--accent-primary); stroke-width: 1; }
+        .tree-text { font-size: 0.5rem; text-anchor: middle; fill: #333; }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body onload="initAnimations()">
+
+<div class="container">
+    <header>
+        <div>
+            <h1>06. Advanced RAG</h1>
+            <div class="subtitle">Query Rewriting • HyDE • Hybrid Search • Pipeline</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>Technique 1: Query Rewriting</h2>
+            <p><strong>Problem:</strong> User queries are ambiguous ("What's the timeline?"). Generic embeddings retrieve irrelevant chunks.</p>
+            <p><strong>Solution:</strong> LLM rewrites the query to be specific before embedding.</p>
+            <p>"Timeline" → "Q3 Project Release Timeline"</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Before vs. After</span>
+            <div class="qr-container">
+                <!-- Bad Path -->
+                <div class="qr-row bad">
+                    <div class="qr-node qr-bad">Vague Query</div>
+                    <div class="qr-arrow"><div class="qr-packet"></div></div>
+                    <div class="qr-node qr-bad">Random Result</div>
+                </div>
+                <!-- Good Path -->
+                <div class="qr-row good">
+                    <div class="qr-node qr-good">Rewritten Query</div>
+                    <div class="qr-arrow"><div class="qr-packet"></div></div>
+                    <div class="qr-node qr-good">Relevant Docs</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>Technique 2: HyDE</h2>
+            <p><strong>Hypothetical Document Embedding.</strong></p>
+            <p>Query is too short to embed well. Instead, generate a <strong>fake answer</strong> first, then embed the fake answer.</p>
+            <p>The fake document is dense and informative, leading to better vector matches than the sparse query.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Fake Doc Generation</span>
+            <div class="hyde-flow">
+                <div class="hd-box">Query<br>"Return policy"</div>
+                <div style="color:var(--accent-primary)">→</div>
+                <div class="hd-box hd-ghost">LLM<br>Generator</div>
+                <div style="color:var(--accent-primary)">→</div>
+                <div class="hd-box hd-typing">
+                    Fake Doc: <br>
+                    <span class="hd-text">"Our policy is 30 days..."</span>
+                </div>
+                <div style="color:var(--accent-primary)">→</div>
+                <div class="hd-box" style="border-color:var(--accent-success); background:#f0fdf4;">Match</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>Technique 3: Hybrid Search</h2>
+            <p><strong>Dense + Sparse.</strong> Embeddings miss keywords; Keywords miss semantics. Use both.</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Dense:</strong> Finds "Compensation" (Semantic).</li>
+                <li><strong>Sparse (BM25):</strong> Finds exact "CEO" (Keyword).</li>
+            </ul>
+            <p><strong>Merge:</strong> Use Reciprocal Rank Fusion (RRF) or Weighted Scoring.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Fusion Pipeline</span>
+            <div class="hybrid-grid">
+                <!-- Lines -->
+                <div class="hb-line hl-1"></div>
+                <div class="hb-line hl-2"></div>
+                <div class="hb-line hl-3"></div>
+                <div class="hb-line hl-4"></div>
+                
+                <!-- Nodes -->
+                <div class="hb-node hb-q">Query</div>
+                <div class="hb-node hb-dense">Dense</div>
+                <div class="hb-node hb-sparse">Sparse</div>
+                <div class="hb-node hb-fusion">Fusion</div>
+
+                <!-- Particles -->
+                <div class="hb-particle hp-1"></div>
+                <div class="hb-particle hp-2"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Full Advanced Pipeline</h2>
+            <p>1. <strong>Query Rewrite</strong> → Clarify.</p>
+            <p>2. <strong>Multi-Query Retrieval</strong> → Dense + Sparse for each.</p>
+            <p>3. <strong>Deduplicate</strong> → Merge lists.</p>
+            <p>4. <strong>Rerank</strong> → Cross-encoder scoring.</p>
+            <p>5. <strong>Generate</strong> → LLM answer.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Sequence</span>
+            <div class="pipe-vert" id="pipelineAnim">
+                <div class="pv-step">1. Query Rewriting</div>
+                <div class="pv-step">2. Multi-Query Retrieval (Dense+Sparse)</div>
+                <div class="pv-step">3. Deduplicate / Combine</div>
+                <div class="pv-step">4. Reranking (Cross-Encoder)</div>
+                <div class="pv-step">5. Generate Answer</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>Decision Tree</h2>
+            <p>How to choose the right technique?</p>
+            <ul style="font-size: 0.8rem;">
+                <li>Ambiguous? → <strong>Query Rewrite</strong>.</li>
+                <li>Very Short? → <strong>HyDE</strong>.</li>
+                <li>Need Keywords? → <strong>Hybrid</strong>.</li>
+                <li>Noisy Results? → <strong>Rerank</strong>.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Logic Flow</span>
+            <svg class="tree-svg" viewBox="0 0 200 100">
+                <!-- Tree Structure -->
+                <rect x="90" y="10" width="20" height="10" rx="2" class="tree-node" />
+                <text x="100" y="18" class="tree-text">Ambig?</text>
+                
+                <!-- Yes Branch -->
+                <path d="M 100 20 L 100 30 L 50 30 L 50 50" class="tree-path" style="animation-delay: 0s;" />
+                <rect x="40" y="50" width="20" height="10" rx="2" class="tree-node" style="fill:#f0fdf4" />
+                <text x="50" y="58" class="tree-text">Rewrite</text>
+                
+                <!-- No Branch -->
+                <path d="M 100 20 L 100 30 L 150 30 L 150 50" class="tree-path" style="animation-delay: 1s;" />
+                <rect x="140" y="50" width="20" height="10" rx="2" class="tree-node" />
+                <text x="150" y="58" class="tree-text">Short?</text>
+
+                <!-- Yes Branch 2 -->
+                <path d="M 150 60 L 150 70 L 120 70" class="tree-path" style="animation-delay: 2s;" />
+                <rect x="110" y="70" width="20" height="10" rx="2" class="tree-node" style="fill:#f0fdf4" />
+                <text x="120" y="78" class="tree-text">HyDE</text>
+
+                <!-- No Branch 2 -->
+                <path d="M 150 60 L 150 70 L 180 70" class="tree-path" style="animation-delay: 2s;" />
+                <rect x="170" y="70" width="20" height="10" rx="2" class="tree-node" style="fill:#f0fdf4" />
+                <text x="180" y="78" class="tree-text">Done</text>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Rewrite Queries:</strong> Fix ambiguity before searching.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>HyDE:</strong> Generate fake answers to improve embedding.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Hybrid:</strong> Combine Dense (Meaning) + Sparse (Keywords).</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Rerank:</strong> Validate retrieved chunks before answering.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    function initAnimations() {
+        // 1. Pipeline Sequential Animation
+        const steps = document.querySelectorAll('.pv-step');
+        let stepIndex = 0;
+        
+        function cycleSteps() {
+            steps.forEach(s => s.classList.remove('active'));
+            steps[stepIndex].classList.add('active');
+            stepIndex = (stepIndex + 1) % steps.length;
+        }
+        
+        setInterval(cycleSteps, 1000); // Highlight step every second
+        cycleSteps(); // Start immediately
+    }
+</script>
+
+</body>
+</html>

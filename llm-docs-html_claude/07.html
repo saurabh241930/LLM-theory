@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reranking: Improving Retrieval Quality with Cross-Encoders</title>
+    <style>
+        :root {
+            --bg-body: #f6f6f6;
+            --bg-content: #ffffff;
+            --text-primary: #202122;
+            --text-secondary: #54595d;
+            --accent-primary: #0645ad;
+            --accent-secondary: #d73027;
+            --accent-success: #007d2e;
+            --accent-warning: #d46a2a;
+            --border-color: #a2a9b1;
+            --wiki-bg: #f8f9fa;
+            --font-body: Georgia, serif;
+            --font-code: monospace;
+            --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --radius: 2px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-body); color: var(--text-primary); font-family: var(--font-body); line-height: 1.6; font-size: 15px; padding: var(--space-md); -webkit-font-smoothing: antialiased; }
+        .container { max-width: 900px; margin: 0 auto; background: var(--bg-content); padding: var(--space-lg); border: 1px solid var(--border-color); box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        header { border-bottom: 3px solid var(--accent-primary); padding-bottom: var(--space-md); margin-bottom: var(--space-lg); }
+        h1 { font-size: 1.8rem; color: var(--text-primary); font-weight: normal; margin-bottom: 4px; font-family: var(--font-system); }
+        .subtitle { color: var(--text-secondary); font-size: 0.95rem; font-style: italic; font-family: var(--font-system); }
+        .topic-section { margin-bottom: var(--space-lg); padding-bottom: var(--space-lg); border-bottom: 1px solid #e8e8e8; }
+        .topic-section:last-of-type { border-bottom: none; }
+        h2 { font-size: 1.4rem; color: var(--text-primary); margin-top: var(--space-lg); margin-bottom: var(--space-md); font-weight: normal; font-family: var(--font-system); border-bottom: 2px solid #e8e8e8; padding-bottom: 8px; }
+        h3 { font-size: 1.1rem; color: var(--text-primary); margin-top: var(--space-md); margin-bottom: 8px; font-weight: bold; font-family: var(--font-system); }
+        p { color: var(--text-primary); margin-bottom: var(--space-md); text-align: justify; line-height: 1.8; }
+        strong { color: var(--text-primary); font-weight: bold; }
+        em { font-style: italic; color: var(--text-secondary); }
+        code { background: var(--wiki-bg); padding: 2px 4px; border-radius: var(--radius); font-family: var(--font-code); font-size: 0.9em; color: var(--accent-secondary); }
+        ul, ol { margin-left: 2em; margin-bottom: var(--space-md); }
+        li { margin-bottom: 8px; color: var(--text-primary); line-height: 1.7; }
+        .infobox { background: var(--wiki-bg); border: 1px solid var(--border-color); padding: var(--space-md); margin: var(--space-md) 0; border-left: 4px solid var(--accent-primary); border-radius: var(--radius); }
+        .infobox strong { display: block; margin-bottom: 6px; color: var(--accent-primary); }
+        .figure-container { background: var(--wiki-bg); border: 1px solid var(--border-color); padding: var(--space-md); margin: var(--space-md) 0; text-align: center; border-radius: var(--radius); }
+        .figure-label { font-size: 0.85rem; color: var(--text-secondary); margin-top: 8px; font-style: italic; font-family: var(--font-system); }
+        .pipeline { display: flex; flex-direction: column; gap: 8px; margin: var(--space-md) 0; }
+        .pipeline-stage { padding: 16px; background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%); border-left: 4px solid var(--accent-primary); border-radius: var(--radius); font-family: var(--font-system); color: var(--text-primary); }
+        .pipeline-stage strong { display: block; margin-bottom: 4px; color: var(--accent-primary); }
+        .warning-card { background: #fff1f0; border: 1px solid #ffa6a6; border-left: 4px solid var(--accent-secondary); padding: var(--space-md); margin: var(--space-md) 0; border-radius: var(--radius); }
+        .warning-card strong { color: var(--accent-secondary); display: block; margin-bottom: 6px; }
+        .takeaway-section { background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%); border: 2px solid var(--accent-primary); padding: var(--space-lg); margin-top: var(--space-lg); border-radius: var(--radius); }
+        .takeaway-section h2 { color: var(--accent-primary); margin-top: 0; }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md); }
+        .takeaway-item { padding: var(--space-md); background: white; border-left: 3px solid var(--accent-success); border-radius: var(--radius); }
+        .takeaway-item strong { color: var(--accent-success); display: block; margin-bottom: 6px; font-family: var(--font-system); }
+        @media (max-width: 768px) { .container { padding: var(--space-md); border: none; box-shadow: none; background: var(--bg-body); } h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1>Reranking: Improving Retrieval Quality with Cross-Encoders</h1>
+            <div class="subtitle">How Cross-Encoder Models Transform Ranking Quality and Enable Precise Document Selection in RAG Systems</div>
+        </div>
+    </header>
+
+    <section class="topic-section">
+        <h2>The Fundamental Problem: Dense Retriever Limitations</h2>
+        <p>Dense retrievers using embedding-based search have become the workhorse of RAG systems. Yet they operate under a significant architectural constraint: they encode documents and queries independently. A document embedding is computed once during preprocessing, then reused for all queries. This independence, while enabling efficiency, sacrifices the opportunity to consider query-specific context when scoring relevance.</p>
+        <p>Consider a practical scenario. A retriever embeds a document: "The bank holds investments in tech stocks." This embedding captures general lexical content—references to finance, investments, and technology. Later, a user queries: "Where can I fish on the riverbank?" The query embedding captures natural environment, fishing, and geography. These embeddings might still be somewhat similar (both contain "bank" in some semantic form), leading the retriever to return the finance document as relevant when it's completely wrong.</p>
+        <p>This failure mode—returning documents that are superficially similar but contextually irrelevant—highlights the retriever's blind spot. It cannot reason about the specific query in the context of each candidate document. It cannot see that this particular query wants "riverbank" while the document offers "financial bank."</p>
+        <div class="infobox">
+            <strong>Core Architecture Limitation:</strong> Bi-encoders (independent document/query encoding) are efficient but context-unaware. They cannot jointly evaluate whether a document truly answers a specific query.
+        </div>
+    </section>
+
+    <section class="topic-section">
+        <h2>Cross-Encoder Architecture and Model Design</h2>
+        <h3>Joint Encoding for Query-Document Interaction</h3>
+        <p><strong>Cross-encoders</strong> address this limitation by jointly encoding the query and document together. Rather than separate embedding operations, a single transformer model processes concatenated query and document tokens: [CLS] query tokens [SEP] document tokens [SEP]. The output from the special [CLS] token is passed to a classification head producing a relevance score.</p>
+        <p>This joint processing allows the model to attend across query and document tokens, enabling complex reasoning about their interaction. The attention mechanism can recognize that "bank" in the query context (fishing-related) differs from "bank" in the document (finance-related). The model learns patterns distinguishing true relevance from superficial similarity.</p>
+        <h3>Training Cross-Encoders</h3>
+        <p>Cross-encoders are typically trained using triplet loss or pairwise ranking loss. The training data consists of (query, relevant_document, irrelevant_document) triplets. The model learns to score relevant documents higher than irrelevant ones, even when both share surface-level similarities. This contrastive training directly optimizes for ranking quality.</p>
+        <p>Popular pre-trained cross-encoders include DistilBERT-MultiQA (distilled for efficiency), BERT-based models from sentence-transformers, and more recent models like Voyage AI's cross-encoder. Many are available as open-source models, trainable on custom domain data for specialized applications.</p>
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>Input Format</strong>
+                <p>[CLS] "What is Python?" [SEP] "Python is a programming language..." [SEP]</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Joint Encoding</strong>
+                <p>Transformer jointly processes query and document with cross-attention between tokens.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Relevance Scoring</strong>
+                <p>[CLS] token output → dense layer → relevance score (0-1 probability scale).</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="topic-section">
+        <h2>Reranking in the RAG Context</h2>
+        <h3>Two-Stage Retrieval Pipeline</h3>
+        <p>Reranking is integrated into a two-stage retrieval pipeline. Stage 1 (retriever): Generate a larger candidate set, e.g., top 100 documents using fast dense search. Optimize for <strong>recall</strong>—ensure relevant documents are in the candidate pool. Stage 2 (reranker): Score and order the 100 candidates using the cross-encoder. Optimize for <strong>precision</strong>—ensure relevant documents are ranked highest.</p>
+        <p>This two-stage approach balances computational cost and quality. Dense retrieval is fast (milliseconds per query); cross-encoder scoring is slower (seconds for 100 documents). By filtering to top candidates first, the system avoids expensive scoring on irrelevant documents while still capturing precision improvements.</p>
+        <h3>Computational Trade-offs</h3>
+        <p>A common configuration: dense retriever generates top 50 candidates (10-20ms), cross-encoder reranks them (1-2 seconds for 50 documents). Total latency: ~2 seconds. Alternatively: top 100 candidates could yield better coverage at increased latency. Or: top 10 candidates with lighter reranker model reduces latency to 300ms but might miss relevant documents.</p>
+        <p>Production systems tune these parameters based on latency budgets. Real-time applications might accept top 10 with fast reranking. Offline batch systems might rerank top 500 for maximum precision. The tuning process involves empirical evaluation on domain-specific test sets.</p>
+    </section>
+
+    <section class="topic-section">
+        <h2>Reranking Effectiveness and Performance Gains</h2>
+        <h3>Empirical Results</h3>
+        <p>Reranking consistently improves ranking metrics significantly. In TREC and MS MARCO benchmarks, cross-encoder reranking improves NDCG@10 by 10-25% over dense retrieval alone. In real-world RAG systems, reranking often moves relevant documents from position 15 to position 3, transforming whether the language model receives sufficient context for correct answer generation.</p>
+        <p>The improvements are most dramatic on difficult, ambiguous, or complex queries where shallow semantic similarity is insufficient. Simple factual queries like "What year was Python released?" might show minimal improvement because dense retrieval already works well. Multi-faceted queries like "Compare Python and Go for systems programming" show dramatic reranking benefits.</p>
+        <h3>When Reranking Helps Most</h3>
+        <p>Reranking is most effective when: 1) The retriever produces many candidates with mixed relevance, necessitating careful sorting. 2) The query is complex or ambiguous, requiring query-aware evaluation. 3) Domain-specificity is high, and a reranker trained on domain data can exploit specialized patterns. 4) The cost of wrong ranking (poor LLM answers) is high, justifying computational investment in reranking.</p>
+        <p>Conversely, reranking provides minimal value when the retriever already produces excellent top-k results, or when queries are trivial enough that any relevant document yields correct answers. Not all systems need or benefit from reranking—it's an optimization for quality-critical scenarios.</p>
+    </section>
+
+    <section class="topic-section">
+        <h2>Advanced Reranking Strategies</h2>
+        <h3>Multi-Phase Reranking</h3>
+        <p>Some systems employ cascading rerankers of different complexity levels. A fast, lightweight reranker (DistilBERT-based) filters top 50 to top 10, then a heavier reranker (full-size BERT) precisely scores the final 10. This approach reduces computational cost compared to heavy reranking of all candidates while maintaining precision benefits.</p>
+        <h3>Listwise Reranking</h3>
+        <p>Most rerankers score documents independently (pairwise). <strong>Listwise reranking</strong> considers the entire list structure, optimizing for ranking metrics like NDCG directly. Learning-to-rank techniques like LambdaMART take the full candidate list as input and learn to optimize ranking directly. While more sophisticated, they're less commonly used in commercial RAG due to complexity.</p>
+        <h3>Ensemble and Weighted Reranking</h3>
+        <p>Multiple rerankers can be combined. Different rerankers may specialize in different query types (technical vs. narrative). Weights can be learned from validation data to balance their contributions. This ensemble approach is more robust than any single reranker, though at increased computational cost.</p>
+        <div class="infobox">
+            <strong>Practical Insight:</strong> Simple two-stage reranking (fast retriever + cross-encoder) provides 80% of potential improvement at reasonable computational cost. More sophisticated techniques provide incremental gains at substantially higher complexity.
+        </div>
+    </section>
+
+    <section class="topic-section">
+        <h2>Implementation Challenges and Best Practices</h2>
+        <h3>Model Selection and Calibration</h3>
+        <p>Reranker model choice significantly impacts both quality and latency. Larger models (full BERT, 110M parameters) are more accurate but slower. Distilled models (DistilBERT, 66M parameters) are faster with minimal accuracy loss. Domain-fine-tuned models are more accurate on specialized content but may fail on out-of-domain queries.</p>
+        <p>Calibration is important: raw cross-encoder scores can be miscalibrated, producing probability-like values that don't reflect true relevance. Using temperature scaling or logistic calibration on validation data improves reliability of the scores for downstream components.</p>
+        <h3>Batch Processing and Optimization</h3>
+        <p>Reranking scales most efficiently with batch processing. Scoring 100 documents one-by-one is inefficient; scoring them in batches of 16 or 32 leverages GPU parallelism. For online systems, batching adds latency as the system accumulates queries. Trade-offs between throughput and latency depend on system architecture and constraints.</p>
+        <h3>Monitoring and Debugging</h3>
+        <p>Production RAG systems should monitor reranking quality: Are top-k results after reranking more relevant than before? Do reranking improvements translate to better answer generation? Debugging tools should expose: which documents were reranked upward/downward? which queries benefit most from reranking? This visibility helps identify reranker failures or miscalibration.</p>
+    </section>
+
+    <section class="topic-section">
+        <h2>When NOT to Use Reranking</h2>
+        <p>Reranking is not universally beneficial. If a dense retriever already achieves top-5 accuracy >90%, reranking adds latency without commensurate quality improvement. For latency-critical applications (real-time chat requiring <200ms response), reranking may be prohibitively expensive. For systems where storage is severely constrained, avoiding complex rerankers reduces model footprint.</p>
+        <p>The decision should be empirically driven. Baseline quality of dense retrieval should be measured, then incremental benefit of reranking quantified. If dense retrieval is already performing well, resources might be better spent on other improvements: better documents in the index, query enhancement, or generation model quality.</p>
+        <div class="warning-card">
+            <strong>Optimization Danger:</strong> It's easy to over-engineer RAG systems with reranking, multi-stage retrieval, and complex orchestration when simple dense retrieval would suffice. Each component adds cost and complexity; benefit should justify the investment.
+        </div>
+    </section>
+
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>Cross-Encoders Enable Context-Aware Scoring:</strong> Joint query-document processing allows reasoning about interaction, catching context mismatches that bi-encoders miss.
+            </div>
+            <div class="takeaway-item">
+                <strong>Two-Stage Pipeline Balances Cost and Quality:</strong> Fast retriever generates candidates; cross-encoder precisely ranks them, achieving precision at acceptable cost.
+            </div>
+            <div class="takeaway-item">
+                <strong>Dramatic Improvements on Complex Queries:</strong> Reranking provides 10-25% NDCG improvements, with largest benefits on ambiguous or multi-faceted queries.
+            </div>
+            <div class="takeaway-item">
+                <strong>Model and Calibration Choices Matter:</strong> Distilled vs. full models, fine-tuning, and score calibration significantly affect quality and efficiency trade-offs.
+            </div>
+            <div class="takeaway-item">
+                <strong>Empirical Evaluation Required:</strong> Reranking benefit varies by domain and query type; baseline metrics should guide whether investment is warranted.
+            </div>
+            <div class="takeaway-item">
+                <strong>Operational Complexity Increases:</strong> Production reranking pipelines require monitoring, batch processing optimization, and debugging infrastructure.
+            </div>
+        </div>
+    </section>
+
+</div>
+</body>
+</html>
+    <style>
+        :root {
+            /* Light Mode Palette (Consistent) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --accent-danger: #b91c1c; /* Red */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Problem (Split Flow) */
+        .split-container { width: 100%; height: 100px; position: relative; display: flex; justify-content: center; }
+        .split-start { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); padding: 4px 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.6rem; z-index: 2; }
+        .split-end { position: absolute; right: 10px; padding: 4px 8px; border-radius: 4px; font-size: 0.6rem; z-index: 2; width: 90px; text-align: center; }
+        .se-top { top: 10px; border-color: #fca5a1; background: #fff1f2; color: #b91c1c; }
+        .se-btm { bottom: 10px; border-color: var(--accent-success); background: #f0fdf4; color: var(--accent-success); }
+        
+        .split-line { position: absolute; height: 2px; background: #cbd5e1; top: 50%; left: 70px; z-index: 1; transform-origin: left; }
+        .sl-top { width: 100px; transform: rotate(-25deg); }
+        .sl-btm { width: 100px; transform: rotate(25deg); }
+
+        .packet { 
+            width: 6px; height: 6px; background: var(--accent-primary); border-radius: 50%; 
+            position: absolute; top: -2px; left: 0; 
+            animation: travelSplit 2.5s infinite linear;
+        }
+        .packet-btm { animation-delay: 0.2s; background: var(--accent-success); }
+
+        @keyframes travelSplit {
+            0% { left: 0; opacity: 0; }
+            10% { left: 10px; opacity: 1; }
+            90% { left: 90px; opacity: 1; }
+            100% { left: 100px; opacity: 0; }
+        }
+
+        /* 2. Architecture (Parallel) */
+        .arch-container { display: flex; width: 100%; gap: 10px; height: 100%; }
+        .arch-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border-right: 1px dashed #e2e8f0; }
+        .arch-col:last-child { border-right: none; }
+        
+        .arch-step { 
+            width: 90%; background: #fff; border: 1px solid #cbd5e1; padding: 4px; 
+            text-align: center; font-size: 0.65rem; margin: 2px 0; border-radius: 4px; position: relative; z-index: 2;
+        }
+        .as-fast { border-color: var(--accent-primary); }
+        .as-slow { border-color: var(--accent-warning); background: #fffbeb; }
+        
+        .flow-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent-primary); opacity: 0.5; }
+        .fb-anim { animation: slideDown 1s infinite linear; }
+        .fb-slow-anim { animation: slideDown 4s infinite linear; background: var(--accent-warning); }
+
+        @keyframes slideDown { from { top: -10%; } to { top: 110%; } }
+
+        /* 3. Funnel (Two-Stage) */
+        .funnel-stage { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
+        .fs-row { display: flex; gap: 2px; justify-content: center; width: 100%; }
+        .dot { width: 6px; height: 6px; background: #cbd5e1; border-radius: 50%; transition: all 0.5s; }
+        .dot.active { background: var(--accent-primary); transform: scale(1.5); }
+        .dot.final { background: var(--accent-success); transform: scale(2); }
+
+        /* 4. Trade-offs (Charts) */
+        .trade-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .tg-col { display: flex; flex-direction: column; gap: 4px; padding: 4px; border: 1px solid #e2e8f0; border-radius: 4px; }
+        .tg-row { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; }
+        .tg-bar { height: 6px; background: #e2e8f0; border-radius: 2px; flex: 1; overflow: hidden; }
+        .tg-fill { height: 100%; width: 0; transition: width 1s; }
+        
+        /* 5. Decision Tree (SVG) */
+        .tree-svg { width: 100%; height: 100px; }
+        .tree-path { fill: none; stroke: #cbd5e1; stroke-width: 1.5; stroke-dasharray: 100; stroke-dashoffset: 100; animation: drawTree 4s infinite linear; }
+        @keyframes drawTree { 0% { stroke-dashoffset: 100; } 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 0; } }
+        .tree-node { fill: #fff; stroke: var(--accent-primary); stroke-width: 1; }
+        .tree-text { font-size: 0.5rem; text-anchor: middle; fill: #333; }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body onload="initAnimations()">
+
+<div class="container">
+    <header>
+        <div>
+            <h1>07. Reranking</h1>
+            <div class="subtitle">Cross-Encoders • Two-Stage Retrieval • Quality vs. Speed</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>The Problem with Cosine</h2>
+            <p>Vector similarity is fast but noisy. It ranks "How to return" higher than "Defect warranty" because of keyword overlap, ignoring the query-chunk relationship.</p>
+            <div class="insight">
+                💡 Cosine Score ≠ Relevance Score.
+            </div>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Ambiguity</span>
+            <div class="split-container">
+                <div class="split-start">Query</div>
+                <div class="split-line sl-top"><div class="packet"></div></div>
+                <div class="split-line sl-btm"><div class="packet packet-btm"></div></div>
+                
+                <div class="split-end se-top">
+                    Rank 1: "How to return"<br>
+                    <span style="font-size:0.5rem; color:#b91c1c">Keyword Match (Wrong)</span>
+                </div>
+                <div class="split-end se-btm">
+                    Rank 2: "Defect Policy"<br>
+                    <span style="font-size:0.5rem; color:var(--accent-success)">True Meaning</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>Bi-Encoder vs. Cross-Encoder</h2>
+            <p><strong>Bi-Encoder (Vector Search):</strong> Separate embeddings. Fast (O(1)). Coarse.</p>
+            <p><strong>Cross-Encoder (Reranker):</strong> Reads [Query, Chunk] together. Slow (O(n)). Precise.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Architecture</span>
+            <div class="arch-container">
+                <div class="arch-col">
+                    <div class="flow-bar fb-anim"></div>
+                    <div class="arch-step as-fast">Embed Query</div>
+                    <div class="arch-step as-fast">Cosine Math</div>
+                    <div class="arch-step as-fast">Score (0.85)</div>
+                    <div style="font-size:0.6rem; color:#64748b; margin-top:auto;">Fast & Coarse</div>
+                </div>
+                <div class="arch-col">
+                    <div class="flow-bar fb-slow-anim"></div>
+                    <div class="arch-step as-slow">[CLS] Q + C [SEP]</div>
+                    <div class="arch-step as-slow">Deep BERT</div>
+                    <div class="arch-step as-slow">Score (0.98)</div>
+                    <div style="font-size:0.6rem; color:var(--accent-warning); margin-top:auto;">Slow & Precise</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>Two-Stage Workflow</h2>
+            <p><strong>Stage 1:</strong> Embedding search retrieves Top-100 fast.</p>
+            <p><strong>Stage 2:</strong> Reranker scores the Top-100, returns Top-5.</p>
+            <p><strong>Why?</strong> Reranking 1M docs is too slow/expensive. Reranking 100 is cheap (~$0.001).</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">The Funnel</span>
+            <div class="funnel-stage">
+                <!-- Stage 1 -->
+                <div style="font-size:0.6rem; color:#64748b;">Stage 1: All Docs (Vector Search)</div>
+                <div class="fs-row" id="row1">
+                    <!-- 20 dots generated by JS -->
+                </div>
+                
+                <!-- Stage 2 -->
+                <div style="font-size:0.6rem; color:var(--accent-warning);">Stage 2: Top-100 (Reranker)</div>
+                <div class="fs-row" id="row2">
+                    <!-- 5 dots generated by JS -->
+                </div>
+
+                <!-- Stage 3 -->
+                <div style="font-size:0.6rem; color:var(--accent-success);">Stage 3: Top-5 (To LLM)</div>
+                <div class="fs-row" id="row3">
+                    <!-- 2 dots generated by JS -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Trade-offs</h2>
+            <p>Vector search is fast but inaccurate. Reranking is accurate but slow.</p>
+            <p><strong>Recommendation:</strong> Always use a two-stage pipeline. Don't rerank the whole database.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Comparison</span>
+            <div class="trade-grid">
+                <div class="tg-col" style="border-color:var(--accent-primary)">
+                    <div style="text-align:center; font-weight:bold; color:var(--accent-primary)">Vector</div>
+                    <div class="tg-row"><div style="width:40px">Speed</div><div class="tg-bar"><div class="tg-fill" style="background:var(--accent-primary); width:95%"></div></div></div>
+                    <div class="tg-row"><div style="width:40px">Cost</div><div class="tg-bar"><div class="tg-fill" style="background:var(--accent-success); width:10%"></div></div></div>
+                    <div class="tg-row"><div style="width:40px">Acc</div><div class="tg-bar"><div class="tg-fill" style="background:var(--accent-warning); width:50%"></div></div></div>
+                </div>
+                <div class="tg-col" style="border-color:var(--accent-warning)">
+                    <div style="text-align:center; font-weight:bold; color:var(--accent-warning)">Reranker</div>
+                    <div class="tg-row"><div style="width:40px">Speed</div><div class="tg-bar"><div class="tg-fill" style="background:var(--accent-primary); width:30%"></div></div></div>
+                    <div class="tg-row"><div style="width:40px">Cost</div><div class="tg-bar"><div class="tg-fill" style="background:var(--accent-success); width:80%"></div></div></div>
+                    <div class="tg-row"><div style="width:40px">Acc</div><div class="tg-bar"><div class="tg-fill" style="background:var(--accent-warning); width:95%"></div></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>When to Add Reranking</h2>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Latency Critical?</strong> No (Reranking adds ~500ms).</li>
+                <li><strong>Accuracy Critical?</strong> Yes (Legal/Medical).</li>
+                <li><strong>Data Noisy?</strong> Yes (Cosine fails often).</li>
+                <li><strong>Budget?</strong> Yes (API costs ~$0.001/q).</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Decision Tree</span>
+            <svg class="tree-svg" viewBox="0 0 200 100">
+                <!-- Tree Structure -->
+                <rect x="90" y="10" width="20" height="10" rx="2" class="tree-node" />
+                <text x="100" y="18" class="tree-text">Latency OK?</text>
+                
+                <!-- No Branch (Good) -->
+                <path d="M 100 20 L 100 30 L 50 30 L 50 50" class="tree-path" style="animation-delay: 0s;" />
+                <rect x="40" y="50" width="20" height="10" rx="2" class="tree-node" style="fill:#f0fdf4" />
+                <text x="50" y="58" class="tree-text">Use It</text>
+                
+                <!-- Yes Branch (Bad) -->
+                <path d="M 100 20 L 100 30 L 150 30 L 150 50" class="tree-path" style="animation-delay: 1s;" />
+                <rect x="140" y="50" width="20" height="10" rx="2" class="tree-node" />
+                <text x="150" y="58" class="tree-text">Skip It</text>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Cosine is Coarse:</strong> Fast but misses subtle relevance.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Rerankers are Precise:</strong> Cross-encoders read query+chunk together.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Two-Stage is Key:</strong> Vector (1M→100) → Rerank (100→5).</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Cost Effective:</strong> High quality for minimal latency/cost overhead.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    function initAnimations() {
+        // 1. Generate Funnel Dots
+        const r1 = document.getElementById('row1');
+        const r2 = document.getElementById('row2');
+        const r3 = document.getElementById('row3');
+
+        // Create dots for Row 1 (Top)
+        for(let i=0; i<20; i++) {
+            let d = document.createElement('div');
+            d.className = 'dot';
+            r1.appendChild(d);
+        }
+        
+        // Create dots for Row 2 (Middle)
+        for(let i=0; i<6; i++) {
+            let d = document.createElement('div');
+            d.className = 'dot';
+            r2.appendChild(d);
+        }
+
+        // Create dots for Row 3 (Bottom)
+        for(let i=0; i<3; i++) {
+            let d = document.createElement('div');
+            d.className = 'dot final';
+            r3.appendChild(d);
+        }
+
+        // Animate Funnel: Cycles through filtering
+        let cycle = 0;
+        const dots1 = r1.querySelectorAll('.dot');
+        const dots2 = r2.querySelectorAll('.dot');
+        const dots3 = r3.querySelectorAll('.dot');
+
+        function animateFunnel() {
+            // Reset
+            dots1.forEach(d => { d.style.opacity = '0.3'; d.style.transform = 'scale(1)'; });
+            dots2.forEach(d => { d.style.opacity = '0.3'; d.style.transform = 'scale(1)'; });
+            dots3.forEach(d => { d.style.opacity = '0.3'; d.style.transform = 'scale(1)'; });
+
+            if(cycle % 3 === 0) {
+                // Stage 1 Active
+                dots1.forEach(d => { d.style.opacity = '1'; d.classList.add('active'); });
+            } else if (cycle % 3 === 1) {
+                // Stage 2 Active
+                dots2.forEach(d => { d.style.opacity = '1'; d.classList.add('active'); });
+            } else {
+                // Stage 3 Active
+                dots3.forEach(d => { d.style.opacity = '1'; });
+            }
+            cycle++;
+        }
+
+        setInterval(animateFunnel, 1000);
+        animateFunnel();
+    }
+</script>
+
+</body>
+</html>

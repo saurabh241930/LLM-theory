@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Types</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+        .qa-container h3 { margin-top: 0; color: var(--wp-title-text); }
+        .qa-container .answer { margin-top: 10px; }
+        .one-liner { font-weight: bold; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>RAG Types</h1>
+        <div class="subtitle">Types of Retrieval-Augmented Generation</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container" id="rag-types-overview">
+            <h3>What are the main architectural types of RAG?</h3>
+            <div class="answer">
+                <div class="one-liner">RAG has evolved from simple vector retrieval (Naive) to Advanced (pre/post retrieval optimization) to Modular and Agentic RAG.</div>
+                
+<p>There are several distinct types of RAG topologies:</p>
+<ul>
+    <li><strong>Naive RAG:</strong> The standard Index -> Retrieve -> Generate flow using basic chunking and a single vector DB.</li>
+    <li><strong>Advanced RAG:</strong> Incorporates Query Translation, Reranking, Hybrid Search, and advanced chunking (Parent-child).</li>
+    <li><strong>Modular RAG:</strong> Decoupled RAG where specific modules (routing, predicting, verifying) can be swapped dynamically.</li>
+    <li><strong>Graph RAG:</strong> Uses Knowledge Graphs (Neo4j) alongside Vectors for deep relation traversal.</li>
+    <li><strong>Agentic RAG:</strong> LLM agents actively orchestrate the retrieval process, invoking different tools and databases iteratively.</li>
+</ul>
+<div class="mermaid">
+flowchart LR
+  A[Naive RAG] --> B[Advanced RAG]
+  B --> C[Modular RAG]
+  C --> D[Agentic & Graph RAG]
+</div>
+
+            </div>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+</html>

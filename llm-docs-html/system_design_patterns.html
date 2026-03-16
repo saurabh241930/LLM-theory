@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Design</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+        .one-liner { font-weight: bold; margin-bottom: 10px; }
+        .trap { background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin-top: 10px; }
+        .depth { background-color: #e2e3e5; padding: 10px; border-left: 4px solid #6c757d; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="subtitle">Core Architectures & Components</div>
+    </header>
+
+    <div class="content-wrapper">
+
+        <div class="qa-container" id="q1">
+            <h3>Q1: Design a scalable microservices architecture for a BFSI app</h3>
+            <div class="answer">
+                <div class="one-liner">Break the domain into bounded contexts, each owning its data, exposed via API Gateway with async event backbone.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Bounded contexts: Auth, Accounts, Transactions, Notifications — each a separate service with its</li>
+                    <li>own DB</li>
+                    <li> API Gateway handles routing, rate limiting, auth token validation before requests hit services</li>
+                    <li> Async communication via Kafka/RabbitMQ for cross-service events (e.g., transaction created →</li>
+                    <li>notification triggered)</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Client --> Gateway["API Gateway"]
+  Gateway --> Auth["Auth Service"]
+  Gateway --> Account["Account Service"]
+  Gateway --> Tx["Transaction Service"]
+  Account --> DB1[("Account DB")]
+  Tx --> DB2[("Tx DB")]
+  Tx -- "Event: Created" --> Kafka[("Kafka / Event Bus")]
+  Kafka --> Notif["Notification Service"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Use Circuit Breaker (Resilience4j) to prevent cascading failures between services</li>
+                        <li>Service mesh (Istio) for mTLS, observability, and traffic management at scale</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't say 'microservices for everything' — interviewers want to hear when NOT to use them (small team, low complexity = monolith first)
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q2">
+            <h3>Q2: API Gateway vs Backend for Frontend (BFF) — when to use which</h3>
+            <div class="answer">
+                <div class="one-liner">API Gateway is a single entry point for all clients; BFF is a tailored gateway per client type.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> API Gateway: rate limiting, auth, routing — generic for all consumers</li>
+                    <li> BFF: separate backends for mobile vs web vs third-party — each optimizes its own payload shape</li>
+                    <li> BFF reduces over-fetching: mobile gets a slim response, web gets a richer one from the same</li>
+                    <li>underlying microservices</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  MobileClient["Mobile App"] --> BFF_Mobile["Mobile BFF"]
+  WebClient["Web App"] --> BFF_Web["Web BFF"]
+  BFF_Mobile --> ServiceA["Service A"]
+  BFF_Web --> ServiceA
+  BFF_Web --> ServiceB["Service B"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>BFF pattern shines in teams where frontend and backend teams are aligned — each team owns</li>
+                        <li>their BFF</li>
+                        <li>GraphQL can act as a BFF-like layer, letting clients request exactly what they need</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't confuse BFF with API Gateway — they can coexist. API Gateway sits in front of BFFs.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q3">
+            <h3>Q3: Explain CQRS and Event Sourcing — when to apply</h3>
+            <div class="answer">
+                <div class="one-liner">CQRS separates reads from writes; Event Sourcing stores state as a log of events rather than current values.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> CQRS: Command model handles writes (normalized DB), Query model handles reads</li>
+                    <li>(denormalized/cached) — separate scaling</li>
+                    <li> Event Sourcing: every state change is an immutable event; current state is derived by replaying</li>
+                    <li>events</li>
+                    <li> Together they enable full audit trails, temporal queries ('what was the state at T?'), and replay-based</li>
+                    <li>debugging</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart LR
+  Command["Write Request"] --> CmdService["Command Service"]
+  CmdService --> EventStore[("Event Store (Append Only)")]
+  EventStore -- "Publishes Event" --> MessageBus["Message Bus"]
+  MessageBus --> QueryService["Query Service"]
+  QueryService --> ReadDB[("Read-Optimized DB")]
+  Query["Read Request"] --> QueryService
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Eventual consistency is the tradeoff — reads may lag behind writes by milliseconds to seconds</li>
+                        <li>Use projections to build read models from event streams; rebuild projections anytime by replaying</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> CQRS adds complexity — only apply when read/write loads differ significantly or audit trail is a hard requirement (BFSI, compliance)
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q4">
+            <h3>Q4: How do you handle distributed transactions across microservices?</h3>
+            <div class="answer">
+                <div class="one-liner">Use the Saga pattern — a sequence of local transactions coordinated via events, with compensating transactions for rollback.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Choreography Saga: each service publishes events and reacts to others' events — no central</li>
+                    <li>coordinator</li>
+                    <li> Orchestration Saga: a central orchestrator (e.g., LangGraph, Temporal) tells each service what to do</li>
+                    <li>next</li>
+                    <li> Compensating transactions: if step N fails, steps N-1 to 1 are reversed via explicit undo operations</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+sequenceDiagram
+  participant Order
+  participant Payment
+  participant Inventory
+  Order->>Payment: Reserve Funds
+  Payment-->>Order: OK
+  Order->>Inventory: Reserve Stock
+  Inventory-->>Order: Failed
+  Order->>Payment: Rollback (Compensate)
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>2PC (Two-Phase Commit) is an alternative but creates tight coupling and blocking — avoid in</li>
+                        <li>microservices</li>
+                        <li>Outbox pattern ensures atomicity between DB write and event publish — write event to outbox table</li>
+                        <li>in same transaction</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Never say 'use a shared DB' to solve distributed transactions — that defeats microservices isolation entirely
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q5">
+            <h3>Q5: Designing for high availability — failover, circuit breakers, retries</h3>
+            <div class="answer">
+                <div class="one-liner">HA is about eliminating single points of failure at every layer — compute, data, network, and dependencies.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Circuit Breaker: after N failures, open the circuit (fail fast), then half-open after timeout to test</li>
+                    <li>recovery</li>
+                    <li> Retry with exponential backoff + jitter: prevents thundering herd on recovery</li>
+                    <li> Multi-AZ deployments, health checks, and auto-scaling groups ensure compute HA on AWS</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Client --> ServiceA["Service A"]
+  ServiceA -- "Call Service B" --> CB{"Circuit Breaker"}
+  CB -- "Closed (Healthy)" --> ServiceB["Service B"]
+  CB -. "Open (Failing)" .-x ServiceB
+  CB -- "Open" --> Fallback["Return Fallback Data"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Bulkhead pattern: isolate thread pools per downstream dependency so one slow service doesn't</li>
+                        <li>exhaust all threads</li>
+                        <li>Chaos engineering (Netflix Simian Army) — proactively inject failures to validate resilience</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Retries without backoff can amplify failures — always add jitter to prevent synchronized retry storms
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q6">
+            <h3>Q6: Monolith to microservices migration strategy</h3>
+            <div class="answer">
+                <div class="one-liner">Use the Strangler Fig pattern — incrementally extract services while keeping the monolith running in parallel.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Strangler Fig: route specific endpoints to new microservices behind a facade; monolith handles the</li>
+                    <li>rest</li>
+                    <li> Start with the most independently deployable, lowest-coupling domain (e.g., Notifications, Reporting)</li>
+                    <li> Anti-corruption layer between old and new: translate models so new service doesn't inherit legacy</li>
+                    <li>domain concepts</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Monolith["Legacy Monolith"]
+  Monolith --> Strangler["Strangler Fig Proxy"]
+  Strangler -- "Old Routes" --> Monolith
+  Strangler -- "/new-api" --> Microservice["New Microservice"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Database decomposition is the hardest part — shared DB must eventually split; use dual writes</li>
+                        <li>transitionally</li>
+                        <li>Track migration progress with a 'decomposition scorecard' per bounded context</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't big-bang rewrite — it almost always fails. Incremental migration with parallel running is safer and provable.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q7">
+            <h3>Q7: How would you design a rate limiter for a high-traffic API?</h3>
+            <div class="answer">
+                <div class="one-liner">Token Bucket or Sliding Window algorithm, enforced at API Gateway level with Redis as shared state.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Token Bucket: refills at fixed rate; requests consume tokens — allows bursting up to bucket capacity</li>
+                    <li> Sliding Window Counter: more accurate than fixed window, tracks request count in rolling time</li>
+                    <li>window per key</li>
+                    <li> Redis + Lua script for atomic check-and-decrement across distributed gateway instances</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Req["Incoming Request"] --> Gateway["API Gateway"]
+  Gateway --> Redis[("Redis (Token Bucket)")]
+  Redis -- "Tokens Available" --> Forward["Forward to Backend"]
+  Redis -- "No Tokens" --> Reject["429 Too Many Requests"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Rate limit by: IP, user ID, API key, or tenant — different granularity for different threat models</li>
+                        <li>Return Retry-After header with 429 response so well-behaved clients back off gracefully</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Fixed window algorithm has edge-case: 2x requests possible at window boundary — sliding window solves this
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q8">
+            <h3>Q8: Explain the Outbox Pattern and why it matters</h3>
+            <div class="answer">
+                <div class="one-liner">Write DB record and event to an outbox table in one transaction; a relay process publishes the event — guarantees exactly-once semantics.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Problem: after DB write, app crashes before publishing event — data and messaging fall out of sync</li>
+                    <li> Outbox: write business data AND event record in same DB transaction — atomically consistent</li>
+                    <li> Debezium (CDC) or polling relay reads outbox table and publishes to Kafka/RabbitMQ</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Service["Service (Tx)"] --> DB[("Primary DB")]
+  DB -- "Writes to Outbox Table" --> DB
+  Relay["Message Relay / CDC"] -- "Reads Outbox" --> DB
+  Relay --> Kafka[("Kafka Broker")]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Transactional outbox enables at-least-once delivery; idempotency keys on consumers handle</li>
+                        <li>deduplication</li>
+                        <li>Alternative: event-first approach (publish to Kafka first, then write to DB) — different tradeoffs</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Dual writes (write to DB and Kafka independently) are not atomic — one can succeed while the other fails; outbox fixes this
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q9">
+            <h3>Q9: How do you design a notification system at scale (email, SMS, push)?</h3>
+            <div class="answer">
+                <div class="one-liner">Async event-driven pipeline with channel-specific workers, deduplication, and delivery tracking.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Producer publishes notification events to Kafka topic; channel consumers (email/SMS/push) process</li>
+                    <li>independently</li>
+                    <li> Deduplication via idempotency key — prevents duplicate sends on retry</li>
+                    <li> Delivery status tracked in DB: sent, delivered, failed, bounced — enables retry and audit</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  Producer["Any Service"] --> Queue["Notification Queue"]
+  Queue --> Worker["Worker Pool"]
+  Worker --> Pref["User Preferences DB"]
+  Worker -- "If SMS" --> Twilio["Twilio API"]
+  Worker -- "If Email" --> SendGrid["SendGrid API"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Priority queues: critical notifications (OTP, fraud alert) get separate high-priority topic</li>
+                        <li>Template rendering service decoupled from delivery — supports A/B testing of content</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't call email/SMS providers synchronously in request path — always async; user doesn't need to wait for delivery
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q10">
+            <h3>Q10: What is the Saga pattern vs Two-Phase Commit?</h3>
+            <div class="answer">
+                <div class="one-liner">Saga is async and eventually consistent; 2PC is synchronous and strongly consistent but blocks resources.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> 2PC: coordinator asks all nodes to 'prepare', then 'commit' — all or nothing; blocks until all respond</li>
+                    <li> Saga: series of local transactions; failure triggers compensating transactions instead of global</li>
+                    <li>rollback</li>
+                    <li> Saga is preferred in microservices — no distributed lock, no blocking, services stay autonomous</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart LR
+  Orchestrator["Saga Orchestrator"]
+  Orchestrator --> S1["Service 1: Book Hotel"]
+  Orchestrator --> S2["Service 2: Book Flight"]
+  S2 -- "Fails" --> Orchestrator
+  Orchestrator --> S1_Cancel["Service 1: Cancel Hotel"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>2PC has single point of failure: if coordinator crashes between prepare and commit, nodes are stuck</li>
+                        <li>Saga requires designing compensating transactions upfront — not always possible (e.g., sent email</li>
+                        <li>can't be unsent)</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> 2PC is still valid in single-DB multi-table scenarios or within a single service — just not across microservice boundaries
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q11">
+            <h3>Q11: How would you design a URL shortener at scale?</h3>
+            <div class="answer">
+                <div class="one-liner">Hash-based ID generation, KV store for redirects, CDN at edge for sub-millisecond lookups.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Base62 encode a counter or hash to generate short codes — 7 chars gives 62^7 = 3.5 trillion URLs</li>
+                    <li> Redis as primary KV store for redirect lookups — sub-millisecond reads at scale</li>
+                    <li> Cassandra or DynamoDB for persistent storage — wide-column scales horizontally</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  User["User /long-url"] --> API["URL Service"]
+  API --> KGS["Key Generation Service (KGS)"]
+  KGS --> DB[("URL Mapping DB")]
+  User2["User /xyz123"] --> Cache[("Redis Cache")]
+  Cache -- "Miss" --> DB
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Counter-based IDs risk enumeration attacks — use random salted hashing instead</li>
+                        <li>Analytics pipeline: async Kafka event per click → Spark aggregation → dashboard</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't use SQL with auto-increment as the only ID source at scale — distributed counter or pre-generated ID pool is safer
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q12">
+            <h3>Q12: Explain the Bulkhead pattern</h3>
+            <div class="answer">
+                <div class="one-liner">Isolate resources (thread pools, connection pools) per downstream dependency so one failure doesn't starve others.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Named after ship bulkheads — a breach in one compartment doesn't flood the whole ship</li>
+                    <li> Each external service gets its own thread pool; if service A is slow, only its pool fills — service B is</li>
+                    <li>unaffected</li>
+                    <li> Implemented in Resilience4j, Hystrix (deprecated), or custom semaphore-based limiting</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart TD
+  App["Application Node"]
+  App --> Pool1["ThreadPool 1 (Service A)"]
+  App --> Pool2["ThreadPool 2 (Service B)"]
+  Pool1 -- "Exhausted" --> Fail["Fails Fast (Service B is safe)"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Combine with Circuit Breaker: Bulkhead limits concurrent calls; Circuit Breaker stops calls when</li>
+                        <li>error threshold is hit</li>
+                        <li>Tune pool sizes based on SLA — critical services get larger pools</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Bulkhead without monitoring is incomplete — you need metrics on pool utilization to tune sizes correctly
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q13">
+            <h3>Q13: How do you handle service discovery in microservices?</h3>
+            <div class="answer">
+                <div class="one-liner">Client-side (Eureka/Consul) or server-side (AWS ALB, Kubernetes Service) discovery to resolve service instances dynamically.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Client-side: service registry (Eureka) holds instance list; client queries registry and load-balances</li>
+                    <li>itself</li>
+                    <li> Server-side: load balancer (ALB, Nginx) handles discovery transparently — client calls LB, LB routes</li>
+                    <li> Kubernetes uses DNS-based discovery — service name resolves to ClusterIP which routes to pods</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 1em;">
+flowchart LR
+  ServiceA["Service A"] --> Registry["Service Registry (Consul)"]
+  Registry -- "Returns IP" --> ServiceA
+  ServiceA --> ServiceB["Service B"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Health checks in registry: unhealthy instances are deregistered automatically</li>
+                        <li>Service mesh (Istio) adds mTLS, retries, and traffic splitting on top of discovery</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Hardcoding IPs or DNS names in config is an anti-pattern — any IP change breaks the service
+                </div>
+            </div>
+        </div>
+
+            </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+</html>

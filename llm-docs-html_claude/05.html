@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naive RAG: Fundamentals of Retrieval-Augmented Generation</title>
+    <style>
+        :root {
+            /* Wikipedia-style Palette */
+            --bg-body: #f6f6f6;
+            --bg-content: #ffffff;
+            --text-primary: #202122;
+            --text-secondary: #54595d;
+            --accent-primary: #0645ad;
+            --accent-secondary: #d73027;
+            --accent-success: #007d2e;
+            --accent-warning: #d46a2a;
+            --border-color: #a2a9b1;
+            --wiki-bg: #f8f9fa;
+            
+            /* Typography */
+            --font-body: Georgia, serif;
+            --font-code: monospace;
+            --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --radius: 2px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            font-size: 15px;
+            padding: var(--space-md);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-content);
+            padding: var(--space-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        /* Header - Wikipedia Style */
+        header {
+            border-bottom: 3px solid var(--accent-primary);
+            padding-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text-primary);
+            font-weight: normal;
+            margin-bottom: 4px;
+            font-family: var(--font-system);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Content Sections */
+        .topic-section {
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-lg);
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .topic-section:last-of-type {
+            border-bottom: none;
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            margin-top: var(--space-lg);
+            margin-bottom: var(--space-md);
+            font-weight: normal;
+            font-family: var(--font-system);
+            border-bottom: 2px solid #e8e8e8;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-top: var(--space-md);
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-family: var(--font-system);
+        }
+
+        p {
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+            text-align: justify;
+            line-height: 1.8;
+        }
+
+        strong { 
+            color: var(--text-primary); 
+            font-weight: bold; 
+        }
+
+        em {
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        code {
+            background: var(--wiki-bg);
+            padding: 2px 4px;
+            border-radius: var(--radius);
+            font-family: var(--font-code);
+            font-size: 0.9em;
+            color: var(--accent-secondary);
+        }
+
+        ul, ol {
+            margin-left: 2em;
+            margin-bottom: var(--space-md);
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+
+        /* Info Box */
+        .infobox {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-left: 4px solid var(--accent-primary);
+            border-radius: var(--radius);
+        }
+
+        .infobox strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--accent-primary);
+        }
+
+        /* Figure Container */
+        .figure-container {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            text-align: center;
+            border-radius: var(--radius);
+            position: relative;
+        }
+
+        .figure-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Pipeline Stage */
+        .pipeline {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: var(--space-md) 0;
+        }
+
+        .pipeline-stage {
+            padding: 16px;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+            border-left: 4px solid var(--accent-primary);
+            border-radius: var(--radius);
+            font-family: var(--font-system);
+            color: var(--text-primary);
+        }
+
+        .pipeline-stage strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--accent-primary);
+        }
+
+        /* Warning Card */
+        .warning-card {
+            background: #fff1f0;
+            border: 1px solid #ffa6a6;
+            border-left: 4px solid var(--accent-secondary);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-radius: var(--radius);
+        }
+
+        .warning-card strong {
+            color: var(--accent-secondary);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        /* Takeaway Box */
+        .takeaway-section {
+            background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%);
+            border: 2px solid var(--accent-primary);
+            padding: var(--space-lg);
+            margin-top: var(--space-lg);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-section h2 {
+            color: var(--accent-primary);
+            margin-top: 0;
+        }
+
+        .takeaway-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .takeaway-item {
+            padding: var(--space-md);
+            background: white;
+            border-left: 3px solid var(--accent-success);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-item strong {
+            color: var(--accent-success);
+            display: block;
+            margin-bottom: 6px;
+            font-family: var(--font-system);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--space-md);
+                border: none;
+                box-shadow: none;
+                background: var(--bg-body);
+            }
+            h1 { font-size: 1.4rem; }
+            h2 { font-size: 1.1rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Naive RAG: Fundamentals of Retrieval-Augmented Generation</h1>
+            <div class="subtitle">Understanding the Core Pipeline: Document Retrieval, Context Injection, and Answer Generation</div>
+        </div>
+    </header>
+
+    <!-- Section 1: What is RAG? -->
+    <section class="topic-section">
+        <h2>What is Retrieval-Augmented Generation?</h2>
+        
+        <p><strong>Retrieval-Augmented Generation (RAG)</strong> is a paradigm that fundamentally changes how large language models answer questions. Rather than relying solely on the knowledge embedded in model weights during training, RAG systems retrieve relevant external documents first, then use those documents as context when generating answers. This approach transforms the LLM from an isolated knowledge repository into a contextually-aware reasoning engine.</p>
+
+        <p>The motivation for RAG is compelling: traditional language models face inherent limitations. They cannot access information beyond their training date, they have fixed knowledge cutoffs, and they are prone to <em>hallucination</em>—confidently generating false information when their training data contains no relevant knowledge. RAG solves these problems by grounding model responses in actual, retrievable documents.</p>
+
+        <p>Consider a difference in approach. A standard language model, when asked "What is the protein structure of a newly discovered enzyme?", might generate a plausible-sounding but entirely fabricated answer if this enzyme wasn't in the training data. A RAG system, by contrast, would first search a database of scientific papers, retrieve actual documents about this enzyme (if they exist in indexed form), and then use those documents to generate an accurate, evidence-based response.</p>
+
+        <div class="infobox">
+            <strong>Core Principle:</strong> RAG shifts the model's role from pure knowledge storage to intelligent reasoning over retrieved evidence. This separation enables up-to-date answers, specialized domain knowledge, and verifiable fact-grounding.
+        </div>
+    </section>
+
+    <!-- Section 2: The Three-Phase Architecture -->
+    <section class="topic-section">
+        <h2>The Naive RAG Pipeline: Three Phases</h2>
+        
+        <p>Naive RAG, the simplest and most fundamental RAG architecture, follows a straightforward three-phase process: an offline indexing phase, a runtime retrieval phase, and a generation phase. Understanding this basic pipeline is essential before moving to advanced variations.</p>
+
+        <h3>Phase 1: Offline Indexing</h3>
+
+        <p>The indexing phase occurs once, preparing the system for later queries. All documents that might be relevant to future questions are processed: chunked into manageable pieces, converted to embeddings, and stored in a vector database. This one-time investment enables fast retrieval later.</p>
+
+        <p>The process begins with <strong>document chunking</strong>—dividing large documents into smaller segments. A naive approach uses fixed-size chunks (e.g., 512 tokens per chunk with 256-token overlap for context continuity). More sophisticated approaches consider semantic boundaries, splitting at paragraph boundaries or within meaningful sections. The chunk size represents a critical design choice: too small and context is fragmented, too large and embedding quality suffers from representing too much diverse content.</p>
+
+        <p>Each chunk is then converted to a dense vector using an <strong>embedding model</strong>. Models like OpenAI's text-embedding-3 or open-source alternatives like BGE convert text into numerical representations capturing semantic meaning. These embeddings are stored alongside the original text in a <strong>vector database</strong> (Pinecone, Weaviate, Chroma, FAISS), which indexes them for fast similarity search.</p>
+
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>Step 1: Document Collection</strong>
+                <p>Gather all documents that will serve as the knowledge base. These might be internal PDFs, documentation, articles, or any text relevant to your domain.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Step 2: Chunking & Preprocessing</strong>
+                <p>Split documents into fixed-size chunks (typically 256-1024 tokens) with optional overlap for context preservation.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Step 3: Embedding Generation</strong>
+                <p>Convert each chunk to a vector using a consistent embedding model. Store both embeddings and original text in the vector database.</p>
+            </div>
+        </div>
+
+        <h3>Phase 2: Runtime Query Processing</h3>
+
+        <p>When a user asks a question, the system springs into action. The user's query is embedded using the same model as the documents, producing a query vector. This vector is then used to search the database for the k most similar document chunks using cosine similarity or other distance metrics.</p>
+
+        <p>The raw retrieval results might include many candidates. Naive RAG simply takes the top-k results (e.g., top 3 or 5 chunks) without any further filtering or reranking. While this simplicity is computationally efficient, it's also the source of many RAG failures: if the retrieval step returns irrelevant chunks, the LLM must generate answers from poor context.</p>
+
+        <h3>Phase 3: Generation</h3>
+
+        <p>The retrieved chunks are formatted into a prompt template and sent to the language model. A typical template looks like: "Given the following context: [RETRIEVED_CHUNKS], answer the user's question: [USER_QUERY]". The model generates an answer conditioned on this augmented context.</p>
+
+        <p>From the model's perspective, the retrieved documents appear as normal context in the prompt—it has no special awareness that this context came from a retriever rather than being part of its training. This simplicity is both a strength (easy to implement) and a weakness (the model cannot indicate uncertainty about retrieved context or ask for better information).</p>
+    </section>
+
+    <!-- Section 3: Implementation Details -->
+    <section class="topic-section">
+        <h2>Implementation and Design Choices</h2>
+        
+        <h3>Chunk Size and Overlap</h3>
+
+        <p>The choice of chunk size significantly impacts system performance. Smaller chunks (256 tokens) result in more precise, focused context but may fragment coherent information. Larger chunks (1024+ tokens) preserve context but dilute embeddings with irrelevant material. Most implementations use 256-512 token chunks with 50-100 token overlap to maintain continuity across boundaries.</p>
+
+        <p>Overlap strategy matters because a relevant sentence near a chunk boundary should still be retrievable. Without overlap, a chunk ending at "The sky is..." and the next chunk beginning at "...blue" splits a simple concept. Overlap of 20-25% typically provides good continuity without creating excessive redundancy in the database.</p>
+
+        <h3>Embedding Model Selection</h3>
+
+        <p>The embedding model determines whether semantically related documents appear nearby in vector space. For naive RAG with no reranking, embedding quality is paramount. Open-source models like BGE, Sentence-BERT, or Voyage AI embeddings work well. Proprietary options like OpenAI's embeddings provide good general-purpose performance but at higher cost and lower control.</p>
+
+        <p>Embedding dimension affects both storage and speed. Higher dimensions (1536) capture more nuance but require more memory. Lower dimensions (384) are faster and smaller but may lose semantic detail. Most modern systems use 768-1536 dimensions, balancing precision and efficiency.</p>
+
+        <h3>Similarity Metric</h3>
+
+        <p><strong>Cosine similarity</strong> is the standard metric in RAG systems because it measures the angle between vectors regardless of magnitude, making it robust to document length variations. Euclidean distance and dot product also appear but less frequently. The choice is usually determined by the vector database library selected.</p>
+    </section>
+
+    <!-- Section 4: Strengths of Naive RAG -->
+    <section class="topic-section">
+        <h2>Advantages and Appropriate Use Cases</h2>
+        
+        <p>Naive RAG's simplicity is its greatest strength. For many practical applications, it provides effective, fast, and interpretable results without substantial system complexity.</p>
+
+        <h3>Ideal Use Cases</h3>
+
+        <p>Naive RAG excels for <strong>fact-lookup queries</strong>: "What is the capital of France?" or "When was Python released?" For these factually grounded questions with relevant information in the indexed documents, naive retrieval followed by generation typically produces correct answers. It works well for domain-specific Q&A over relatively homogeneous documentation.</p>
+
+        <p>The <strong>privacy and control advantages</strong> are significant. Since RAG systems retrieve from your own documents rather than using external APIs repeatedly, sensitive information stays under your control. Updates to knowledge are instantaneous—add new documents to the database, and the system immediately has access to updated information without retraining the model.</p>
+
+        <p><strong>Cost efficiency</strong> is another advantage. A naive RAG system is computationally lightweight. Vector search is fast, and you avoid retraining large language models. Many organizations find that implementing RAG on smaller models (7B-13B parameter ranges) with good retrieval yields better cost-performance than relying on larger models without retrieval.</p>
+
+        <div class="infobox">
+            <strong>Computational Sweet Spot:</strong> Many successful naive RAG systems run a small- to medium-sized open-source model (7B-13B parameters) with good retrievers, achieving quality and cost far exceeding larger models without augmentation.
+        </div>
+    </section>
+
+    <!-- Section 5: Fundamental Limitations -->
+    <section class="topic-section">
+        <h2>Limitations and Critical Failure Modes</h2>
+        
+        <p>Naive RAG's simplicity comes at a cost. Several fundamental limitations cause silent failures—situations where the system confidently produces wrong answers.</p>
+
+        <h3>The Retrieval Ceiling Problem</h3>
+
+        <p>A primary limitation: <strong>naive RAG cannot correct bad retrieval</strong>. If the top-k retrieved chunks don't contain the answer, no amount of generation quality compensates. This is the retrieval bottleneck—the quality of the final answer cannot exceed the quality of retrieved context. Evaluations consistently show: if relevant information isn't in the top-k results, the model fails despite its reasoning capabilities.</p>
+
+        <p>Consider a query like "What are the side effects of combining drug X and drug Y?" If the indexed documents discuss side effects of X and side effects of Y separately but never address their combination, the retriever will return individually relevant but collectively useless chunks. The model must then either refuse to answer or hallucinate a response.</p>
+
+        <h3>Complex Query Limitations</h3>
+
+        <p>Naive RAG retrieval assumes straightforward lexical/semantic similarity between question and answer text. For multi-hop reasoning queries—"Who directed the movie starring the actor in [named film]?"—naive retrieval struggles. The query is conceptually distant from document chunks that would contain the answer. Advanced RAG addresses this with multi-stage retrieval and reasoning, but naive RAG lacks such sophistication.</p>
+
+        <h3>Silent Failures</h3>
+
+        <p>The most dangerous failure mode: the system produces confident-sounding answers even when context is irrelevant. A retrieved chunk discusses "banks" as financial institutions, but the query asks about river banks. The model might generate an answer about financial banking policies completely misaligned with the actual question—and deliver it confidently with no uncertainty signals.</p>
+
+        <div class="warning-card">
+            <strong>Critical Issue - Silent Failures:</strong> Language models excel at plausible language generation. When provided with contextually irrelevant documents, they often generate fluent but factually wrong answers. This is more dangerous than explicit refusal to answer, as the wrongness is hidden behind natural language fluency.
+        </div>
+
+        <h3>Chunk Boundary Problems</h3>
+
+        <p>Information scattered across chunk boundaries becomes harder to retrieve. A question might require synthesizing information from two adjacent chunks, but vector search finds only one of them. This fragmentation problem becomes severe with smaller chunk sizes, creating the classic tradeoff: small chunks help retrieval precision but hurt context coherence.</p>
+
+        <h3>Embedding Model Drift</h3>
+
+        <p>If you embed your knowledge base with embedding model V1, then later switch to embedding model V2 for safety, efficiency, or accuracy reasons, your stored vectors become incompatible with new queries. Re-embedding millions of documents is expensive. This creates versions drift—you might have documents from 2023 indexed with V1, documents from 2024 indexed with V2, leading to unpredictable retrieval behavior.</p>
+    </section>
+
+    <!-- Section 6: Practical Considerations -->
+    <section class="topic-section">
+        <h2>Operational and Practical Considerations</h2>
+        
+        <h3>Vector Database Evaluation</h3>
+
+        <p>Vector database choice affects performance and cost. FAISS and Annoy offer fast similarity search for in-memory or file-based use. Pinecone and Weaviate provide cloud-hosted solutions with scaling. Chroma offers local-first development with optional cloud deployment. The choice depends on: volume of vectors (millions? billions?), update frequency (static index vs. streaming updates?), and budget constraints.</p>
+
+        <h3>Monitoring and Debugging</h3>
+
+        <p>Production RAG systems require monitoring. Key metrics: retrieval precision (are top-k results relevant?), generation accuracy (are answers correct given context?), and latency (is search fast enough?). Debug tools should expose: what chunks were retrieved for a given query? why was this chunk ranked higher than that one? did the model hallucinate or synthesize from context?</p>
+
+        <h3>Scaling Considerations</h3>
+
+        <p>For small knowledge bases (under 100K documents), naive implementations work fine. At scale (millions of documents), vector database indexing strategy becomes critical. Indexes like HNSW provide O(log n) search but require more memory. IVF clustering provides worse accuracy but smaller memory footprint. These choices compound across systems.</p>
+    </section>
+
+    <!-- Takeaway Section -->
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>Three-Phase Architecture:</strong> Offline indexing prepares documents; runtime retrieval finds similar chunks; generation produces answers grounded in retrieved context.
+            </div>
+            <div class="takeaway-item">
+                <strong>Retrieval Quality is Paramount:</strong> The final answer quality cannot exceed the quality of retrieved context; naive RAG cannot recover from bad retrieval.
+            </div>
+            <div class="takeaway-item">
+                <strong>Chunk Design Matters:</strong> Chunk size, overlap, and boundaries significantly affect both retrieval precision and context coherence.
+            </div>
+            <div class="takeaway-item">
+                <strong>Silent Failure Risk:</strong> When retrieval returns irrelevant context, models generate fluent-sounding but factually wrong answers confidently.
+            </div>
+            <div class="takeaway-item">
+                <strong>Appropriate for Fact Lookup:</strong> Naive RAG excels for straight forward fact-retrieval queries where relevant information is explicitly in documents.
+            </div>
+            <div class="takeaway-item">
+                <strong>Advanced Techniques Required for Complex Queries:</strong> Multi-hop reasoning, query expansion, and reranking are necessary beyond naive RAG for complex question types.
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>

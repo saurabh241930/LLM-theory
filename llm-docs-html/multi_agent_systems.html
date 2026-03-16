@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent Systems and LangGraph - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .agent-arch-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .arch-box {
+            padding: 15px;
+            border: 1px solid var(--wp-border);
+            background: #f8f9fa;
+        }
+
+        .arch-box h3 {
+            margin-top: 0;
+            color: var(--wp-accent);
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .node-viz {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .node {
+            padding: 8px 12px;
+            border: 2px solid #36c;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #36c;
+        }
+
+        .edge {
+            height: 2px;
+            width: 40px;
+            background: #36c;
+            position: relative;
+        }
+
+        .edge::after {
+            content: "";
+            position: absolute;
+            right: 0;
+            top: -4px;
+            border: 5px solid transparent;
+            border-left-color: #36c;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Multi-Agent Systems</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Agent Orchestration</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <circle cx="30" cy="20" r="8" fill="#36c" />
+                    <circle cx="70" cy="20" r="8" fill="#37b24d" />
+                    <line x1="38" y1="20" x2="62" y2="20" stroke="#666" stroke-width="2" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Framework</div>
+                    <div class="infobox-value">LangGraph</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">State</div>
+                    <div class="infobox-value">Persistent & Mutable</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Paradigms</div>
+                    <div class="infobox-value">Collaborative / Supervisor</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p><strong>Multi-Agent Systems (MAS)</strong> represent the architectural evolution of LLM applications from
+                single-threaded programs to collaborative networks of specialized cognitive entities. By decomposing a
+                single, complex task into sub-tasks managed by independent "Specialist Agents," developers can improve
+                system accuracy, reliability, and parallel processing capabilities.</p>
+
+            <h2>The Move to Stateful Graphs</h2>
+            <p>While early frameworks (like LangChain) used linear chains, <strong>LangGraph</strong> introduced
+                cycle-based, stateful graphs. This allows agents to "loop back" to previous steps—a requirement for
+                error correction and multi-step reasoning.</p>
+
+            <div class="node-viz animate-on-scroll">
+                <div class="node">Input</div>
+                <div class="edge"></div>
+                <div class="node">Supervisor</div>
+                <div class="edge"></div>
+                <div class="node" style="border-color: #37b24d; color: #37b24d;">Workers</div>
+            </div>
+
+            <h2>Common Multi-Agent Patterns</h2>
+            <div class="agent-arch-grid animate-on-scroll">
+                <div class="arch-box">
+                    <h3>Supervisor Pattern</h3>
+                    <p>One central agent acts as a router, deciding which specialist (e.g., Researcher, Coder, Reviewer)
+                        should handle the current turn.</p>
+                </div>
+                <div class="arch-box">
+                    <h3>Collaborative Handover</h3>
+                    <p>Agents pass the context to the next specialist in a predefined or dynamic sequence (Agent A →
+                        Agent B → Agent C).</p>
+                </div>
+            </div>
+
+            <h2>Comparison: Single vs. Multi-Agent</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Single Agent</th>
+                        <th>Multi-Agent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Decision Context</strong></td>
+                        <td>Global (Full Prompt)</td>
+                        <td>Local (Specialized)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Accuracy</strong></td>
+                        <td>Low (Generalized)</td>
+                        <td>High (Specialist focus)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Token Usage</strong></td>
+                        <td>Low</td>
+                        <td>High (Orchestration overhead)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Scalability</strong></td>
+                        <td>Poor</td>
+                        <td>Excellent</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Implementation with LangGraph</h2>
+            <p>In LangGraph, the system state is preserved in a <strong>StateGraph</strong>. Each node in the graph
+                represents an agent or a tool, and edges represent the execution flow.</p>
+
+            <div class="code-block">
+                workflow = StateGraph(AgentState)<br>
+                workflow.add_node(<span class="string">"researcher"</span>, researcher_node)<br>
+                workflow.add_node(<span class="string">"editor"</span>, editor_node)<br>
+                workflow.add_edge(<span class="string">"researcher"</span>, <span class="string">"editor"</span>)<br>
+                app = workflow.compile()
+            </div>
+
+            <h2>Memory Architectures</h2>
+            <ul>
+                <li><strong>Short-term memory:</strong> The "Thread" or "Conversation" state, passed between nodes as
+                    the active messages list.</li>
+                <li><strong>Long-term memory:</strong> Persistent storage (Vector DB or SQL) where summaries and key
+                    facts are stored across sessions.</li>
+                <li><strong>Shared memory:</strong> A central "Blackboard" where all agents can read findings and post
+                    updates.</li>
+            </ul>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>The <strong>RSA Sales QA Dashboard</strong> uses a <strong>Supervisor Agent Pattern</strong> to manage
+                the complexity of an audit. The Supervisor receives a call recording and assigns sub-tasks: the
+                <strong>Transcription Agent</strong> converts audio to text, the <strong>Compliance Agent</strong>
+                checks for mandatory RSA disclosures, and the <strong>PII-Redactor Agent</strong> ensures customer phone
+                numbers and addresses are removed before the audit is saved. This specialized division of labor ensures
+                that the compliance check is both accurate and legally secure.
+            </p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: LangGraph Supervisor Architecture</span>
+                <span class="keyword">def</span> <span class="class-name">supervisor_node</span>(state):
+                <span class="keyword">if</span> <span class="string">"audio"</span> <span class="keyword">in</span>
+                state: <span class="keyword">return</span> <span class="string">"transcriber"</span>
+                <span class="keyword">if</span> <span class="string">"text"</span> <span class="keyword">in</span>
+                state: <span class="keyword">return</span> <span class="string">"compliance_checker"</span>
+                <span class="keyword">return</span> <span class="string">"END"</span>
+
+                workflow = StateGraph(AuditState)
+                workflow.add_node(<span class="string">"transcriber"</span>, transcriber_agent)
+                workflow.add_node(<span class="string">"compliance_checker"</span>, auditor_agent)
+                workflow.add_edge(<span class="string">"transcriber"</span>, <span
+                    class="string">"compliance_checker"</span>)
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ LangGraph enables cyclic workflows and state persistence.<br>
+                ✅ Use "Nodes" for logic and "Edges" for decision branching.<br>
+                ✅ Supervisor patterns prevent context dilution by routing tasks selectively.<br>
+                ✅ Multi-agent systems trade token cost for higher reasoning ceilings.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

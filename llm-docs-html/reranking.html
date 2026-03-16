@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reranking - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .stage-viz {
+            display: grid;
+            grid-template-columns: 1fr 20px 1fr;
+            gap: 10px;
+            margin: 20px 0;
+            align-items: center;
+        }
+
+        .stage-box {
+            padding: 15px;
+            border: 1px solid var(--wp-border);
+            background: #f8f9fa;
+            text-align: center;
+        }
+
+        .stage-box.highlight {
+            border-color: var(--wp-accent);
+            background: #eef2ff;
+        }
+
+        .stage-arrow {
+            text-align: center;
+            font-size: 20px;
+            color: var(--wp-accent);
+        }
+
+        .architecture-viz {
+            background: #202124;
+            color: #fff;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.8em;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .token-cls {
+            color: #fcc419;
+        }
+
+        .token-sep {
+            color: #ff6b6b;
+        }
+
+        .token-text {
+            color: #51cf66;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Reranking</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Reranking</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <rect x="5" y="10" width="30" height="20" fill="#f8f9fa" stroke="#36c" />
+                    <path d="M 40 20 L 60 20" stroke="#36c" stroke-width="2" />
+                    <rect x="65" y="10" width="30" height="20" fill="#36c" />
+                    <text x="80" y="25" text-anchor="middle" font-size="8" fill="#fff">TOP 5</text>
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Model Type</div>
+                    <div class="infobox-value">Cross-Encoder</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Latency</div>
+                    <div class="infobox-value">Medium (500ms+)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Role</div>
+                    <div class="infobox-value">Precision Filtering</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>In Information Retrieval systems, <strong>reranking</strong> is a secondary stage of the retrieval
+                process where a candidate set of documents is re-ordered using a high-precision, computationally
+                intensive model. While initial retrieval (using embeddings) is designed for speed and recall, reranking
+                is designed for <strong>precision</strong>, ensuring that the most contextually relevant information
+                appears at the top of the list provided to an LLM.</p>
+
+            <h2>The Candidate Pool Trade-off</h2>
+            <p>In production RAG, initial retrieval prioritizes <strong>Recall over Precision</strong>. This means the
+                system tries not to miss relevant documents, even if it brings in some noise.</p>
+            <ul>
+                <li><strong>Candidate Pool:</strong> Typically top 30-100 chunks retrieved via Hybrid Search.</li>
+                <li><strong>The Noise Problem:</strong> Embedding models (Bi-Encoders) calculate similarity
+                    independently. They don't "see" the query and document together, which can lead to false positives
+                    (high score but irrelevant context).</li>
+            </ul>
+
+            <h2>Bi-Encoder vs. Cross-Encoder</h2>
+            <p>The core distinction in neural retrieval is how queries and documents are compared.</p>
+            <ul>
+                <li><strong>Bi-Encoders (Recall):</strong> Encode queries and documents separately into vectors.
+                    Similarity is a simple dot product. <em>Fast but "context-blind."</em></li>
+                <li><strong>Cross-Encoders (Precision):</strong> Process the query and document
+                    <strong>simultaneously</strong> in a single neural pass. This allows the model to attend to
+                    multi-word interactions and nuances that independent embeddings miss.
+                </li>
+            </ul>
+
+            <div class="architecture-viz">
+                [<span class="token-cls">CLS</span>] How to return product [<span class="token-sep">SEP</span>] Returns
+                are accepted within 30 days if... [<span class="token-sep">SEP</span>]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                &nbsp;&nbsp;[<span class="token-text">Cross-Encoder Transformer</span>]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                &nbsp;Relevance Score: 0.985
+            </div>
+
+            <h2>Two-Stage Retrieval Workflow</h2>
+            <p>To balance performance and accuracy, production systems use a two-stage pipeline:</p>
+
+            <div class="stage-viz animate-on-scroll">
+                <div class="stage-box">
+                    <strong>Stage 1: Recall</strong><br>
+                    Vector Search (Bi-Encoder)<br>
+                    <small>Retrieve TOP 100</small>
+                </div>
+                <div class="stage-arrow">→</div>
+                <div class="stage-box highlight">
+                    <strong>Stage 2: Precision</strong><br>
+                    Reranker (Cross-Encoder)<br>
+                    <small>Return TOP 5</small>
+                </div>
+            </div>
+
+            <h2>Comparison Table</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Embedding Only</th>
+                        <th>Full Two-Stage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Recall (Top-5)</strong></td>
+                        <td>70-80%</td>
+                        <td>90-95%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Latency</strong></td>
+                        <td>~10-20ms</td>
+                        <td>~300-600ms</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Computational Cost</strong></td>
+                        <td>Low</td>
+                        <td>Medium to High</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Implementation Logic</h2>
+            <p>Reranking is most effective when the candidate pool is sufficiently diverse but manageable.</p>
+            <div class="code-block">
+                <span class="comment"># Pseudo-flow: Recall then Rerank</span><br>
+                candidates = vector_db.search(query, top_k=100)<br>
+                reranked_results = reranker.score(query, candidates)<br>
+                final_context = reranked_results[:5]
+            </div>
+
+            <h2>Real-World Scenario: Legal Search</h2>
+            <p>In legal search, "Section 10(a)" is distinct from "Section 10(b)". A Bi-Encoder might score both highly
+                due to token overlap. A <strong>Cross-Encoder</strong>, however, can attend to the specific 'a' or 'b'
+                suffix in the context of the query, correctly ranking the exact clause needed for the case.</p>
+
+            <h2>Pitfalls of Reranking</h2>
+            <ul>
+                <li><strong>Reranking Too Many Chunks:</strong> 500+ chunks will cause massive latency spikes.
+                    <em>Target top 50-100.</em>
+                </li>
+                <li><strong>Garbage In, Garbage Out:</strong> If Stage 1 fails to find the chunk, Stage 2 cannot surface
+                    it.</li>
+            </ul>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>During automated auditing, the <strong>RSA Sales QA Dashboard</strong> often retrieves multiple
+                similar-looking clauses regarding "Cancellation Fees" from the insurance policy manual. A standard
+                embedding search might rank a "General Policy Cancellation" chunk higher than the specific "RSA Add-on
+                Cancellation" chunk due to keyword density. By applying a <strong>Cross-Encoder Reranker</strong>, the
+                dashboard re-evaluates the top 50 chunks against the user's specific query about RSA fees, ensuring the
+                <em>most legally precise</em> clause is shown to the auditor, thereby preventing wrongful penalization
+                of advisors.
+            </p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Precision Reranking</span>
+                <span class="keyword">from</span> sentence_transformers <span class="keyword">import</span> CrossEncoder
+
+                model = CrossEncoder(<span class="string">'cross-encoder/ms-marco-MiniLM-L-6-v2'</span>)
+                query = <span class="string">"What is the exact penalty for missing RSA disclosures?"</span>
+                chunks = [<span class="string">"General policy cancellation..."</span>, <span class="string">"RSA add-on
+                    disclosure failure results in $100 fine..."</span>]
+
+                scores = model.predict([(query, chunk) <span class="keyword">for</span> chunk <span
+                    class="keyword">in</span> chunks])
+                sorted_chunks = [c <span class="keyword">for</span> _, c <span class="keyword">in</span>
+                sorted(zip(scores, chunks), reverse=True)]
+
+                <span class="keyword">print</span>(f<span class="string">"Top Match: {sorted_chunks[0]}"</span>)
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ Rerankers are "Context-Aware" Cross-Encoders.<br>
+                ✅ Two-stage retrieval maximizes both speed and accuracy.<br>
+                ✅ Reranking is most effective on the top 100 candidate chunks.<br>
+                ✅ Use reranking when precision is more critical than sub-100ms latency.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

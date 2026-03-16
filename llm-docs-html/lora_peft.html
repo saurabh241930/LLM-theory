@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoRA and PEFT Techniques - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .matrix-viz {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 25px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border: 1px solid var(--wp-border);
+        }
+
+        .matrix {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: bold;
+            font-family: serif;
+        }
+
+        .matrix-w {
+            width: 60px;
+            height: 60px;
+            background: #6a737d;
+        }
+
+        .matrix-a {
+            width: 15px;
+            height: 60px;
+            background: #36c;
+        }
+
+        .matrix-b {
+            width: 60px;
+            height: 15px;
+            background: #37b24d;
+        }
+
+        .operator {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .tech-tag {
+            font-size: 0.8em;
+            background: #eef2ff;
+            color: var(--wp-accent);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>LoRA and PEFT</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">LoRA</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <rect x="10" y="5" width="20" height="30" fill="#36c" />
+                    <rect x="40" y="5" width="50" height="5" fill="#37b24d" />
+                    <text x="50" y="25" text-anchor="middle" font-size="8" fill="#36c">Low Rank</text>
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Stands For</div>
+                    <div class="infobox-value">Low-Rank Adaptation</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Compression</div>
+                    <div class="infobox-value">>10,000x</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Efficiency</div>
+                    <div class="infobox-value">High (PEFT)</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p><strong>Parameter-Efficient Fine-Tuning (PEFT)</strong> is a category of methods used to adapt Large
+                Language Models to specific downstream tasks without retraining all of the model's parameters. The most
+                prominent technique, <strong>Low-Rank Adaptation (LoRA)</strong>, achieves this by adding small,
+                trainable "adapter" matrices to the pre-existing frozen weights of the transformer architecture.</p>
+
+            <h2>The Problem: Scale and Memory</h2>
+            <p>Full fine-tuning of a model like Llama 3 (70B parameters) requires updating every single parameter, which
+                necessitates massive GPU VRAM for the gradients and optimizer states. For most developers, this is
+                computationally impossible.</p>
+
+            <h2>LoRA Architecture</h2>
+            <p>LoRA hypothesizes that the updates to a weight matrix during fine-tuning have a "low intrinsic
+                dimension." Instead of updating a <em>d x d</em> matrix $W$, LoRA represents the update as the product
+                of two smaller matrices, $A$ and $B$, of rank $r$.</p>
+
+            <div class="matrix-viz animate-on-scroll">
+                <div class="matrix matrix-w">W</div>
+                <div class="operator">+</div>
+                <div class="matrix matrix-a">A</div>
+                <div class="operator">×</div>
+                <div class="matrix matrix-b">B</div>
+            </div>
+
+            <p>If $W$ is 4096 x 4096 ($~16M$ parameters) and the rank $r$ is 8, then A and B combined only have $4096
+                \times 8 \times 2 = 65,536$ parameters. This represents a <strong>250x reduction</strong> in trainable
+                parameters.</p>
+
+            <h2>Quantization: QLoRA</h2>
+            <p><strong>QLoRA</strong> further enhances efficiency by quantizing the base model weights to 4-bit
+                precision (NF4) while performing LoRA updates. This allows fine-tuning of a 7B-parameter model on
+                consumer-grade hardware with as little as 12-16GB of VRAM.</p>
+
+            <h2>Comparison Table: Tuning Methods</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Trainable Parameters</th>
+                        <th>Memory Requirement</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Full Fine-Tuning</strong></td>
+                        <td>100%</td>
+                        <td>Very High</td>
+                        <td>SOTA Baseline</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LoRA</strong></td>
+                        <td>&lt;1%</td>
+                        <td>Low</td>
+                        <td>Comparable to Full</td>
+                    </tr>
+                    <tr>
+                        <td><strong>QLoRA (4-bit)</strong></td>
+                        <td>&lt;1%</td>
+                        <td>Ultra-Low</td>
+                        <td>Near-LoRA High</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Prompt Tuning</strong></td>
+                        <td>~0.01%</td>
+                        <td>Minimal</td>
+                        <td>Task Specific</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Why LoRA is the Industry Standard</h2>
+            <ul>
+                <li><strong>Modular Adaptation:</strong> Developers can share small (10-100MB) LoRA "adapters" instead
+                    of sharing full (140GB) model weights.</li>
+                <li><strong>Reduced Catastrophic Forgetting:</strong> Since the base weights are frozen, the model
+                    retains its original general knowledge while learning specialized behavior from the adapters.</li>
+                <li><strong>Fast Deployment:</strong> Switching between tasks is as simple as swapping the small adapter
+                    matrix in memory.</li>
+            </ul>
+
+            <h2>Choosing the Rank ($r$)</h2>
+            <div class="side-note">
+                💡 <strong>Guideline:</strong> A rank of $r=8$ or $r=16$ is sufficient for most language tasks.
+                Increasing rank beyond 64 often leads to diminishing returns and risks overfitting the training data.
+            </div>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>To keep operational costs low, the <strong>RSA Sales QA Dashboard</strong> uses <strong>LoRA
+                    adapters</strong>. Instead of running a massive, expensive model for every audit, the team uses a
+                frozen 8B-parameter base model and swaps in a 100MB LoRA adapter specifically trained to detect
+                "Aggressive Sales Tactics" in insurance transcripts. When the dashboard switches to auditing
+                <em>Customer Support</em> calls instead of <em>Sales</em> calls, it simply swaps the "Sales Auditor"
+                adapter for a "Support empathetic" adapter, allowing a single small server to handle multiple
+                specialized specialized tasks.
+            </p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Loading specialized LoRA Adapters</span>
+                <span class="keyword">from</span> peft <span class="keyword">import</span> PeftModel, PeftConfig
+
+                base_model = AutoModelForCausalLM.from_pretrained(<span class="string">"llama-3-8b"</span>)
+                <span class="comment"># Dynamically swap 'Sales Auditor' adapter</span>
+                model = PeftModel.from_pretrained(base_model, <span class="string">"rsa-sales-auditor-adapter"</span>)
+
+                <span class="comment"># To audit support calls, simply reload with:</span>
+                <span class="comment"># model.load_adapter("rsa-support-empathy-adapter")</span>
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ PEFT methods adapt models using minimal trainable parameters.<br>
+                ✅ LoRA uses matrix factorization to approximate weight updates.<br>
+                ✅ QLoRA enables fine-tuning on consumer-level GPUs.<br>
+                ✅ Adapters are portable, modular, and easy to distribute.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

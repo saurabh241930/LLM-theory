@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embeddings and Vector Search - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .vector-space-svg {
+            width: 300px;
+            height: 300px;
+            border: 1px solid var(--wp-border);
+            background: #fff;
+        }
+
+        .point {
+            fill: var(--wp-accent);
+        }
+
+        .label {
+            font-size: 12px;
+            font-family: var(--font-sans);
+        }
+
+        .connection-line {
+            stroke: var(--wp-accent);
+            stroke-width: 1;
+            stroke-dasharray: 200;
+            stroke-dashoffset: 200;
+        }
+
+        .flow-text-box {
+            width: 120px;
+            text-align: center;
+            border: 1px solid var(--wp-border);
+            padding: 5px;
+            background: #f8f9fa;
+        }
+
+        .flow-model-box {
+            width: 100px;
+            text-align: center;
+            border: 1px solid var(--wp-accent);
+            padding: 10px;
+            background: #eef2ff;
+            font-weight: bold;
+        }
+
+        .flow-vector-box {
+            width: 150px;
+            text-align: center;
+            border: 1px solid var(--wp-border);
+            padding: 5px;
+            background: #f8f9fa;
+            font-family: monospace;
+        }
+
+        .flow-arrow-fill {
+            width: 0%;
+            height: 2px;
+            background: var(--wp-accent);
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .wiki-table tr:nth-child(even) {
+            background-color: #fdfdfd;
+        }
+
+        .comparison-viz {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .comp-card {
+            border: 1px solid var(--wp-border);
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .comp-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            color: var(--wp-accent);
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Embeddings and Vector Search</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Embeddings</div>
+            <div class="infobox-image">
+                <svg width="100" height="100" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#36c" stroke-width="2" />
+                    <circle cx="30" cy="40" r="4" fill="#36c" />
+                    <circle cx="70" cy="60" r="4" fill="#36c" />
+                    <circle cx="50" cy="50" r="4" fill="#36c" />
+                    <line x1="30" y1="40" x2="50" y2="50" stroke="#36c" stroke-width="1" />
+                    <line x1="70" y1="60" x2="50" y2="50" stroke="#36c" stroke-width="1" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Data Representation</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Domain</div>
+                    <div class="infobox-value">NLP, ML, Information Retrieval</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Key Property</div>
+                    <div class="infobox-value">Semantic Proximity</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Common Models</div>
+                    <div class="infobox-value">Word2Vec, BERT, OpenAI-ada</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>In the field of natural language processing and machine learning, <strong>embeddings</strong> are dense
+                numerical representations of data points—most commonly words, sentences, or entire documents. Unlike
+                sparse representations like one-hot encoding, embeddings map high-dimensional categorical data into a
+                continuous vector space where the geometric distance between points reflects their semantic similarity.
+            </p>
+
+            <h2>Conceptual Foundation</h2>
+            <p>The core intuition behind embeddings is the <strong>distributional hypothesis</strong>: linguistic items
+                that appear in similar contexts tend to have similar meanings. By training neural networks on massive
+                corpora, these models learn to project text into a "meaning space." For instance, in a well-trained
+                embedding space, the vector representation for "cat" will be mathematically closer to "feline" than it
+                is to "airplane."</p>
+
+            <div class="side-note">
+                💡 <strong>Key Insight:</strong> Similar meanings = similar vectors. In this paradigm, we store numbers
+                instead of raw text, where each position (dimension) in the vector captures a specific facet of meaning.
+            </div>
+
+            <div class="diagram-container animate-on-scroll" data-animation-func="animateTextToVector">
+                <div class="flow-viz">
+                    <div class="flow-text-box flow-text">"The cat sat on the mat"</div>
+                    <div class="flow-arrow">
+                        <div class="flow-arrow-fill"></div>
+                    </div>
+                    <div class="flow-model-box flow-model">Embedding Model</div>
+                    <div class="flow-arrow">
+                        <div class="flow-arrow-fill"></div>
+                    </div>
+                    <div class="flow-vector-box flow-vector">
+                        <span class="vector-val" style="opacity: 0;">[0.21,</span>
+                        <span class="vector-val" style="opacity: 0;"> -0.45,</span>
+                        <span class="vector-val" style="opacity: 0;"> 0.89,</span>
+                        <span class="vector-val" style="opacity: 0;"> ...]</span>
+                    </div>
+                </div>
+                <div class="diagram-caption">Figure 1: The transformation of raw text into a dense numerical vector.
+                </div>
+            </div>
+
+            <h2>Why Embeddings Matter</h2>
+            <p>Traditional search systems rely on keyword matching, which fails when the user's vocabulary differs from
+                the source text. Embeddings enable "semantic search" by understanding underlying concepts.</p>
+
+            <div class="comparison-viz">
+                <div class="comp-card">
+                    <div class="comp-header">Traditional Text Search (Syntactic)</div>
+                    <p><strong>Query:</strong> "cat"</p>
+                    <p><strong>Matches:</strong> Hits "cat", but misses "feline" or "kitten".</p>
+                    <p><em>Problem:</em> Heavily dependent on exact character overlap.</p>
+                </div>
+                <div class="comp-card">
+                    <div class="comp-header">Embedding Search (Semantic)</div>
+                    <p><strong>Query:</strong> "cat" → <code>[0.8, 0.2, 0.5]</code></p>
+                    <p><strong>Results:</strong> Finds "feline" <code>[0.77, 0.19, 0.48]</code> as a high-probability
+                        match ($0.98$ similarity).</p>
+                    <p><em>Benefit:</em> Captures conceptual intent over literal syntax.</p>
+                </div>
+            </div>
+
+            <h2>The Mathematics of Similarity</h2>
+            <p>To determine how related two pieces of text are, we measure the angle between their vectors using
+                <strong>Cosine Similarity</strong>.
+            </p>
+
+            <div class="code-block">
+                cosine_similarity(A, B) = (A · B) / (||A|| × ||B||)
+            </div>
+
+            <p>Where (A·B) is the dot product and ||A|| is the magnitude. The result is a value between -1 and 1:</p>
+            <ul>
+                <li><strong>1.0:</strong> Identical direction (identical meaning).</li>
+                <li><strong>0.0:</strong> Orthogonal (completely unrelated).</li>
+                <li><strong>-1.0:</strong> Opposite direction (contradictory).</li>
+            </ul>
+
+            <p><strong>Practical Example:</strong> Let Vector A = <code>[1, 0]</code> and Vector B =
+                <code>[0.707, 0.707]</code> (representing a 45° angle). Their similarity is $0.707$, indicating strong
+                conceptual overlap despite different coordinates.
+            </p>
+
+            <div class="diagram-container animate-on-scroll" data-animation-func="animateSemanticSpace">
+                <svg class="vector-space-svg" viewBox="0 0 300 300">
+                    <line x1="20" y1="280" x2="280" y2="280" stroke="#ccc" stroke-width="1" />
+                    <line x1="20" y1="280" x2="20" y2="20" stroke="#ccc" stroke-width="1" />
+                    <path class="connection-line" d="M 120 100 L 150 120" />
+                    <circle class="point" cx="120" cy="100" r="5" />
+                    <text class="label" x="125" y="95">Cat</text>
+                    <circle class="point" cx="150" cy="120" r="5" />
+                    <text class="label" x="155" y="115">Feline</text>
+                    <circle class="point" cx="50" cy="200" r="5" fill="#f44336" />
+                    <text class="label" x="55" y="195">Airplane</text>
+                    <circle class="point" cx="220" cy="230" r="5" fill="#4caf50" />
+                    <text class="label" x="225" y="225">Pizza</text>
+                </svg>
+                <div class="diagram-caption">Figure 2: Geometric representation of clusters in a semantic vector space.
+                </div>
+            </div>
+
+            <h2>Vector Databases and Indexing Strategies</h2>
+            <p>In production environments with millions of documents, a sequential "brute-force" comparison is too slow
+                ($O(n)$). Vector databases use specialized indices to achieve $O(log n)$ search speeds.</p>
+
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Indexing Strategy</th>
+                        <th>Mechanism</th>
+                        <th>Pros/Cons</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>HNSW</strong></td>
+                        <td>Hierarchical Navigable Small World graphs.</td>
+                        <td>Very fast, memory intensive.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>IVF</strong></td>
+                        <td>Inverted File indexing (clusters space).</td>
+                        <td>Memory efficient, requires periodic re-training.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LSH</strong></td>
+                        <td>Locality-Sensitive Hashing.</td>
+                        <td>Fastest for extremely high volume, lower precision.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Major Vector Database Providers</h3>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>DB</th>
+                        <th>Best For</th>
+                        <th>Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Pinecone</strong></td>
+                        <td>Production RAG, fully managed serverless.</td>
+                        <td>$$ Usage-based</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Chroma</strong></td>
+                        <td>Local development and prototyping.</td>
+                        <td>Free / Open Source</td>
+                    </tr>
+                    <tr>
+                        <td><strong>pgvector</strong></td>
+                        <td>Extending existing PostgreSQL infrastructure.</td>
+                        <td>$ Minimum overhead</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Milvus</strong></td>
+                        <td>High-volume enterprise ingestion.</td>
+                        <td>Free / Self-hosted</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Modern Embedding Models</h2>
+            <p>The choice of model determines the dimensionality and semantic richness of the vectors.</p>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Dimensions</th>
+                        <th>Optimal Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>OpenAI v3 Small</strong></td>
+                        <td>512 - 1536</td>
+                        <td>General purpose, low latency.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>BGE (BAAI)</strong></td>
+                        <td>768</td>
+                        <td>Top-tier open-source retrieval accuracy.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SBERT</strong></td>
+                        <td>384 - 768</td>
+                        <td>Local inference, sentence similarity.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Voyage AI</strong></td>
+                        <td>Variable</td>
+                        <td>Specialized domains (legal, medical, code).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>End-to-End Workflow: The Law Firm Example</h2>
+            <p>A typical RAG (Retrieval-Augmented Generation) pipeline operates in two distinct phases:</p>
+            <ol>
+                <li><strong>Indexing Phase (Offline):</strong> 10,000 legal docs are split into 300-token chunks,
+                    embedded into vectors, and stored in a database like Pinecone with metadata.</li>
+                <li><strong>Retrieval Phase (Runtime):</strong> A user asks about "contract breach penalties." The query
+                    is embedded, the Vector DB finds the top-5 relevant chunks, and these are passed to the LLM to
+                    generate a grounded answer.</li>
+            </ol>
+
+            <h2>Common Pitfalls and Best Practices</h2>
+            <p>Failure to account for these factors can lead to poor retrieval performance:</p>
+            <ul>
+                <li><strong>Domain Mismatch:</strong> Using a general-text model for highly specialized legal or medical
+                    data.</li>
+                <li><strong>Truncation:</strong> Embedding long documents without chunking first.</li>
+                <li><strong>Stale Indices:</strong> Upgrading your embedding model but failing to re-embed your old
+                    database content.</li>
+                <li><strong>Over-reliance on Cosine:</strong> Assuming geometric closeness always equals contextual
+                    relevance; use <strong>Reranking</strong> for validation.</li>
+            </ul>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>In an <strong>Auto Insurance</strong> sales environment, thousands of hours of call audio are recorded
+                daily. To audit these for compliance, the <strong>RSA Sales QA Dashboard</strong> uses embeddings to
+                convert call transcripts into vectors. By plotting these in a semantic space, the system can instantly
+                identify clusters of "Aggressive Upselling" or "Policy Misrepresentation" by comparing them to a "Gold
+                Standard" compliance vector. If an advisor's explanation of <em>Roadside Assistance (RSA)</em> is
+                mathematically distant from the legal disclosure requirements, it is flagged for human review.</p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Detecting Compliance Gaps</span>
+                <span class="keyword">from</span> sentence_transformers <span class="keyword">import</span>
+                SentenceTransformer, util
+
+                model = SentenceTransformer(<span class="string">'all-MiniLM-L6-v2'</span>)
+                compliance_anchor = model.encode(<span class="string">"Advisor must state RSA is optional and explain
+                    the $50 fee."</span>)
+                transcript_segment = model.encode(<span class="string">"I'll add the RSA plan for you, it's a great deal
+                    for your car."</span>)
+
+                similarity = util.cos_sim(compliance_anchor, transcript_segment)
+                <span class="keyword">if</span> similarity < 0.7: <span class="keyword">print</span>(<span
+                        class="string">"FLAG: Mandatory 'Optional' disclosure missing from segment."</span>)
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ Embeddings represent semantics as dense numerical coordinates.<br>
+                ✅ Cosine similarity measures the conceptual angle between two vectors.<br>
+                ✅ Vector DBs (Pinecone, Chroma) enable $O(log n)$ search via HNSW/IVF indexing.<br>
+                ✅ Model choice determines the "depth" of the model's understanding.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

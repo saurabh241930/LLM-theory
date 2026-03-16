@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph RAG</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+        .qa-container h3 { margin-top: 0; color: var(--wp-title-text); }
+        .qa-container .answer { margin-top: 10px; }
+        .one-liner { font-weight: bold; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Graph RAG</h1>
+        <div class="subtitle">Knowledge Graphs & Entity Extraction</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container" id="graph-rag-concepts">
+            <h3>What makes Graph RAG powerful compared to Vector RAG?</h3>
+            <div class="answer">
+                <div class="one-liner">Graph RAG extracts entities and relationships into a Knowledge Graph, enabling multi-hop reasoning over connected concepts.</div>
+                
+<p>Standard vector RAG struggles with questions that span multiple unconnected documents. Graph RAG resolves this by pre-computing relationships.</p>
+<h4>Implementation Flow</h4>
+<ol>
+    <li>Pass documents to an LLM to extract Entities (Nodes) and Relationships (Edges).</li>
+    <li>Store in a Graph DB (like Neo4j) and a Vector DB.</li>
+    <li>At query time, retrieve relevant entities via Vector lookup, then traverse their graph neighbors to fetch deep context.</li>
+</ol>
+<div class="mermaid">
+graph LR
+  A[User: John Doe] -- WORKS_FOR --> B[Acme Corp]
+  B -- LOCATED_IN --> C[New York]
+  A -- HAS_SKILL --> D[Python]
+  style A fill:#f9f,stroke:#333
+  style B fill:#bbf,stroke:#333
+</div>
+
+            </div>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+</html>

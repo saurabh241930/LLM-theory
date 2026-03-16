@@ -1,0 +1,299 @@
+import React from 'react';
+import { 
+  Database, Brain, MessageSquare, FileText, 
+  Search, Cpu, Layers, AlertTriangle, 
+  CheckCircle2, XCircle, FileQuestion,
+  Combine, Sparkles, Filter, Zap, 
+  ArrowDownUp, Target, HelpCircle, Clock, Coins,
+  Scale
+} from 'lucide-react';
+
+// --- STYLING CONSTANTS (ByteByteGo Aesthetic) ---
+const THEME = {
+  cardBg: "bg-white",
+  cardBorder: "border-slate-200",
+  titleBg: "bg-[#41d8a0]",
+  titleBorder: "border-[#2e9e73]",
+  primaryNode: "bg-[#a6f0d4] border-[#31a67a] text-slate-900",
+  secondaryNode: "bg-white border-slate-300 text-slate-700 shadow-sm",
+  dashedNode: "bg-[#f8fafc] border-slate-400 border-dashed text-slate-700",
+  errorNode: "bg-[#ffe4e6] border-[#f43f5e] text-slate-900",
+  warningNode: "bg-[#fef3c7] border-[#d97706] text-slate-900",
+  line: "#64748b"
+};
+
+// --- CORE UI COMPONENTS ---
+
+const Card = ({ title, children, tall = false, xTall = false }) => (
+  <div className={`relative ${THEME.cardBg} rounded-2xl shadow-sm border ${THEME.cardBorder} overflow-hidden flex flex-col items-center w-full ${xTall ? 'h-[650px]' : tall ? 'h-[500px]' : 'h-[400px]'} mb-6 hover:shadow-md transition-shadow`}>
+    <div className={`mt-5 ${THEME.titleBg} text-slate-900 font-extrabold text-lg py-2 px-6 rounded-xl border-2 ${THEME.titleBorder} w-[85%] text-center z-20 shadow-sm tracking-tight`}>
+      {title}
+    </div>
+    <div className="absolute inset-0 top-[60px] w-full p-4 flex items-center justify-center">
+      {children}
+    </div>
+  </div>
+);
+
+const Node = ({ top, left, title, subtitle, icon: Icon, type = "primary", className = "", width = "w-[130px]" }) => {
+  const styleClass = THEME[`${type}Node`] || THEME.primaryNode;
+  return (
+    <div 
+      className={`absolute z-10 flex flex-col items-center justify-center p-2 rounded-lg border-2 ${width} text-center transition-transform hover:scale-105 ${styleClass} ${className}`}
+      style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+    >
+      {Icon && <Icon className="mb-1 opacity-80" size={18} strokeWidth={2} />}
+      <span className="text-[11px] font-bold leading-tight">{title}</span>
+      {subtitle && <span className="text-[9px] opacity-80 mt-1 leading-tight whitespace-pre-line">{subtitle}</span>}
+    </div>
+  );
+};
+
+const Label = ({ top, left, text, icon: Icon, type="default", width="w-auto" }) => (
+  <div 
+    className={`absolute z-20 flex flex-col items-center justify-center px-3 py-1.5 rounded-full text-[10px] font-bold shadow-sm border border-slate-200 ${width} ${type === 'error' ? 'bg-red-50 text-red-600 border-red-200' : type === 'success' ? 'bg-[#e6fcf5] text-[#2e9e73] border-[#31a67a]' : type === 'warning' ? 'bg-[#fef3c7] text-[#d97706] border-[#f59e0b]' : 'bg-white text-slate-700'}`}
+    style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+  >
+    {Icon && <Icon size={14} className={`mb-1 ${type === 'error' ? 'text-red-500' : type === 'warning' ? 'text-[#d97706]' : 'text-[#2e9e73]'}`} />}
+    {text}
+  </div>
+);
+
+const SvgCanvas = ({ children }) => (
+  <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+    <defs>
+       <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill={THEME.line} />
+       </marker>
+       <marker id="arrow-red" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+       </marker>
+       <marker id="arrow-green" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#31a67a" />
+       </marker>
+    </defs>
+    {children}
+  </svg>
+);
+
+const Connection = ({ x1, y1, x2, y2, dashed = false, arrow = true, color = THEME.line }) => {
+  let marker = "none";
+  if (arrow) {
+    if (color === '#ef4444') marker = "url(#arrow-red)";
+    else if (color === '#31a67a') marker = "url(#arrow-green)";
+    else marker = "url(#arrow)";
+  }
+  return (
+    <line 
+      x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} 
+      stroke={color} strokeWidth="2" strokeDasharray={dashed ? "5,5" : "none"} 
+      markerEnd={marker} 
+    />
+  );
+};
+
+// --- SPECIFIC DIAGRAM CARDS ---
+
+// Card 1: The Problem with Vector Similarity
+const CardProblem = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={20} y1={50} x2={40} y2={30} color="#ef4444" />
+      <Connection x1={20} y1={50} x2={40} y2={70} color="#31a67a" />
+    </SvgCanvas>
+
+    <Node top={50} left={20} title='"Return defective item"' icon={MessageSquare} type="secondary" width="w-[120px]" />
+    
+    <Node top={30} left={65} title="Rank 1: 'How to return'" subtitle="Cosine: 0.95 (Keyword match)" icon={AlertTriangle} type="error" width="w-[180px]" />
+    <Node top={70} left={65} title="Rank 2: 'Defect warranty'" subtitle="Cosine: 0.92 (True meaning)" icon={CheckCircle2} type="success" width="w-[180px]" />
+
+    <Label top={20} left={50} text="Cosine ignores exact query-chunk relationship!" icon={XCircle} type="error" />
+  </div>
+);
+
+// Card 2: Architecture (Embedding vs Reranker)
+const CardArchitecture = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[8%] left-[25%] -translate-x-1/2 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Embedding (Bi-Encoder)<br/><span className="text-[9px] lowercase">Fast, Coarse, O(1)</span></div>
+    <div className="absolute top-[8%] left-[75%] -translate-x-1/2 text-xs font-bold text-[#31a67a] uppercase tracking-widest text-center">Reranker (Cross-Encoder)<br/><span className="text-[9px] lowercase">Slow, Precise, O(n)</span></div>
+    <div className="absolute top-[15%] bottom-[5%] left-[50%] border-l-2 border-dashed border-slate-200"></div>
+
+    <SvgCanvas>
+      {/* Bi-Encoder */}
+      <Connection x1={15} y1={30} x2={25} y2={50} arrow={false} />
+      <Connection x1={35} y1={30} x2={25} y2={50} arrow={false} />
+      <Connection x1={25} y1={50} x2={25} y2={65} arrow={false} />
+      <Connection x1={25} y1={65} x2={25} y2={85} />
+
+      {/* Cross-Encoder */}
+      <Connection x1={75} y1={30} x2={75} y2={50} arrow={false} />
+      <Connection x1={75} y1={50} x2={75} y2={65} arrow={false} />
+      <Connection x1={75} y1={65} x2={75} y2={85} />
+    </SvgCanvas>
+
+    {/* Bi-Encoder Nodes */}
+    <Node top={30} left={15} title="Query" type="secondary" width="w-[80px]" />
+    <Node top={30} left={35} title="Chunk" type="secondary" width="w-[80px]" />
+    <Node top={50} left={25} title="Vector Space" subtitle="[0.5...] & [0.6...]" icon={Cpu} type="primary" width="w-[140px]" />
+    <Node top={65} left={25} title="Cosine Math" subtitle="Fast Math" icon={Combine} type="secondary" width="w-[120px]" />
+    <Node top={85} left={25} title="Score (0.85)" type="secondary" width="w-[100px]" />
+
+    {/* Cross-Encoder Nodes */}
+    <Node top={30} left={75} title="[CLS] Query [SEP] Chunk [SEP]" subtitle="Combined Input" type="primary" width="w-[200px]" />
+    <Node top={50} left={75} title="BERT Model" subtitle="Reads both together" icon={Brain} type="primary" width="w-[140px]" />
+    <Node top={65} left={75} title="Deep Attention" subtitle="Cross-references context" icon={Target} type="secondary" width="w-[150px]" />
+    <Node top={85} left={75} title="Score (0.98)" type="success" width="w-[100px]" />
+  </div>
+);
+
+// Card 3: Two-Stage Retrieval Workflow
+const CardTwoStage = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={50} y1={25} x2={50} y2={45} />
+      <Connection x1={50} y1={45} x2={50} y2={70} />
+      <Connection x1={50} y1={70} x2={50} y2={85} />
+    </SvgCanvas>
+
+    {/* Funnel Shapes Background (CSS hacks) */}
+    <div className="absolute top-[35%] left-[50%] -translate-x-1/2 w-[250px] h-0 border-t-[80px] border-t-slate-100 border-l-[30px] border-l-transparent border-r-[30px] border-r-transparent opacity-50 z-0"></div>
+    <div className="absolute top-[60%] left-[50%] -translate-x-1/2 w-[190px] h-0 border-t-[80px] border-t-[#e6fcf5] border-l-[40px] border-l-transparent border-r-[40px] border-r-transparent opacity-50 z-0"></div>
+
+    <Node top={20} left={50} title="All Documents" subtitle="1,000,000+ chunks" icon={Database} type="secondary" width="w-[200px]" />
+    
+    <div className="absolute top-[45%] left-[20%] text-xs font-bold text-slate-500 text-right w-[100px]">STAGE 1:<br/>Vector Search</div>
+    <Node top={45} left={50} title="Top-100 Chunks" subtitle="Fast & Coarse (~10ms)" icon={Search} type="primary" width="w-[160px]" />
+    
+    <div className="absolute top-[70%] left-[20%] text-xs font-bold text-[#31a67a] text-right w-[100px]">STAGE 2:<br/>Cross-Encoder</div>
+    <Node top={70} left={50} title="Top-5 Chunks" subtitle="Slow & Precise (~500ms)" icon={Filter} type="success" width="w-[120px]" />
+
+    <Label top={88} left={50} text="Pass Top-5 to LLM Generator" icon={ArrowDownUp} />
+  </div>
+);
+
+// Card 4: Trade-offs & Costs
+const CardTradeoffs = () => (
+  <div className="relative w-full h-full flex items-center justify-center">
+    <div className="w-[85%] grid grid-cols-2 gap-6 z-10">
+      
+      {/* Vector Box */}
+      <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl shadow-sm">
+        <div className="font-extrabold text-slate-800 text-sm mb-4 flex items-center gap-2 border-b pb-2">
+          <Search className="text-blue-500" /> Vector Similarity
+        </div>
+        <ul className="space-y-3 text-xs text-slate-700">
+          <li className="flex items-center gap-2"><Zap size={14} className="text-amber-500"/> <strong>Speed:</strong> Very Fast (&lt;10ms)</li>
+          <li className="flex items-center gap-2"><Target size={14} className="text-slate-400"/> <strong>Accuracy:</strong> Medium (Coarse)</li>
+          <li className="flex items-center gap-2"><Coins size={14} className="text-green-500"/> <strong>Cost:</strong> ~$0.0001 / query</li>
+          <li className="flex items-center gap-2 mt-4 pt-2 border-t text-slate-500"><Layers size={14}/> <em>Role: Filter 1M to 100</em></li>
+        </ul>
+      </div>
+
+      {/* Reranker Box */}
+      <div className="bg-[#e6fcf5] border border-[#31a67a] p-5 rounded-2xl shadow-sm">
+        <div className="font-extrabold text-[#1f7351] text-sm mb-4 flex items-center gap-2 border-b border-[#a6f0d4] pb-2">
+          <Filter className="text-[#31a67a]" /> Cross-Encoder Reranker
+        </div>
+        <ul className="space-y-3 text-xs text-[#2a5d48]">
+          <li className="flex items-center gap-2"><Clock size={14} className="text-red-400"/> <strong>Speed:</strong> Slower (~500ms)</li>
+          <li className="flex items-center gap-2"><Target size={14} className="text-green-600"/> <strong>Accuracy:</strong> High (Precise)</li>
+          <li className="flex items-center gap-2"><Coins size={14} className="text-amber-600"/> <strong>Cost:</strong> ~$0.001 / query</li>
+          <li className="flex items-center gap-2 mt-4 pt-2 border-t border-[#a6f0d4]"><Layers size={14}/> <em>Role: Filter 100 to 5</em></li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+);
+
+// Card 5: Decision Tree (When to use Reranking)
+const CardDecisionTree = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={20} y1={15} x2={20} y2={35} />
+      <Connection x1={20} y1={15} x2={50} y2={15} dashed={true} />
+      
+      <Connection x1={50} y1={15} x2={50} y2={35} />
+      <Connection x1={50} y1={15} x2={80} y2={15} dashed={true} />
+
+      <Connection x1={80} y1={15} x2={80} y2={35} />
+      <Connection x1={80} y1={15} x2={80} y2={65} dashed={true} />
+      <Connection x1={80} y1={65} x2={50} y2={65} dashed={true} />
+      <Connection x1={50} y1={65} x2={20} y2={65} dashed={true} />
+      
+      <Connection x1={20} y1={65} x2={20} y2={80} />
+    </SvgCanvas>
+
+    {/* Level 1: Latency */}
+    <Node top={15} left={20} title="Latency Critical?" subtitle="Need < 100ms" icon={Clock} type="secondary" width="w-[120px] z-20" />
+    <Label top={25} left={20} text="YES" />
+    <Node top={45} left={20} title="Skip Reranking" subtitle="Vectors only" icon={Search} type="warning" width="w-[130px] z-20" />
+    <Label top={15} left={35} text="NO" type="success" />
+
+    {/* Level 2: Noise */}
+    <Node top={15} left={50} title="Data Noisy?" subtitle="Vectors miss context" icon={AlertTriangle} type="secondary" width="w-[120px] z-20" />
+    <Label top={25} left={50} text="NO" />
+    <Node top={45} left={50} title="Skip Reranking" subtitle="If vectors work fine" icon={CheckCircle2} type="warning" width="w-[130px] z-20" />
+    <Label top={15} left={65} text="YES" type="warning" />
+
+    {/* Level 3: Accuracy */}
+    <Node top={15} left={80} title="Accuracy Critical?" subtitle="Medical, Legal" icon={Scale} type="secondary" width="w-[130px] z-20" />
+    <Label top={25} left={80} text="NO" />
+    <Node top={45} left={80} title="Optional Rerank" subtitle="Depends on budget" icon={HelpCircle} type="dashed" width="w-[130px] z-20" />
+    <Label top={40} left={80} text="YES" type="warning" />
+    
+    {/* Final Setup */}
+    <Node top={65} left={20} title="Budget for API?" icon={Coins} type="secondary" width="w-[130px] z-20" />
+    <Label top={75} left={20} text="YES" />
+    <Node top={85} left={20} title="Add Cohere Rerank" subtitle="Or local BGE Model" icon={Sparkles} type="success" width="w-[150px] z-20" />
+
+  </div>
+);
+
+
+// --- MAIN APP LAYOUT ---
+export default function App() {
+  return (
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-800">
+      
+      <header className="max-w-7xl mx-auto mb-10 border-b border-slate-200 pb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+             Visual Dev Guides <span className="text-slate-400 font-normal">| Reranking</span>
+          </h1>
+          <p className="text-slate-500 mt-2 text-sm max-w-lg">
+            Phase 1 Theory: Overcoming the noisiness of Vector Similarity using two-stage retrieval and Cross-Encoder neural networks.
+          </p>
+        </div>
+        <div className="bg-slate-800 text-white text-sm font-bold py-2 px-5 rounded-full shadow-md flex items-center gap-2">
+          <ArrowDownUp size={16} /> Stage 2 Retrieval
+        </div>
+      </header>
+      
+      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-10">
+         <Card title="01. The Problem with Cosine Similarity">
+           <CardProblem />
+         </Card>
+
+         <Card title="02. Architecture (Bi vs Cross Encoder)">
+           <CardArchitecture />
+         </Card>
+
+         <Card title="03. Two-Stage Retrieval Workflow" tall={true}>
+           <CardTwoStage />
+         </Card>
+
+         <Card title="04. Performance & Cost Trade-offs" tall={true}>
+            <CardTradeoffs />
+        </Card>
+      </main>
+
+      <div className="max-w-7xl mx-auto mt-6">
+        <Card title="05. When to Add Reranking" tall={false}>
+            <CardDecisionTree />
+        </Card>
+      </div>
+
+    </div>
+  );
+}

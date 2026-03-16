@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chunking Strategies - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .chunk-viz-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 1px solid var(--wp-border);
+        }
+
+        .text-block {
+            height: 20px;
+            background: #eef2ff;
+            border: 1px solid var(--wp-accent);
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chunk-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #be185d;
+            left: 33%;
+            animation: moveSplit 4s infinite ease-in-out;
+        }
+
+        @keyframes moveSplit {
+
+            0%,
+            100% {
+                left: 33%;
+            }
+
+            50% {
+                left: 66%;
+            }
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .strategy-box {
+            border: 1px solid var(--wp-border);
+            padding: 15px;
+            margin: 20px 0;
+            background: #fdfdfd;
+        }
+
+        .strategy-header {
+            font-weight: bold;
+            color: var(--wp-accent);
+            border-bottom: 2px solid var(--wp-accent);
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        .decision-tree {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .keyword {
+            color: #d73a49;
+        }
+
+        .string {
+            color: #032f62;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Chunking Strategies</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Content Chunking</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <rect x="5" y="10" width="20" height="20" fill="#eef2ff" stroke="#36c" />
+                    <rect x="30" y="10" width="35" height="20" fill="#eef2ff" stroke="#36c" />
+                    <rect x="70" y="10" width="20" height="20" fill="#eef2ff" stroke="#36c" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Objective</div>
+                    <div class="infobox-value">Context Window Management</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Input</div>
+                    <div class="infobox-value">Unstructured Text</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Output</div>
+                    <div class="infobox-value">Semantic Fragments</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>In the development of Large Language Model (LLM) applications, <strong>chunking</strong> is the process
+                of partitioning large bodies of text into smaller, more manageable segments. This is a critical
+                technical requirement because the internal "memory" of an LLM—known as the <strong>context
+                    window</strong>—is finite. By breaking documents into pieces that fit these constraints, developers
+                ensure that relevant information can be effectively retrieved and processed during inference.</p>
+
+            <h2>Standard Chunking Strategies</h2>
+            <p>Choosing the right chunking strategy involves Balancing <strong>semantic integrity</strong> (keeping
+                related concepts together) against <strong>computational efficiency</strong>.</p>
+
+            <div class="strategy-box">
+                <div class="strategy-header">1. Fixed-Size Chunking</div>
+                <p>The simplest approach, where text is split into chunks of a constant length (e.g., 500 characters or
+                    tokens). While predictable and fast, this method often fails because it ignores grammatical
+                    structures, potentially splitting sentences mid-word.</p>
+            </div>
+
+            <div class="strategy-box">
+                <div class="strategy-header">2. Sliding Window (Overlap)</div>
+                <p>Similar to fixed-size, but nearby chunks overlap (e.g., a 500-token chunk with a 100-token overlap).
+                    This ensures that semantic context isn't lost at the boundaries, though it increases storage
+                    requirements in the vector database.</p>
+            </div>
+
+            <div class="strategy-box">
+                <div class="strategy-header">3. Recursive Character Splitting</div>
+                <p>This strategy attempts to split text at natural boundaries: first by paragraphs, then sentences, and
+                    finally by words. It only proceeds to the next level of granularity if the current fragment still
+                    exceeds the target size.</p>
+                <div class="code-block">
+                    <span class="keyword">def</span> recursive_chunk(text, separators=[<span
+                        class="string">"\n\n"</span>, <span class="string">"\n"</span>, <span class="string">"."</span>,
+                    <span class="string">" "</span>]):<br>
+                    &nbsp;&nbsp;<span class="comment"># Splits hierarchically until size fits...</span>
+                </div>
+            </div>
+
+            <div class="strategy-box">
+                <div class="strategy-header">4. Semantic Chunking</div>
+                <p>An advanced technique where sentences are embedded into a vector space and similarity scores are
+                    calculated between neighbors. A "break" is created whenever there is a significant drop in
+                    similarity, ensuring that each chunk represents a single coherent topic.</p>
+            </div>
+
+            <h2>Performance Comparison</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th>Predictability</th>
+                        <th>Semantic Quality</th>
+                        <th>Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Fixed-Size</strong></td>
+                        <td>Excellent</td>
+                        <td>Poor</td>
+                        <td>$</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sliding Window</strong></td>
+                        <td>Good</td>
+                        <td>Moderate</td>
+                        <td>$$</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Recursive</strong></td>
+                        <td>Variable</td>
+                        <td>Good</td>
+                        <td>$</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Semantic</strong></td>
+                        <td>Highly Variable</td>
+                        <td>Excellent</td>
+                        <td>$$$</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="diagram-container animate-on-scroll">
+                <div class="chunk-viz-container">
+                    <div class="text-block">
+                        <div class="chunk-line"></div>
+                    </div>
+                    <div class="text-block" style="width: 80%; margin: 0 auto;">
+                        <div class="chunk-line" style="animation-delay: -1s;"></div>
+                    </div>
+                </div>
+                <div class="diagram-caption">Figure 1: Visualization of dynamic split points based on semantic
+                    boundaries.</div>
+            </div>
+
+            <h2>Advanced Indexing Strategies</h2>
+            <p>As dataset sizes grow from thousands to millions of documents, standard flat chunking often results in a
+                "needle in a haystack" problem. Advanced systems use multi-tiered indexing to decouple the
+                <strong>Retrieved unit</strong> from the <strong>Reasoning unit</strong>.
+            </p>
+
+            <div class="strategy-box">
+                <div class="strategy-header">5. Multi-Representation Indexing (Parent-Child)</div>
+                <p>Instead of search and generation using the same chunk, this method stores <strong>Small
+                        Chunks</strong> (e.g., 100 tokens) for high-precision retrieval but returns the <strong>Parent
+                        Document</strong> (e.g., 1000 tokens) to the LLM. This provides the "Precision of a laser" with
+                    the "Context of a floodlight."</p>
+                <div class="code-block">
+                    <span class="comment"># Pseudo-flow: Parent Document Retrieval</span><br>
+                    <span class="keyword">for</span> child_chunk <span class="keyword">in</span> retrieved_top_k:<br>
+                    &nbsp;&nbsp;parent_id = child_chunk.metadata[<span class="string">"parent_id"</span>]<br>
+                    &nbsp;&nbsp;full_context = vectordb.get_by_id(parent_id)<br>
+                    &nbsp;&nbsp;llm_prompt.append(full_context)
+                </div>
+            </div>
+
+            <div class="strategy-box">
+                <div class="strategy-header">6. Hierarchical Indexing (RAPTOR)</div>
+                <p><strong>RAPTOR</strong> (Recursive Abstractive Processing for Tree-Organized Retrieval) clusters
+                    chunks and generates summaries for each cluster. This processes repeats recursively to create a tree
+                    of summaries. Retrieval can then traverse the tree, allowing the LLM to answer "Big Picture"
+                    questions that span the entire document set.</p>
+            </div>
+
+            <h2>Decision Framework</h2>
+            <p>The following logic helps determine the optimal strategy for a given dataset:</p>
+            <div class="decision-tree">
+                Is your document structured (headers, sections)?<br>
+                ├─ YES → Use Document-Aware Chunking<br>
+                └─ NO → Continue...<br><br>
+                Is semantic accuracy critical (law, medicine)?<br>
+                ├─ YES → Use Semantic Chunking<br>
+                └─ NO → Continue...<br><br>
+                Budget for embedding all sentences?<br>
+                ├─ YES → Semantic Chunking (Best Quality)<br>
+                └─ NO → Recursive or Fixed + Overlap
+            </div>
+
+            <h2>Real-World Scenario: Enterprise Documentation</h2>
+            <p>Imagine a company with 1,000,000 technical manuals. A user asks: <em>"What is the general safety
+                    philosophy across all battery products?"</em></p>
+            <ul>
+                <li><strong>Naive RAG:</strong> Might find 5 specific chunks about "Lithium-ion temperature limits."
+                    (Too specific).</li>
+                <li><strong>Hierarchical RAG:</strong> Retrieves high-level category summaries about "Battery Safety
+                    Protocols," providing a comprehensive answer.</li>
+            </ul>
+
+            <h2>Common Pitfalls</h2>
+            <ul>
+                <li><strong>Chunks Too Small:</strong> Leading to fragmented context and poor reasoning (less than 200
+                    tokens).</li>
+                <li><strong>Chunks Too Large:</strong> Exceeding the model's comfortable "reasoning" density within the
+                    context window (more than 1000 tokens).</li>
+                <li><strong>Index Bloat:</strong> Storing child, parent, and summary representations can triple your
+                    storage costs.</li>
+                <li><strong>Missing Metadata:</strong> Failing to store the source filename or page number with the
+                    chunk, making the answer impossible to verify.</li>
+            </ul>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>Auditing a 30-minute <strong>RSA sales call</strong> requires precise chunking. A
+                <strong>Fixed-size</strong> chunking might split a sentence where an agent says "...and RSA is [SPLIT]
+                optional," causing the compliance check to fail. Instead, the dashboard uses <strong>Recursive Character
+                    Splitting</strong> to ensure each chunk contains a complete sales argument. For "Big Picture"
+                <strong>Hierarchical Indexing (RAPTOR)</strong> to retrieve a summary of the call's sentiment rather
+                than individual fragments.
+            </p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Recursive Transcript Splitting</span>
+                <span class="keyword">from</span> langchain.text_splitter <span class="keyword">import</span>
+                RecursiveCharacterTextSplitter
+
+                splitter = RecursiveCharacterTextSplitter(
+                chunk_size=500,
+                chunk_overlap=50,
+                separators=[<span class="string">"Advisor:"</span>, <span class="string">"Customer:"</span>, <span
+                    class="string">"\n\n"</span>]
+                )
+                chunks = splitter.split_text(full_call_transcript)
+                <span class="keyword">print</span>(f<span class="string">"Call split into {len(chunks)} contextual units
+                    for audit."</span>)
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ Targeted chunk size ≈ Context Window / 3 (for RAG).<br>
+                ✅ Fixed-size is for speed; Semantic is for accuracy.<br>
+                ✅ Always include metadata (doc_id, page) with every chunk.<br>
+                ✅ Recursive splitting is the most reliable "middle ground" for general documentation.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

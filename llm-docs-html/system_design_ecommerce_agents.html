@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent Commerce System Design</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .depth {
+            margin-top: 15px;
+            padding: 10px;
+            background: #eef2ff;
+            border-left: 3px solid #36c;
+            font-size: 0.9em;
+        }
+
+        .trap {
+            margin-top: 15px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 3px solid #ffecb5;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>System Design: E-Commerce AI Agent Room</h1>
+        <div class="subtitle">Multi-Agent System Handling Marketing, Support, & Inventory for 1M Users</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>Q84: Design an "AI Agent Room" to manage an E-commerce platform (like eBay)</h3>
+            <div class="answer">
+                <div class="one-liner">An event-driven architecture using Kafka to orchestrate a swarm of specialized
+                    LLM Agents (Marketing, Support, Inventory), utilizing a shared Vector Context DB to maintain global
+                    state and resolve conflicts.</div>
+
+                <p>This is an advanced <strong>Multi-Agent System (MAS)</strong> problem. It's wildly different from a
+                    standard chatbot because agents operate <em>asynchronously</em>, interact with APIs (tools), and
+                    must collaborate with <em>each other</em> without overwhelming the system into infinite loops.</p>
+
+                <h4>1. High-Level Concept: The "Room" Architecture</h4>
+                <p>Instead of one massive, confusing LLM trying to do everything, we split responsibilities. We use a
+                    <strong>Publisher/Subscriber model</strong> where an Orchestrator routes tasks, and specialized
+                    Agents perform them using specific tools.</p>
+
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+                    flowchart TD
+                    EventSource["Event Streams (User Clicks, Purchases, Restocks)"] --> Kafka[("Kafka Event Bus")]
+
+                    Kafka --> Orchestrator["Router / Orchestrator Agent"]
+
+                    subgraph Agent Room
+                    Orchestrator -- "Task: Out of Stock" --> InvAgent["Inventory Agent"]
+                    Orchestrator -- "Task: Angry Customer" --> SuppAgent["Support Agent"]
+                    Orchestrator -- "Task: Price Drop" --> MktAgent["Marketing Agent"]
+
+                    InvAgent <--> SharedMemory[("Vector DB (Shared Context Memory)")]
+                        SuppAgent <--> SharedMemory
+                            MktAgent <--> SharedMemory
+                                end
+
+                                InvAgent -- "Runs SQL Updates" --> Tools[(Internal APIs / DBs)]
+                                MktAgent -- "Sends Email via SendGrid" --> Tools
+                                SuppAgent -- "Refunds via Stripe" --> Tools
+                </div>
+
+                <h4>2. Key Components</h4>
+
+                <h5>A. The Orchestrator (Supervisor) Agent</h5>
+                <ul>
+                    <li>The central nervous system. It watches incoming events (e.g., a "Customer Complaint" payload)
+                        and decides <em>which</em> agent gets the job.</li>
+                    <li><strong>Implementation:</strong> A fast, cheap LLM (like Claude Haiku or GPT-4o-mini) running a
+                        strict classification prompt. It outputs JSON routing instructions to message queues.</li>
+                </ul>
+
+                <h5>B. Specialized Department Agents</h5>
+                <p>Each agent is an LLM wrapper configured with a specific persona, system prompt, and access to a
+                    <strong>strict subset of tools (function calling)</strong>.</p>
+                <ul>
+                    <li><strong>Support Agent:</strong> Has access to `get_order_status()`, `issue_refund(amount)`,
+                        `send_message(user_id)`.</li>
+                    <li><strong>Inventory Agent:</strong> Has access to `update_stock(sku, qty)`,
+                        `request_supplier_reorder()`.</li>
+                    <li><strong>Marketing Agent:</strong> Has access to `generate_coupon()`, `email_user()`.</li>
+                </ul>
+
+                <h5>C. Shared Context / Memory (The "Whiteboard")</h5>
+                <p>To scale to 1M users, agents cannot constantly talk to each other directly—this creates massive
+                    latency and cost. Instead, they write to a shared memory store.</p>
+                <ul>
+                    <li>When the Support Agent issues a $50 refund to a VIP user, it writes this action to a
+                        <strong>Vector Database</strong> partitioned by `user_id`.</li>
+                    <li>If the Marketing Agent later wants to target that user, it runs a semantic search on the user's
+                        history in the Vector DB, sees the recent refund, and decides to generate a unique "Sorry for
+                        the trouble!" 20% off coupon instead of a generic promo.</li>
+                </ul>
+
+                <h4>3. The Task Flow (Example Scenario)</h4>
+
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+                    sequenceDiagram
+                    participant Kafka
+                    participant Router as Orchestrator Agent
+                    participant Inv as Inventory Agent
+                    participant Mkt as Marketing Agent
+                    participant DB as Internal APIs
+
+                    Kafka->>Router: Event: "SKU-123 Stock hit 0"
+                    Router->>Inv: Route Task: Trigger Reorder
+                    Inv->>DB: execute: reorder_from_supplier("SKU-123")
+                    DB-->>Inv: SUCCESS
+                    Inv->>Kafka: Publish Event: "SKU-123 Out of Stock until Friday"
+
+                    Kafka->>Router: Route New Knowledge
+                    Router->>Mkt: Route Task: Adjust Marketing
+                    Mkt->>DB: execute: pause_ads("SKU-123")
+                    Mkt->>DB: execute: update_homepage_banner("Pre-order SKU-123 for Friday!")
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal) - Guardrails and Hallucination Control:</strong>
+                    <ul>
+                        <li><strong>Infinite Loops:</strong> A major risk in Multi-Agent systems is Agent A requesting
+                            info from Agent B, who asks A for clarification, forever. Fix: Hard limits on conversation
+                            turns (Depth limit = 5) and strict timeout circuits.</li>
+                        <li><strong>Human-in-the-Loop (HITL):</strong> Define "High-Risk Operations." If the Marketing
+                            Agent decides to email a 90% discount code to 100,000 users, the tool executor halts and
+                            pushes a notification to a Slack channel for human approval before execution.</li>
+                        <li><strong>Observability:</strong> You must trace the "Thought Process." Use tracing tools
+                            (like LangSmith or Arize Phoenix) to log exactly what context was retrieved and what
+                            function was called at every step.</li>
+                    </ul>
+                </div>
+
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Interviewers will press you on latency and cost. 1M active users
+                    generating events will bankrupt you if every click hits GPT-4. Counter this by emphasizing
+                    <strong>Heuristic Gateways</strong>: Use standard code (cheap if/else rules) to handle simple
+                    events, and only trigger the expensive LLM Agents for complex anomalies or unstructured tasks.
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

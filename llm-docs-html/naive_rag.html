@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naive RAG - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .pipeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #fff;
+            border: 1px solid var(--wp-border);
+        }
+
+        .step-entry {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .animate-active .step-entry {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.4s ease-out;
+        }
+
+        .step-num {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--wp-accent);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-label {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .keyword {
+            color: #d73a49;
+        }
+
+        .string {
+            color: #032f62;
+        }
+
+        .comment {
+            color: #6a737d;
+        }
+
+        .class-name {
+            color: #6f42c1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Naive RAG</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Naive RAG</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <rect x="5" y="5" width="20" height="15" fill="#f8f9fa" stroke="#36c" />
+                    <path d="M 25 12 L 45 12" stroke="#36c" stroke-width="2" marker-end="url(#arrow)" />
+                    <rect x="45" y="5" width="30" height="30" fill="#eef2ff" stroke="#36c" />
+                    <text x="60" y="25" text-anchor="middle" font-size="10" fill="#36c">LLM</text>
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Information Retrieval</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Complexity</div>
+                    <div class="infobox-value">Baseline (Low)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Goal</div>
+                    <div class="infobox-value">Knowledge Grounding</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p><strong>Retrieval-Augmented Generation (RAG)</strong> is a semi-parametric architecture that combines the
+                linguistic capabilities of a pre-trained Large Language Model (LLM) with a dynamic, external knowledge
+                base. In its most basic form—referred to as <strong>Naive RAG</strong>—the system operates by retrieving
+                a fixed number of potentially relevant document fragments and prepending them to the user's prompt as
+                context for the generative process.</p>
+
+            <div class="mermaid" style="margin-bottom: 2em; margin-top: 1em;">
+                flowchart LR
+                A[User Query] --> B[Embedding Model]
+                B --> C[(Vector DB)]
+                C --> D[Retrieve Top-K Docs]
+                D --> E[Combine with Prompt]
+                E --> F[LLM Generation]
+                F --> G[Final Answer]
+            </div>
+
+            <h2>The Five-Step Pipeline</h2>
+            <p>The operational flow of a Naive RAG system is linear and sequential, designed to bridge the gap between
+                user intent and proprietary or recent data.</p>
+
+            <div class="diagram-container animate-on-scroll">
+                <div class="pipeline-container">
+                    <div class="step-entry" style="transition-delay: 0.1s;">
+                        <div class="step-num">1</div>
+                        <div class="step-label">Query Embedding: Convert user text to vector coordinates.</div>
+                    </div>
+                    <div class="step-entry" style="transition-delay: 0.3s;">
+                        <div class="step-num">2</div>
+                        <div class="step-label">Retrieval: Search Vector DB for top-k similar chunks.</div>
+                    </div>
+                    <div class="step-entry" style="transition-delay: 0.5s;">
+                        <div class="step-num">3</div>
+                        <div class="step-label">Prompt Construction: Combine chunks + query + instructions.</div>
+                    </div>
+                    <div class="step-entry" style="transition-delay: 0.7s;">
+                        <div class="step-num">4</div>
+                        <div class="step-label">Generation: LLM synthesizes an answer from context.</div>
+                    </div>
+                    <div class="step-entry" style="transition-delay: 0.9s;">
+                        <div class="step-num">5</div>
+                        <div class="step-label">Validation: Final response serves the user's intent.</div>
+                    </div>
+                </div>
+                <div class="diagram-caption">Figure 1: The standard sequential workflow of a baseline RAG system.</div>
+            </div>
+
+            <h2>Technical Implementation</h2>
+            <p>A production-ready Naive RAG setup requires an offline indexing phase and a runtime query phase. Below is
+                a representative Python implementation using architectural best practices.</p>
+
+            <div class="code-block">
+                <span class="keyword">class</span> <span class="class-name">NaiveRAG</span>:<br>
+                &nbsp;&nbsp;<span class="keyword">def</span> __init__(self, vector_db, llm, embed_model):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;self.vector_db = vector_db <span class="comment"># Pinecone/Chroma</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;self.llm = llm <span class="comment"># OpenAI/Claude</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;self.embed_model = embed_model<br><br>
+                &nbsp;&nbsp;<span class="keyword">def</span> query(self, user_query):<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Step 1: Retrieval</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;q_emb = self.embed_model.encode(user_query)<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;chunks = self.vector_db.search(q_emb, k=5)<br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Step 2: Prompting</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;ctx = <span class="string">"\n"</span>.join([c[<span
+                    class="string">"text"</span>] <span class="keyword">for</span> c <span class="keyword">in</span>
+                chunks])<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;prompt = f<span class="string">"Context: {ctx}\nQ:
+                    {user_query}\nA:"</span><br><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Step 3: Generation</span><br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span> self.llm.complete(prompt)
+            </div>
+
+            <h2>Standard Prompt Engineering for RAG</h2>
+            <p>The "grounding" prompt is what prevents the LLM from hallucinating by explicitly constraining its
+                response space to the provided context.</p>
+
+            <div class="example-box">
+                "You are a professional assistant. Given the following technical fragments, answer the user's question
+                accurately. If the information is not present in the fragments, state that you do not know. Do not use
+                outside knowledge."
+            </div>
+
+            <h2>Significant Limitations</h2>
+            <p>While effective as a baseline, Naive RAG suffers from several "silent failures" that occur when the
+                retrieved data is semantically similar but factually irrelevant.</p>
+
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Failure Mode</th>
+                        <th>Mechanism</th>
+                        <th>Consequence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Irrelevant Retrieval</strong></td>
+                        <td>Similarity ≠ Relevance (noisy embeddings).</td>
+                        <td>LLM answers off-topic or hallucinates.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Missing Fragments</strong></td>
+                        <td>Top-k is too small for complex answers.</td>
+                        <td>Incomplete or "shallow" answers.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Query Drift</strong></td>
+                        <td>Short user queries don't embed well.</td>
+                        <td>System misses the core intent.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Stale Data</strong></td>
+                        <td>Mismatch between index and current reality.</td>
+                        <td>Confidence in outdated facts.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>When is Naive RAG Sufficient?</h2>
+            <ul>
+                <li><strong>FAQ Bots:</strong> Where questions are predictably mapped to specific document sections.
+                </li>
+                <li><strong>Low-Stakes Prototyping:</strong> For internal tools where minor inaccuracies are tolerable.
+                </li>
+                <li><strong>Consistent Data Formats:</strong> When all sources follow a standard template (e.g., product
+                    descriptions).</li>
+            </ul>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>The <strong>RSA Sales QA Dashboard</strong> uses Naive RAG to verify if an advisor explained the
+                "Coverage Limits" accurately. When a user queries a specific call, the system retrieves the "Standard
+                RSA Policy" chunks from the Vector DB and provides them as context to the LLM. The model then compares
+                the advisor's spoken words (from transcription) against these "Ground Truth" fragments to see if the
+                advisor claimed the coverage was $500 when the policy actually states $250. This immediate "Grounding"
+                prevents the AI from hallucinating premium details.</p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Baseline Policy Retrieval</span>
+                <span class="keyword">def</span> <span class="class-name">audit_agent_claim</span>(agent_statement):
+                relevant_policy = vector_db.similarity_search(agent_statement, k=1)
+                prompt = f<span class="string">"Policy: {relevant_policy}\nClaim: {agent_statement}\nIs
+                    compliant?"</span>
+                <span class="keyword">return</span> llm.generate(prompt)
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ RAG solves knowledge-cutoff issues in LLMs.<br>
+                ✅ Naive RAG follows a Retrieve → Build → Generate flow.<br>
+                ✅ Hallucinations are mitigated by strict grounding prompts.<br>
+                ✅ Vector similarity is the "engine" of retrieval but isn't always precise.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

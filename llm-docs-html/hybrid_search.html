@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Search</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Hybrid Search</h1>
+        <div class="subtitle">Combining Sparse and Dense Retrieval</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container" id="hybrid-search-core">
+            <h3>How does Hybrid Search work?</h3>
+            <div class="answer">
+                <div class="one-liner">Hybrid Search combines Keyword Match (BM25) with Semantic Vector Search, merging
+                    results via Reciprocal Rank Fusion (RRF).</div>
+
+                <p>Vector search excels at meaning, but fails at exact keyword matches (like specific IDs or acronyms).
+                    Sparse search (BM25) is perfect for exact keywords but fails at semantics.</p>
+                <h4>Core Concepts</h4>
+                <ul>
+                    <li><strong>Sparse Vector (BM25):</strong> Calculates Term Frequency-Inverse Document Frequency.
+                        Fast and exact.</li>
+                    <li><strong>Dense Vector (Embeddings):</strong> Captures semantic meaning across multiple
+                        dimensions.</li>
+                    <li><strong>Reciprocal Rank Fusion (RRF):</strong> The algorithm used to combine both scoring
+                        mechanisms. <code>RRF_Score = 1 / (k + rank_dense) + 1 / (k + rank_sparse)</code></li>
+                </ul>
+                <div class="mermaid">
+                    flowchart TD
+                    Q["User Query"] --> S1["BM25 / Sparse Index"]
+                    Q --> S2["Embedding / Dense Index"]
+                    S1 --> R1["Ranked List A"]
+                    S2 --> R2["Ranked List B"]
+                    R1 --> RRF["Reciprocal Rank Fusion (RRF)"]
+                    R2 --> RRF
+                    RRF --> F["Final Reranked List"]
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

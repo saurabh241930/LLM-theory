@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>21. Real World Production Quetions</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .qa-container pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1em 0;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+
+        .qa-container code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .qa-container pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .qa-container table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+
+        .qa-container th,
+        .qa-container td {
+            border: 1px solid var(--wp-border);
+            padding: 8px;
+            text-align: left;
+        }
+
+        .qa-container th {
+            background-color: #eaecf0;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>21. Real World Production Questions</h1>
+        <div class="subtitle">Deep dive interview questions and architectural decisions across RAG, LLM Operations, and
+            Agents</div>
+    </header>
+
+    <aside class="infobox">
+        <div class="infobox-title">Architecture & System Design</div>
+        <div class="infobox-data">
+            <div class="infobox-row">
+                <div class="infobox-label">Scope</div>
+                <div class="infobox-value">Enterprise LLM Systems</div>
+            </div>
+            <div class="infobox-row">
+                <div class="infobox-label">Role Focus</div>
+                <div class="infobox-value">AI/Backend Engineer</div>
+            </div>
+            <div class="infobox-row">
+                <div class="infobox-label">Key Themes</div>
+                <div class="infobox-value">Scaling, Auth/Multi-tenancy, Queues (BullMQ), Reliability</div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="content-wrapper">
+
+        <!-- RAG Pipeline at Scale -->
+        <h2 id="rag-scale">RAG Pipeline at Scale</h2>
+
+        <div class="qa-container">
+            <h3>Design a production RAG system that handles 10,000 queries/day. Walk me through every component.</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> 10,000 queries/day is mathematically about ~0.11 queries per second (QPS) on
+                    average, but we must architect for peak loads (e.g., ~5-10 QPS). Here is the component walkthrough:
+                </p>
+                <ol>
+                    <li><strong>API Gateway (Kong/Nginx):</strong> Handles authentication, rate limiting, and SSL
+                        termination. Routes requests to the backend.</li>
+                    <li><strong>Backend Service (Node.js/FastAPI):</strong> Validates the incoming payload, hashes the
+                        query, and orchestrates the AI workflow.</li>
+                    <li><strong>Semantic Cache (Redis):</strong> Checks if the user's query intent matches a previously
+                        cached query (using dense vectors or LLM-based caching). If Cache Hit -> Return immediately.
+                    </li>
+                    <li><strong>Query Rewriter/Router:</strong> An LLM or Semantic Router decides if this query needs
+                        the Vector DB. It might expand the query (e.g., "how much?" -> "how much does auto insurance
+                        cost?").</li>
+                    <li><strong>Vector Database (Pinecone/Milvus):</strong> Stores document embeddings. Performs the ANN
+                        (Approximate Nearest Neighbor) search to retrieve the top-K chunks.</li>
+                    <li><strong>Reranker (Cross-Encoder):</strong> Re-scores the top-K chunks retrieved to ensure
+                        extremely high precision context.</li>
+                    <li><strong>LLM Generation (OpenAI/Anthropic):</strong> The backend builds the final prompt
+                        encapsulating the reranked context and user query. Calls the LLM API.</li>
+                    <li><strong>Telemetry & Observability (Datadog/LangSmith):</strong> Logs latency, token usage, and
+                        the retrieved context ID for future evaluation/debugging.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you handle document updates in a RAG system? If a source document changes, how do you re-index
+                without downtime?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> We handle updates using deterministic Document IDs and a decoupled
+                    asynchronous pipeline:</p>
+                <ul>
+                    <li><strong>Hashing:</strong> When a document is ingested, we generate a hash (e.g., SHA-256) of its
+                        contents. If the hash matches the database, we skip processing.</li>
+                    <li><strong>Zero Downtime Re-indexing:</strong> When a change is detected, we do <em>not</em>
+                        overwrite right away. Instead, we chunk and embed the new document in an async background queue
+                        (BullMQ). We assign a `version_id` to these new chunks.</li>
+                    <li><strong>Atomic Swap/Delete:</strong> Once safely embedded into the Vector DB, we execute a
+                        metadata delete command `DELETE FROM vectordb WHERE document_id = X AND version_id =
+                        OLD_VERSION`. This swaps the old data for the new data atomically, ensuring read queries during
+                        the process are never interrupted or left with partial data.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How would you chunk documents for a legal/medical domain vs a general FAQ? What chunking strategy and
+                why?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Chunking is incredibly domain-dependent:</p>
+                <ul>
+                    <li><strong>General FAQ:</strong> Fixed-size chunking (e.g., 500 tokens with 50-token overlap) works
+                        fine. FAQs belong to single-turn concepts, making naive algorithms adequate.</li>
+                    <li><strong>Legal/Medical:</strong> Fixed chunks frequently shear context. We use <strong>Structural
+                            Chunking</strong>. For legal, we chunk by specific markdown headers (e.g., `## Section 1`,
+                        `Clause A`) using tools like LangChain's Markdown text splitter. For medical documents where
+                        context spans multiple pages (e.g., patient history leading to diagnosis), we use
+                        <strong>Parent-Child (Small-to-Big) RAG</strong>. We retrieve smaller, highly precise chunks
+                        (sentences), but inject the adjoining broader parent chunk (the whole paragraph/page) into the
+                        LLM.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Your RAG system is returning irrelevant answers. How do you debug it systematically?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> I isolate the pipeline into three primary failure modes:</p>
+                <ol>
+                    <li><strong>Is it a Retrieval Failure? (Check Vector DB):</strong> I dump the prompt trace (via
+                        LangSmith) and look at the retrieved context. If the requested answer <em>is not</em> in the
+                        context, the vector pipeline failed. Fix: Adjust embedding model, enable hybrid search, add a
+                        reranker step, or rewrite the user's query.</li>
+                    <li><strong>Is it a Grounding/LLM Failure? (Check Prompt/Model):</strong> If the answer <em>is</em>
+                        in the retrieved context but the LLM hallucinates or ignores it, the LLM failed. Fix: Adjust the
+                        prompt to be stricter ("Answer ONLY from the text provided"), lower the temperature to 0, or
+                        switch to a more capable model.</li>
+                    <li><strong>Is it a Semantic Failure? (Check Chunking):</strong> If the context contains the answer
+                        but lacks the surrounding meaning (e.g., a pronoun like "He did it" without knowing who "He"
+                        is), chunk sizes are too small. Fix: Increase overlap or use Parent-Child indexing.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you handle multi-language documents in a RAG pipeline?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> The most robust approach relies on high-quality multilingual models rather
+                    than naive translation:</p>
+                <ul>
+                    <li><strong>Ingestion:</strong> Embed the documents in their native languages using a model trained
+                        on multi-language data (e.g., `text-embedding-3-large` or `multilingual-e5`). Store them as-is.
+                    </li>
+                    <li><strong>Retrieval:</strong> When a user queries in Language A, the multilingual embedding model
+                        inherently maps it to a similar semantic vector space as Document B (written in Language B).
+                        Dense search natively crosses the language barrier without an explicit translation step.</li>
+                    <li><strong>Generation:</strong> Retrieve the native chunks, inject them into the LLM, and prompt:
+                        <em>"Using the provided context, answer the question in the language the query was asked
+                            in."</em> LLMs (like GPT-4) are excellent at cross-lingual synthesis. Note: For Keyword
+                        search (BM25), you <em>must</em> translate the query to the document's language first.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Design a hybrid search system combining keyword (BM25) and semantic (vector) search. How do you merge
+                and rerank results?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Hybrid search leverages the strengths of both dense (meaning) and sparse
+                    (exact match) search.</p>
+                <ol>
+                    <li><strong>Dual Path:</strong> The user query is sent simultaneously to a Vector DB (dense vectors)
+                        and an Inverted Index like Elasticsearch (BM25 sparse vectors for keywords/acronyms).</li>
+                    <li><strong>Retrieval:</strong> We pull the top `K=50` from both sources.</li>
+                    <li><strong>Merging via RRF:</strong> Given that vector scores (cosine) and BM25 scores (TF-IDF
+                        variants) are on completely different mathematical scales, we cannot simply add them. We use
+                        <strong>Reciprocal Rank Fusion (RRF)</strong>. This ranks documents based on their positional
+                        rank in both lists: `Score = 1 / (k + rank)`.</li>
+                    <li><strong>Reranking:</strong> We take the top merged 15 results and pass them through a
+                        Cross-Encoder (e.g., `bge-reranker-large`). The Cross-Encoder evaluates the <em>exact
+                            relationship</em> between the query and each chunk simultaneously, yielding the absolute
+                        best top 5 chunks for the LLM.</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- LLM in Production -->
+        <h2 id="llm-prod">LLM in Production</h2>
+
+        <div class="qa-container">
+            <h3>How do you reduce LLM API costs in a high-traffic production system?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Cost reduction is a multi-layered approach:</p>
+                <ul>
+                    <li><strong>Semantic Caching:</strong> Cache frequent queries using Redis so
+                        identical/highly-similar consecutive queries bypass the LLM entirely API.</li>
+                    <li><strong>Model Routing algorithms:</strong> Not all queries need GPT-4. We use an LLM-based
+                        router or semantic router to direct simple summarization queries to cheaper/faster models
+                        (GPT-4o-mini / Haiku) and route complex reasoning tasks to OpenAI Opus/Pro tier.</li>
+                    <li><strong>Prompt Optimization:</strong> Exclude irrelevant chat history (e.g., truncate memory to
+                        the last 4 turns) and use smaller context limits to drastically reduce input tokens.</li>
+                    <li><strong>Fine-Tuning:</strong> For hyper-specific repetitive tasks (e.g., classifying support
+                        tickets), we fine-tune a smaller open-weights model (like Llama-3 8B) which costs fractions of a
+                        cent compared to leading proprietary models.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>When would you cache LLM responses and how? What are the risks?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong></p>
+                <p><strong>When:</strong> We cache when there is an uneven distribution of queries (a "fat head"), like
+                    generic FAQs ("What's the refund policy?"), or expensive generation tasks that don't change
+                    frequently.</p>
+                <p><strong>How:</strong> We embed the incoming user query and check a Redis Vector Cache. If the cosine
+                    similarity matches an existing key with `>0.95` confidence, we return the cached string.</p>
+                <p><strong>Risks:</strong> 1) <strong>Context Contamination:</strong> A user asking "What is my
+                    balance?" should never be cached globally; caching must respect `tenant_id` or `user_id`. 2)
+                    <strong>Staleness:</strong> If the underlying RAG document changes, the cache serving the old policy
+                    will persist unless explicitly invalidated via event-driven mechanisms. 3)
+                    <strong>Security:</strong> PII injection into shared caching pools.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you handle LLM rate limits gracefully in a backend system?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> You must protect the API layer to prevent cascading downstream failures:</p>
+                <ul>
+                    <li><strong>Exponential Backoff + Jitter:</strong> We configure the LLM client (e.g.,
+                        LiteLLM/LangChain) with backoff. If we get a 429 response, we wait 1s, 2s, 4s, 8s plus a random
+                        sub-second jitter to prevent the "thundering herd" problem pressing the API all at once.</li>
+                    <li><strong>Async Queues:</strong> For long-running batch jobs, push LLM generation into a BullMQ
+                        queue. If rate limited, the worker pauses processing for the exact seconds specified in the
+                        `Retry-After` HTTP header.</li>
+                    <li><strong>UX Grace:</strong> For real-time chats, we stream responses. If delayed, the UI shows
+                        intermediate loader states ("Thinking...", "Analyzing documents..."). If an absolute timeout
+                        hits, we fall back to a predefined generic message instructing the user to try again.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Design a fallback strategy when your primary LLM provider (OpenAI/Anthropic) goes down.</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> An enterprise system uses an abstraction proxy (like LiteLLM or an internal
+                    Provider/Adapter pattern):</p>
+                <ol>
+                    <li>The system attempts `gpt-4o`.</li>
+                    <li>If a 5xx error or prolonged Timeout is caught, the orchestrator triggers the <strong>Fallback
+                            Policy</strong>.</li>
+                    <li>The orchestrator dynamically re-maps the prompt to Anthropic Claude 3.5 Sonnet payload format
+                        and issues the request.</li>
+                    <li>If that fails, it falls back to a self-hosted `vLLM` container running Llama-3 in a regional
+                        VPC.</li>
+                    <li>To prevent thrashing, we implement a <strong>Circuit Breaker pattern</strong>. If OpenAI fails 5
+                        times in a row, the circuit "opens" and routes all traffic to the fallback provider immediately
+                        for the next 5 minutes before attempting to "half-open" and test the primary provider again.
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you version prompts in production? What happens when a prompt change breaks downstream behavior?
+            </h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Prompts are volatile code. We treat them exactly like source code:</p>
+                <ul>
+                    <li><strong>Storage:</strong> Prompts are stored in Git (e.g., generic JSON or `.yaml` files)
+                        decoupled from application logic, or via a Prompt Management Dashboard (LangSmith/Vellum).</li>
+                    <li><strong>Versioning:</strong> Every modification creates a semantic version (e.g.,
+                        `prompt_v1.2.0`).</li>
+                    <li><strong>Prevention:</strong> Before a prompt is merged, it must pass an automated CI/CD
+                        evaluation pipeline. It checks the prompt against a "Golden Dataset" of 50-100 regression
+                        queries. If accuracy drops below an 85% threshold, the PR fails.</li>
+                    <li><strong>Rollback:</strong> If a prompt change sneaks into production and breaks down-stream
+                        systems (e.g., outputs malformed JSON), we can instantly rollback to the previous Git
+                        commit/version tag via the environment variables to restore operation without refactoring
+                        application code.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you stream LLM responses to the frontend efficiently?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> To minimize Time-To-First-Token (TTFT), we use Server-Sent Events (SSE) or
+                    WebSockets.</p>
+                <ol>
+                    <li>The client opens a persistent SSE connection (`text/event-stream`).</li>
+                    <li>The Node.js/Python backend invokes the LLM API with `stream=True`.</li>
+                    <li>As the provider sends byte chunks back to the server, the backend iterates over the async
+                        generator and instantly flushes these tokens directly to the SSE stream.</li>
+                    <li>The React/Vue frontend consumes the SSE endpoint using libraries like
+                        `@microsoft/fetch-event-source` and reactively updates state, appending text to the user's view
+                        word-by-word.</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Hallucination & Reliability -->
+        <h2 id="reliability">Hallucination & Reliability</h2>
+
+        <div class="qa-container">
+            <h3>How do you detect and mitigate hallucinations in a production RAG system?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong></p>
+                <p><strong>Mitigation:</strong> 1) Stricter prompting: "Answer only using the provided text. Cite your
+                    source." 2) Top-K tuning: Provide highly relevant chunks (via reranking) to minimize noise taking up
+                    context. 3) Reduce Temperature to 0.</p>
+                <p><strong>Detection:</strong> We use an LLM-as-a-judge system running asynchronously on logged queries.
+                    We parse the generated answer and ask an evaluator LLM: "Does the answer perfectly align with this
+                    source context?" If the score is low, we flag it in a dashboard for human review.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>What is faithfulness vs answer relevance vs context recall — and how do you measure each?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> These are core RAG metrics (often measured via RAGAS):</p>
+                <ul>
+                    <li><strong>Faithfulness (Hallucination metric):</strong> Checks if the generated answer is entirely
+                        entailed by the retrieved context. (Measured by LLM-as-a-judge evaluating premise vs
+                        hypothesis).</li>
+                    <li><strong>Answer Relevance:</strong> Checks if the generated answer directly addresses the user's
+                        initial query, avoiding evasive or tangential answers. (Measured by checking semantic similarity
+                        between generated answers and the question intent).</li>
+                    <li><strong>Context Recall:</strong> Checks if the retriever actually fetched all the necessary
+                        information required to answer the query, validating search quality. (Measured against an
+                        annotated ground-truth answer).</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How would you build an automated evaluation pipeline for your LLM outputs?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong></p>
+                <ol>
+                    <li>Create a <strong>Golden Dataset</strong>: 100 manually curated rows of `[Query, Expected
+                        Context, Expected Output]`.</li>
+                    <li>Integrate a framework like RAGAS or TruEra into the CI/CD pipeline (GitHub Actions).</li>
+                    <li>On pull request (e.g., when a chunk size changes or a prompt is updated), a script runs the
+                        entire dataset through the dev environment.</li>
+                    <li>Calculate aggregate scores for Faithfulness, Relevance, and BLEU/ROUGE (if absolute string match
+                        is needed).</li>
+                    <li>If the new pipeline scores `< 0.9` (or substantially lower than the previous baseline), the
+                            pipeline halts and blocks the merge.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>A customer reports the AI gave wrong information. Walk me through your incident response.</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong></p>
+                <ol>
+                    <li><strong>Replicate & Isolate:</strong> Locate the specific query via a unique `trace_id` in our
+                        observability tool (LangSmith). Re-run the exact query in staging.</li>
+                    <li><strong>Debug Pipeline:</strong> Did the Vector DB retrieve the wrong chunk? (Context Recall
+                        issue). Did the LLM ignore the correct chunk and make things up? (Faithfulness issue).</li>
+                    <li><strong>Patch:</strong> If chunking failed, improve metadata or reranking. If the LLM failed,
+                        adjust the system prompt to explicitly restrict that hallucination pattern.</li>
+                    <li><strong>Regression Testing:</strong> Add the customer's exact query to our Golden Dataset to
+                        ensure this particular edge-case never breaks in future updates.</li>
+                    <li><strong>Deploy & Communicate:</strong> Push the patch and inform the customer, showing the
+                        system is adaptable and improving.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you ground LLM responses strictly to retrieved context and prevent it from using parametric
+                knowledge?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> This requires aggressive prompt engineering and parameter tuning:</p>
+                <ul>
+                    <li><strong>Parameters:</strong> Set Temperature to 0.0 and Top_P to a low threshold.</li>
+                    <li><strong>Prompting Schema:</strong>
+                        <br><code>You are a strict extraction system. NEVER use prior knowledge. Answer ONLY using the text below. If the text does not contain the answer, your MUST reply "Information not found in context".</code>
+                    </li>
+                    <li><strong>Chain of Thought logic:</strong> Enforce the model to extract quotes first before
+                        answering: `Step 1. Quote the exact text confirming the answer. Step 2. Summarize the quoted
+                        text.` This forces grounding validation before generation.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Multi-Tenant Architecture -->
+        <h2 id="multi-tenant">Multi-Tenant Architecture</h2>
+
+        <div class="qa-container">
+            <h3>You're building a GenAI SaaS with 500 tenants. How do you isolate their data in a shared vector DB?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> We use <strong>Metadata Filtering</strong>, an industry standard for logical
+                    partition isolation without the infrastructure cost of 500 separate databases.</p>
+                <p>When a document is ingested, every chunk receives a metadata tag: `{ "tenant_id": "T-123", "dept":
+                    "HR" }`. At query time, the API Gateway authenticates the user, securely injecting `T-123` into the
+                    backend. The backend hardcodes a pre-filter (`$eq: { tenant_id: "T-123" }`) into every vector
+                    search. The Vector DB executes the filter <em>before</em> calculating distances, guaranteeing Tenant
+                    A mathematically cannot retrieve Tenant B's vectors.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you implement per-tenant rate limiting for LLM API calls?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> We use an API Gateway (like Kong) paired with a Redis distributed cache.</p>
+                <p>We deploy a <strong>Token Bucket algorithm</strong>. Each tenant has a max Tokens-Per-Minute (TPM)
+                    allocation based on their subscription tier. Before dispatching a request to OpenAI, the backend
+                    checks Redis: `INCR tenant:123:tokens_used`. If the accumulated tokens exceed their limit, the
+                    backend rejects the request immediately returning a `HTTP 429 Too Many Requests` back to the tenant,
+                    shielding the underlying LLM provider from the load.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you handle per-tenant prompt customization without managing 500 different prompts?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> We use a <strong>Compositional Prompt Architecture</strong> stored in a
+                    relational DB (e.g., PostgreSQL).</p>
+                <p>We maintain a single "Global Core Prompt" (e.g., "You are an AI assistant processing documents...").
+                    We allow tenants to define override rules in a Settings UI (e.g., "Always respond in Spanish"). In
+                    the DB, the tenant's record holds a `custom_instructions` text field. At generation time, the
+                    backend fetches both and concatenates them dynamically using variables: `<Global Instruction>
+                        {tenant.custom_instructions} User Query: {query}`. This avoids managing 500 distinct files.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Design cost attribution — how do you know which tenant is consuming how many tokens?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> LLM APIs (OpenAI/Anthropic) natively return a `usage` payload inside every
+                    response containing `prompt_tokens` and `completion_tokens`.</p>
+                <p>The backend intercepts this payload, maps those tokens to current provider pricing (e.g., $5.00/1M
+                    prompt tokens), and emits a structured log or telemetry event tagged with the authenticated
+                    `tenant_id`. These events are piped into a Data Warehouse (Snowflake/Clickhouse) or Time-Series
+                    database, rolling up via materialized views to provide internal billing dashboards or
+                    customer-facing usage metrics.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>A tenant's data must be deleted immediately (GDPR). How do you handle this in a vector DB?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Vector databases do not have native sub-table level drops, so we rely on
+                    explicit mapping.</p>
+                <p>We maintain a canonical relational database (Postgres) representing our tenant schema. When a tenant
+                    triggers an account deletion, we collect their internal `tenant_id` alongside all their
+                    `document_ids`. We then issue a batch metadata-based delete command to the Vector database: `DELETE
+                    from collection WHERE metadata.tenant_id == "T-123"`. The Vector DB invalidates the physical
+                    embeddings immediately. This is backed up by TTLs (Time to Live) on associated cloud storage
+                    buckets.</p>
+            </div>
+        </div>
+
+        <!-- Agents & Tool Use -->
+        <h2 id="agents">Agents & Tool Use</h2>
+
+        <div class="qa-container">
+            <h3>How does a ReAct agent work internally? What is the think-act-observe loop?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> ReAct interleaves reasoning capabilities with environment actions.</p>
+                <ol>
+                    <li><strong>Think:</strong> The LLM analyzes the user prompt and breaks down the task. It writes a
+                        "Thought" string explaining its rationale (e.g., "I need to find the customer's ID before I can
+                        look up their orders").</li>
+                    <li><strong>Act:</strong> Based on the thought, it outputs a strict JSON payload predicting the name
+                        of a registered tool and the arguments required (`call: { name: 'get_user_id', args: { email:
+                        'x@x.com' } }`). <em>Execution pauses.</em></li>
+                    <li><strong>Observe:</strong> The backend takes this JSON, executes the actual code (SQL/API call),
+                        and appends the raw result back to the LLM's memory trace as an "Observation".</li>
+                </ol>
+                <p>It loops back to "Think" indefinitely until it decides it has enough context to issue a "Final
+                    Answer".</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>When do agents fail in production and how do you guard against it?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Agents fail spectacularly due to non-deterministic execution paths:</p>
+                <ul>
+                    <li><strong>Failures:</strong> Hallucinating non-existent tools, passing malformed JSON parameters,
+                        or getting trapped in an infinite retry loop (calling the same failed tool 100 times).</li>
+                    <li><strong>Guards:</strong> Use `gpt-4o` or models specifically trained on <em>Structured
+                            Outputs</em> (JSON mode) to enforce strict schema adherence. Implement a hard
+                        `max_iterations = 5` threshold. If an agent loops 5 times without a `Final Answer`, the backend
+                        terminates it with an Exception back to the user interface indicating "Failed to complete task."
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you design tool schemas for an LLM agent that interacts with your legacy MySQL + MongoDB stack?
+            </h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> The Golden Rule is <strong>Bounded Context, No Raw Execution</strong>.</p>
+                <p>Never expose a generic "run_query(sql_string)" tool. Instead, build specific, atomic wrapper
+                    functions. <br>
+                    For MySQL: `tool: get_order_status(order_id: int, user_id: string)`<br>
+                    For Mongo: `tool: get_profile_preferences(user_email: string)`<br>
+                    Provide hyper-detailed schema descriptions to the LLM so it knows exactly what the tool does and
+                    what format the parameters must take. The backend code encapsulates the complex joins and
+                    sanitization, keeping the LLM strictly as a routing and extraction engine.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you prevent an agent from getting stuck in an infinite tool-calling loop?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Aside from a hard `max_iterations`, we implement <strong>Iterative Memory
+                        Awareness</strong>.</p>
+                <p>If an agent calls Tool X with Argument Y, and it receives `Error: Data Not Found`, it might just try
+                    it again due to lack of diverse reasoning. We log the history trace. If our backend orchestrator
+                    detects that the exact same Tool+Argument combo was executed twice consecutively yielding the exact
+                    same error, we intercept and forcibly prompt the LLM: <em>"System Observation: Tool X has failed
+                        twice. Try an alternative strategy or exit and ask the user for clarification."</em></p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Design an agent that can answer questions by querying both a SQL database and a vector store. How do you
+                decide which tool to call?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> You expose both systems as modular tools to the Agent.</p>
+                <p>Tool 1: `query_structured_sales_db(SQL_query)` - Decription: "Use this to answer questions about
+                    exact sales numbers, dates, aggregations, counts, and revenue figures."<br>
+                    Tool 2: `query_unstructured_policy_docs(search_string)` - Description: "Use this to answer
+                    conceptual questions about company policies, return rules, definitions, and subjective summaries."
+                </p>
+                <p>The LLM's reasoning loop evaluates the intent. If it sees "What was the revenue in Q3?", it routes to
+                    structured SQL. If it sees "Why was the Q3 contract rejected?", it routes to the Vector Store. For
+                    hybrid queries, it will call both sequentially and synthesize the observations.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you add human-in-the-loop approval for high-stakes agent actions?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Through asynchronous decoupling states.</p>
+                <p>When the Agent selects a high stakes tool (e.g., `process_customer_refund`), the backend intercepts
+                    execution <em>before</em> running the underlying function. The Agent's process tree transitions into
+                    a `PAUSED_WAITING_APPROVAL` state. The backend sends a WebSocket/API event to the frontend UI:
+                    "Agent wants to run a refund for $500. [Approve] / [Deny]". When the human clicks Approve, the
+                    backend wakes the paused executing state, finishes the function call, and resumes the Agent loop
+                    with an "Action Approved and Executed" observation.</p>
+            </div>
+        </div>
+
+        <!-- Async Queue Architecture -->
+        <h2 id="async-queue">Async & Queue Architecture for LLMs</h2>
+
+        <div class="qa-container">
+            <h3>Why would you use an async job queue for LLM tasks instead of a synchronous API call?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Synchronous logic fails due to network unreliability and generation latency.
+                </p>
+                <p>LLM streams can take anywhere from 2 seconds to 4 minutes depending on output length and provider
+                    congestion. If 1,000 users upload PDFs synchronously, the web server's HTTP threads will lock up
+                    completely, resulting in 504 Gateway Timeouts. An async queue (BullMQ, Celery) allows the backend to
+                    return a 202 Accepted instantly. Dedicated background workers process the heavy LLM tasks at their
+                    own decoupled pace, ensuring the primary web server is always highly available.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Design a BullMQ-based pipeline for processing 1000 document ingestion jobs with retry logic and progress
+                tracking.</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> We use <strong>BullMQ Flows (Parent-Child chaining)</strong>.</p>
+                <ol>
+                    <li>A user uploads 1000 PDFs. The system creates a single `Batch_Parent` job tracking the status of
+                        1000 individual `Ingest_Child` jobs mapped to each PDF.</li>
+                    <li>Worker Nodes pick off `Ingest_Child` jobs one by one. They extract text, create chunks, hit the
+                        embedding API, and upsert to the Vector Store.</li>
+                    <li>As each `Ingest_Child` completes, it updates the `Batch_Parent` progress (e.g., 250/1000
+                        complete) which the frontend polls.</li>
+                    <li>If a chunk embedding fails due to a network error, BullMQ automatically retries the
+                        <em>specific</em> child job using an Exponential Backoff policy (e.g., 5 retry maximums),
+                        ensuring one bad PDF doesn't break the entire 1000 document batch.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you prioritize urgent LLM jobs over batch jobs in the same queue?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> In queuing systems like BullMQ, this is handled via Integer Priorities.</p>
+                <p>When queuing an asynchronous chat generation request (where a user is waiting Real-time at screen),
+                    we enqueue the job with `Priority = 1`. When we kick off a massive hourly background scraping and
+                    text classification job, we enqueue it with `Priority = 10`. The worker infrastructure inherently
+                    sorts the Redis active list by priority value, ensuring that any real-time user request dynamically
+                    skips ahead of thousands of background batch tasks.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>A long-running LLM job fails midway. How do you implement resumable processing?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> We implement <strong>Idempotency with State Tracking</strong>.</p>
+                <p>If we are extracting structured data from a 500-page lease document, we do not treat the 500 pages as
+                    a single monolithic block. Instead, we chunk it. After successfully processing every 10 pages, the
+                    worker updates a database record: `Progress Cursor = 40`. If the worker container crashes midway,
+                    the job fails and re-enters the active queue. When the <em>new</em> worker picks up the job, it
+                    polls the database, reads `Progress Cursor = 40`, and gracefully resumes analysis starting precisely
+                    from page 41, saving massive token costs.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you handle backpressure when LLM API rate limits are hit mid-queue?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> With a queue-level Rate Limiter plugin reacting directly to API headers.</p>
+                <p>When an LLM provider returns a 429 error, it typically includes a `Retry-After: 30` header indicating
+                    a cool-off window. Instead of aggressively retrying and triggering a ban, the worker catches the 429
+                    error and explicitly tells the BullMQ global queue manager to "PAUSE". The manager halts the entire
+                    execution queue for exactly 30 seconds. This applies systemic backpressure, stopping all workers
+                    instantly preventing further cascading api violations. Once 30 seconds expires, the queue unpauses
+                    automatically.</p>
+            </div>
+        </div>
+
+        <!-- NL-to-SQL -->
+        <h2 id="nl-to-sql">NL-to-SQL Specifically</h2>
+
+        <div class="qa-container">
+            <h3>What are the failure modes of NL-to-SQL in production?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> There are four primary failure states:</p>
+                <ol>
+                    <li><strong>Hallucination:</strong> Creating tables or column names that simply do not exist in your
+                        database schema.</li>
+                    <li><strong>Syntax Errors:</strong> Combining incompatible functions, missing GROUP BY statements,
+                        or invalid SQL dialect translation (e.g., assuming Postgres syntax within a Snowflake
+                        environment).</li>
+                    <li><strong>Business Logic Misinterpretation:</strong> The query is syntactically valid but
+                        functionally wrong. (e.g., The user asks for "Revenue," and the LLM sums `total_cart_value`
+                        instead of `completed_purchases`.).</li>
+                    <li><strong>Security:</strong> Prompt injection causing destructive outputs (`DROP TABLE`).</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you handle ambiguous queries where multiple SQL interpretations are valid?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> This is solved at the Prompt and UX levels.</p>
+                <p>First, prompt the LLM to identify ambiguity: <em>"If the query request is vague and has multiple
+                        conflicting SQL interpretations, output a clarifying question to the user instead of generating
+                        SQL."</em></p>
+                <p>If generated anyway, the UI must visualize the assumptions. We display the executed data table but
+                    provide a natural language rationale above it: <em>"I assumed 'active users' means users who logged
+                        in within the last 30 days. To change this assumption, refine your question."</em></p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you prevent SQL injection via LLM-generated queries?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> 100% Zero-Trust execution infrastructure.</p>
+                <p>No LLM code should ever have mutation privileges. Execute the generated SQL via a dedicated IAM
+                    Database Role that is completely <strong>Read-Only (`SELECT` permissions only)</strong>. Drop,
+                    Truncate, Insert, and Update must be explicitly revoked. Additionally, pass the generated string
+                    through a strict AST (Abstract Syntax Tree) SQL parser/linter in the backend to ensure it is bounded
+                    to a single SELECT query without malicious chained statement injections (`;`).</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you give the LLM enough schema context without blowing the context window on a 200-table
+                database?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> We implement <strong>Schema Retrieval (RAG for Schema).</strong></p>
+                <p>We do not dump 200 schemas into the prompt. Instead, we chunk the database structure table-by-table
+                    (combining DDL, column descriptions, and sample rows) and embed them into a Vector Database. When
+                    the user asks, "Show regional sales", we dynamically search the Vector Store to retrieve the top 3-5
+                    most mathematically relevant schemas (e.g., `sales_records`, `region_mapping`). We inject only those
+                    5 relevant tables into the LLM context, ensuring high accuracy while saving thousands of tokens.</p>
+            </div>
+        </div>
+
+
+        <!-- Tailored Architecture Questions -->
+        <h2 id="background-specific">Curated Architecture Questions</h2>
+
+        <div class="qa-container">
+            <h3>Walk me through your multi-tenant architecture decision — why did you choose that over schema-per-tenant
+                or DB-per-tenant?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> DB-per-tenant creates massive operational drag. When deploying an LLM stack,
+                    managing 500 individual Postgres instances, scaling 500 redundant CPU allocations, and orchestrating
+                    massive migration scripts for schema updates is agonizing. Schema-per-tenant limits DB connection
+                    pooling limits. I opted for a <strong>Shared DB with Row-Level/Metadata Filtering</strong>. It
+                    provides cost efficiency, instant tenant onboarding, and we enforce strict data isolation inside the
+                    API access logic and Vector DB metadata queries, which is computationally trivial and highly secure
+                    when implemented correctly via ORMs/Frameworks.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Why BullMQ over alternatives like Celery, SQS, or RabbitMQ for your use case?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> The platform was rooted deeply bridging TypeScript applications and LLM
+                    logic. BullMQ heavily leverages Redis (which we already required for Semantic Caching and Rate
+                    Limiting). This drastically streamlined infrastructure, unlike SQS or RabbitMQ which required
+                    onboarding new AWS/AMQP topologies. BullMQ excels at advanced <strong>Flows (Parent-child job tree
+                        dependencies)</strong>, which are vital for asynchronous Agent loops, and has native logic for
+                    API Rate Limit backpressure plugins directly mapped to its Redis core.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>In your RAG pipeline, how did you decide on chunk size and overlap?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> We avoided guessing and ran an empirical evaluation benchmark via RAGAS.</p>
+                <p>We created a Golden Dataset and ran the ingestion pipeline testing configurations: `[256-token,
+                    512-token, 1024-token]`. We found that 256 generated too much noise fragmenting clauses, leading to
+                    low Context Recall. 1024 was too bloated, increasing API costs and confusing the LLM due to the
+                    "Lost in the Middle" phenomenon. 512 tokens with a standard ~50-token semantic overlap provided the
+                    golden mean between embedding-level precision and generation-phase coherence.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How does your API Gateway handle authentication across microservices?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Microservices should be decoupled from identity providers. We use the API
+                    Gateway (e.g., Kong) as the primary security checkpoint. The client sends a JWT token. The Gateway
+                    validates the JWT signature, claims, and expiry. Once validated, the Gateway rips off the JWT token
+                    and appends explicitly trusted internal HTTP Headers (e.g., `X-Internal-Tenant-ID`,
+                    `X-Internal-User-Role`) before passing the request to downstream backend components like the Vector
+                    DB or Generation Engine. The microservices inherently trust these specific headers since the
+                    internal VPC network prevents direct public bypasses.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>If you were to scale your current architecture 10x, what breaks first?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> The two biggest bottlenecks would be <strong>Vector Search Latency under
+                        heavy concurrent load</strong> and <strong>Provider API Rate Limits</strong>.</p>
+                <p>At 10x load, performing approximate nearest neighbor search via brute force or un-optimized Index
+                    configurations (HNSW) without memory allocation tweaking will drastically slow down retrieval speed.
+                    The other failure is TPM (Tokens per Minute). Rapid traffic spikes will instantly exhaust OpenAI
+                    bounds causing a massive backup in the BullMQ waiting queues. Moving to dedicated API infrastructure
+                    (Microsoft Azure Provisioned Throughput Units - PTUs) and Sharding the Vector Database horizontally
+                    across clusters would be the immediate resolution roadmaps.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

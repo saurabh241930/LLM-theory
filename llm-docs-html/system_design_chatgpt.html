@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Clone System Design</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .depth {
+            margin-top: 15px;
+            padding: 10px;
+            background: #eef2ff;
+            border-left: 3px solid #36c;
+            font-size: 0.9em;
+        }
+
+        .trap {
+            margin-top: 15px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 3px solid #ffecb5;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>System Design: ChatGPT Clone</h1>
+        <div class="subtitle">Personal Assistant Chatbot for 10M Active Users</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>Q83: Design a ChatGPT Clone (Personal Assistant Chatbot) for 10M Users</h3>
+            <div class="answer">
+                <div class="one-liner">A massively scalable streaming architecture utilizing SSE/WebSockets for realtime
+                    token delivery, conversational memory management via NoSQL, and a heavily optimized LLM Inference
+                    cluster.</div>
+
+                <p>When giving this interview, treat the problem not just as a standard web application, but as a
+                    specialized ML Serving pipeline. The main challenges are <strong>Streaming Latency
+                        (Time-To-First-Token)</strong>, <strong>Context Window Management</strong>, and <strong>GPU
+                        Compute Cost</strong>.</p>
+
+                <h4>1. High-Level Architecture</h4>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+                    flowchart TD
+                    Client["Web / Mobile Client"] <-->|Streaming SSE/WebSocket| Gateway["API Gateway / Load Balancer"]
+
+                        Gateway --> Auth["Auth Service (JWT)"]
+                        Gateway --> Session["Chat Session Manager"]
+
+                        Session <--> Redis[("Redis (Context Cache / Rate Limiting)")]
+                            Session <--> Cassandra[("Cassandra (Chat History DB)")]
+
+                                Session -.->|gRPC| Orchestrator["Inference Orchestrator"]
+
+                                subgraph GPU Inference Cluster
+                                Orchestrator --> GPU1["LLM Serving Node (vLLM / Triton)"]
+                                Orchestrator --> GPU2["LLM Serving Node"]
+                                Orchestrator --> GPU3["LLM Serving Node"]
+                                end
+
+                                GPU1 -.->|Stream Tokens| Session
+                </div>
+
+                <h4>2. Key Components & Approach</h4>
+
+                <h5>A. API Gateway & Connection Management</h5>
+                <ul>
+                    <li><strong>Protocol:</strong> Use <strong>Server-Sent Events (SSE)</strong> for the core LLM
+                        output. Unlike WebSockets (which are bi-directional), SSE is incredibly efficient for
+                        uni-directional streaming from server to client, perfectly matching the token-by-token
+                        generation of LLMs.</li>
+                    <li><strong>Rate Limiting:</strong> Use a Token Bucket algorithm via Redis to prevent abusive usage
+                        (GPUs are expensive). Limit both "requests per minute" and "input tokens per request".</li>
+                </ul>
+
+                <h5>B. Chat Session & Memory Management</h5>
+                <ul>
+                    <li>An LLM is inherently stateless. True "conversational memory" requires the backend to fetch the
+                        previous chat history and append it to the current user prompt before sending it to the GPU.
+                    </li>
+                    <li><strong>Storage:</strong> Use a NoSQL database like <strong>Cassandra/ScyllaDB</strong> for chat
+                        history. It handles massive write-heavy workloads perfectly since every single turn of a
+                        conversation is an INSERT.</li>
+                    <li><strong>Cache:</strong> Keep the <em>active</em> conversation window in <strong>Redis</strong>.
+                        When a user sends a message, fetch the last N messages from Redis (e.g., last 4000 tokens)
+                        instantly instead of querying disk.</li>
+                </ul>
+
+                <h5>C. The Inference Cluster (The Bottleneck)</h5>
+                <p>Standard load balancers (Round Robin) are terrible for LLMs because request lengths vary wildly (a
+                    "Hello" vs "Write a book").</p>
+                <ul>
+                    <li><strong>Continuous Batching:</strong> Use an engine like <strong>vLLM</strong>. Instead of
+                        waiting for a batch of 16 queries to all finish, vLLM dynamically injects new queries into the
+                        GPU as soon as older ones complete.</li>
+                    <li><strong>PagedAttention:</strong> Explain to the interviewer that memory fragmentation in the KV
+                        Cache (the GPU memory storing the context of the conversation) limits batch size. Mentioning
+                        PagedAttention (memory management like virtual memory in OS) is a massive senior signal.</li>
+                    <li><strong>Orchestrator:</strong> Routes requests to GPUs based on <em>KV Cache Locality</em>. If
+                        GPU-2 already holds the context for User A's conversation in memory, route User A's next message
+                        to GPU-2 to avoid re-computing the prompt.</li>
+                </ul>
+
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+                    sequenceDiagram
+                    participant Client
+                    participant DB as Redis/Cassandra
+                    participant App as Session Manager
+                    participant GPU as Inference Cluster
+
+                    Client->>App: "Explain quantum physics" (Session=123)
+                    App->>DB: Fetch last 5 messages
+                    DB-->>App: [Msg1, Msg2, ...]
+                    App-->>App: Truncate to Max Context Window
+                    App->>GPU: Prompt = [History] + "Explain quantum physics"
+                    loop Token Generation
+                    GPU-->>App: Stream "Quantum"
+                    App-->>Client: SSE Event "Quantum"
+                    GPU-->>App: Stream " physics..."
+                    App-->>Client: SSE Event " physics..."
+                    end
+                    App->>DB: Async Save User Prompt & Full AI Answer
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal) - Edge Cases & Optimizations:</strong>
+                    <ul>
+                        <li><strong>Context Overflow:</strong> What if the conversation exceeds 128k tokens? Instead of
+                            dropping old messages, run a background summarization agent. "Turn the first 50 messages
+                            into a 500-token summary", keeping the core facts but saving token space.</li>
+                        <li><strong>Cold Starts vs Hot Instances:</strong> Generating the first token
+                            (Time-To-First-Token / Prefill Phase) is compute-heavy. Generating subsequent tokens (Decode
+                            Phase) is memory-bandwidth heavy. Split the cluster—have dedicated GPUs that ONLY process
+                            the initial prompt, and transfer the intermediate state (KV Cache) to <em>Decode</em> GPUs
+                            that stream the tokens back.</li>
+                    </ul>
+                </div>
+
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Don't design it like a standard CRUD app. If the interviewer asks
+                    "How do you scale the database?", clarify that the DB isn't the bottleneck—the GPU memory (KV cache)
+                    is. Storing text is cheap; executing transformer math is expensive. Focus heavily on streaming
+                    protocols and GPU utilization.
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

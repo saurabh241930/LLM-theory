@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alignment: Instruct Tuning, RLHF, DPO</title>
+    <style>
+        :root {
+            /* Light Mode Palette */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --accent-danger: #b91c1c; /* Red */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Robust Font Stack */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.5; /* Increased for readability */
+            font-size: 14px; /* Increased from 13px for better readability */
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--font-main) 14px; /* Match body font size */
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+            .diagram-box { min-height: auto; padding: var(--space-md); }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.1rem; /* Slightly larger for hierarchy */
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 6px; /* Increased margin for readability */
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: 6px; }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.85rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 150px; /* Optimized height */
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden; /* Crucial to prevent breaking layout */
+            max-width: 100%;
+            word-wrap: break-word; /* Prevents long text from breaking layout */
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Progression Bars */
+        .prog-container { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+        .prog-row { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; }
+        .prog-label { width: 70px; text-align: right; font-weight: 600; font-family: var(--font-main); }
+        .prog-track { flex: 1; height: 10px; background: #e2e8f0; border-radius: 4px; overflow: hidden; width: 100%; }
+        .prog-fill { height: 100%; width: 0; transition: width 2s ease-out; }
+        
+        .p-base .prog-fill { background: var(--accent-danger); animation: loadBar 0.5s forwards; }
+        .p-instruct .prog-fill { background: var(--accent-warning); animation: loadBar 0.5s 0.3s forwards; }
+        .p-aligned .prog-fill { background: var(--accent-primary); animation: loadBar 0.5s 0.6s forwards; }
+
+        @keyframes loadBar { from { width: 0; } to { width: 100%; } }
+
+        /* 2. Instruction Tuning (Data Flow) */
+        .data-flow { 
+            width: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            position: relative; 
+            padding: 0 10px;
+        }
+        .df-pair { 
+            display: flex; 
+            gap: 8px; 
+            align-items: center; 
+            font-size: 0.75rem; 
+            padding: 6px 12px; 
+            background: #f1f5f9; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 4px; 
+            opacity: 0; 
+            transform: translateY(10px); 
+            transition: 0.4s;
+        }
+        .df-key { color: var(--accent-primary); font-weight: 600; font-family: monospace; }
+        .df-val { color: var(--text-secondary); font-family: var(--font-main); }
+        
+        .df-flow-arrow { 
+            position: absolute; left: 20%; top: 50%; width: 6px; height: 3px; background: var(--accent-primary); 
+            opacity: 0; animation: flowDown 2s infinite ease-in-out; 
+        }
+        @keyframes flowDown { 0% { top: -10px; opacity: 0; } 50% { top: 50%; opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+        /* 3. RLHF Loop */
+        .rlhf-container { 
+            position: relative; 
+            width: 90%; 
+            height: 140px; 
+            margin: 0 auto;
+            display: flex; align-items: center; justify-content: center; 
+            background: #f8fafc; 
+            border: 1px dashed #cbd5e1; 
+            border-radius: 4px; 
+            margin-top: 10px; 
+        }
+        .rlhf-loop-visual {
+            position: relative; width: 120px; height: 100px; /* Smaller container to fit nicely */
+            top: 10px; left: 50%; 
+            transform: translateX(-50%);
+        }
+        .rl-node {
+            position: absolute; 
+            background: #fff; 
+            border: 1px solid #cbd5e1; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 0.7rem; 
+            text-align: center; z-index: 2;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .rn-gen { top: 10%; left: 10%; }
+        .rn-rank { top: 50%; right: 10%; border-color: var(--accent-success); color: var(--accent-success); }
+        .rn-rew { bottom: 30%; left: 50%; border-color: var(--accent-primary); color: var(--text-primary); }
+        .rn-ppo { bottom: 10%; left:50%; border-color: var(--accent-success); background: #f0fdf4; color: var(--accent-success); font-weight: bold; }
+
+        /* Loop Path Animation */
+        .rl-path { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;
+        }
+        .rl-path path {
+            fill: none; stroke: #334155; stroke-width: 2; 
+            stroke-dasharray: 100; stroke-dashoffset: 100;
+            animation: drawLoop 4s infinite linear;
+        }
+        @keyframes drawLoop { 
+            0% { stroke-dashoffset: 100; } 
+            80% { stroke-dashoffset: 0; } 
+            100% { stroke-dashoffset: 100; } 
+        }
+
+        /* 4. DPO (Branching) */
+        .dpo-branch { 
+            width: 100%; 
+            height: 140px; 
+            position: relative; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            border-radius: 4px;
+            background: #f8fafc;
+        }
+        .dp-node { 
+            width: 30px; height: 30px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 4px; 
+            background: #fff; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 0.7rem; 
+            position: absolute; 
+            z-index: 2; 
+            white-space: nowrap;
+        }
+        .dp-origin { top: 10%; left: 10%; }
+        .dp-a { top: 40%; left: 30%; border-color: var(--accent-success); background: #f0fdf4; transform: scale(1); }
+        .dp-b { top: 60%; left: 30%; border-color: font-size: 0.7rem; background: #fff1f2; transform: scale(1); opacity: 0.5; }
+        .dp-result { top: 50%; left: 70%; border: 1px solid var(--accent-success); background: #f0fdf4; transform: scale(1); opacity: 0.5; }
+
+        /* DPO Merge Animation */
+        .dl-line { position: absolute; height: 2px; background: #cbd5e1; transform-origin: left center; z-index: 1; opacity: 0.5; }
+        .dl-1 { width: 20px; transform: rotate(25deg); top: 25px; left: 25px; }
+        .dl-2 { width: 20px; transform: rotate(-25deg); top: 55px; left: 25px; }
+        .dl-merge { 
+            position: absolute; top: 50%; left: 50%; width: 10px; height: 40px; 
+            background: var(--accent-primary); 
+            opacity: 0;
+            animation: growLine 2s infinite ease-in-out;
+        }
+
+        @keyframes growLine { 0% { width: 10px; left: 25px; opacity: 0; } 50% { width: 40px; left: 25px; opacity: 1; } 100% { width: 10px; left: 65px; opacity: 0; } }
+
+        /* 5. Comparison (Bars) */
+        .comp-bars { display: flex; gap: 20px; height: 100px; align-items: flex-end; justify-content: center; }
+        .cb-group { flex: 1; display: flex; flex-direction: column; gap: 4px; width: 100%; }
+        .cb-label { font-size: 0.7rem; font-weight: bold; text-align: center; color: var(--text-primary); }
+        .cb-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; width: 100%; }
+        .cb-bar-bg { flex: 1; height: 8px; background: #e2e8f0; border-radius: 3px; overflow: hidden; width: 100%; }
+        .cb-bar-fill { height: 100%; width: 0; border-radius: 3px; transition: width 1.5s ease-out; }
+        .cb-rlhf .cb-bar-fill { background: var(--accent-warning); animation-delay: 0s; }
+        .cb-dpo .cb-bar-fill { background: var(--accent-success); animation-delay: 0.5s; }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body onload="initAnimations()">
+
+<div class="container">
+    <header>
+        <div>
+            <h1>14. Alignment: Instruct Tuning, RLHF & DPO</h1>
+            <div class="subtitle">Quality Progression • Human Feedback • Preference Optimization</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1: Alignment Problem -->
+    <section class="topic-section">
+        <div>
+            <h2>The Alignment Problem</h2>
+            <p>Pre-trained models generate text based on training data. They aren't optimized to be helpful, harmless, or honest. They might hallucinate or refuse to help.</p>
+            <p><strong>Solution:</strong> Alignment (Instruct Tuning, RLHF, DPO) teaches the model to follow human preferences.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Performance Quality</span>
+            <div class="prog-container">
+                <div class="prog-row">
+                    <div class="prog-label">Pre-trained</div>
+                    <div class="prog-track"><div class="prog-fill p-base"></div></div>
+                    <div style="font-size: 0.7rem; color: var(--accent-danger); text-align: right;">Hallucinates</div>
+                </div>
+                <div class="prog-row">
+                    <div class="prog-label">Instruct Tuned</div>
+                    <div class="prog-track"><div class="prog-fill p-instruct"></div></div>
+                    <div style="font-size: 0.7rem; color: var(--accent-warning); text-align: right;">Follows Instructions</div>
+                </div>
+                <div class="prog-row">
+                    <div class="prog-label">RLHF / DPO</div>
+                    <div class="prog-track"><div class="prog-fill p-aligned"></div></div>
+                    <div style="font-size: 0.7rem; color: var(--accent-success); text-align: right;">Helpful & Honest</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2: Instruction Tuning -->
+    <section class="topic-section">
+        <div>
+            <h2>Instruction Tuning</h2>
+            <p>Teach the model to follow instructions by training on datasets of {Instruction, Output} pairs (e.g., Alpaca, ShareGPT).</p>
+            <ul style="font-size: 0.9rem;">
+                <li><strong>Datasets:</strong> Alpaca (52k), ShareGPT (500k).</li>
+                <li><strong>Result:</strong> Model learns "If prompt X, then generate Y".</li>
+            </ul>
+        </div>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Supervised Learning</span>
+            <div class="data-flow">
+                <div class="df-pair style="animation-delay: 0s; opacity: 1;">
+                    <span class="df-key">Q:</span> "Summarize..." <span class="df-arrow"></span> <span class="df-val">"Summary text..."</span>
+                </div>
+                <div class="df-pair style="animation-delay: 0.5s; opacity: 1;">
+                    <span class="df-key">Q:</span> "Classify..." <span class="df-arrow"></span> <span class="df-val">"Positive"</span>
+                </div>
+                <div class="df-pair style="animation-delay: 1.0s; opacity: 1;">
+                    <span class="df-key">Q:</span> "What is...?" <span class="df-arrow"></span> <span class="df-val">"Explanation..."</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3: RLHF Pipeline (Full Width) -->
+    <section class="topic-section" style="grid-column: 1 / -1;">
+        <div class="diagram-box" style="min-height: 250px; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0;">
+            <span class="diagram-label">The RLHF Pipeline</span>
+            <div class="rlhf-container">
+                <svg class="rl-path" viewBox="0 0 120 120">
+                    <!-- Loop path -->
+                    <path d="M 60 30 L 60 40 L 100 40" fill="none" stroke="white" stroke-width="2" stroke-dasharray="100" stroke-dashoffset="100" marker-end="url(#arrow)" style="stroke: #64748b; opacity: 0.1;" />
+                    <path d="M 60 40 L 60 70 L 100 70 L 100 60" fill="none" stroke="#334155" stroke-width="2" stroke-dasharray="100" stroke-dashoffset="100" marker-end="url(#arrow)" />
+                    <path d="M 100 60 L 60 60" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+                    <!-- Human Feedback Loop -->
+                    <path d="M 60 55 Q 90 55 100 70" fill="none" stroke="#31a67a" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrow-green)" />
+                </svg>
+
+                <!-- Nodes -->
+                <div class="rl-node rn-gen">Generate<br>Candidates</div>
+                <div class="rl-node rn-rank">Human<br>Ranking</div>
+                <div class="rl-node rn-rew">Train Reward<br>Model</div>
+                <div class="rl-node rn-ppo">PPO<br>Optimize</div>
+                
+                <div style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary); text-align: center;">
+                    3 Stages: Generation → Ranking → Reward Model → RL Training
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>DPO (Direct Preference Optimization)</h2>
+            <p>DPO is a modern, simpler alternative to RLHF. It skips the explicit reward model and directly optimizes for human preferences in one step.</p>
+            <ul style="font-size: 0.9rem;">
+                <li><strong>RLHF:</strong> 3 stages. Complex. 2-4 weeks. $100K+.</li>
+                <li><strong>DPO:</strong> 1 stage (direct fine-tune on preferences). Days. $10K.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Branch & Merge</span>
+            <div class="dpo-branch">
+                <div class="dp-node dp-origin">Prompt</div>
+                
+                <div class="dl-1"></div>
+                <div class="dp-node dp-a">Resp A (Good)</div>
+                <div class="dl-merge"></div>
+                
+                <div class="dl-2"></div>
+                <div class="dp-node dp-b">Resp B (Bad)</div>
+                
+                <!-- The obstacle -->
+                <div style="position: absolute; top: 45%; left: 60%; width: 2px; height: 40px; background: var(--accent-danger); border-radius: 2px; z-index: 0;"></div>
+                <!-- Animated Merge Line -->
+                <div style="position: absolute; top: 45%; left: 50%; width: 15px; height: 2px; background: var(--accent-success); transform: rotate(-30deg); transform-origin: left center; animation: growLine 2s infinite ease-in-out;"></div>
+                
+                <div class="dp-node dp-result">Aligned Model</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>RLHF vs DPO Comparison</h2>
+            <p>Both achieve similar alignment quality (~90%+), but DPO is significantly faster and cheaper.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Time & Cost</span>
+            <div class="comp-bars">
+                <div class="cb-group">
+                    <div class="cb-label">RLHF</div>
+                    <div class="cb-row"><span>Time</span><div class="cb-bar-bg"><div class="cb-bar-fill cb-rlhf" style="width: 100%;"></div></div></div>
+                    <div class="cb-row"><span>Cost</span><div class="cb-bar-bg"><div class="cb-bar-fill cb-rlhf" style="width: 100%;"></div></div></div>
+                </div>
+                <div class="cb-group">
+                    <div class="cb-label">DPO</div>
+                    <div class="cb-row"><span>Time</span><div class="cb-bar-bg"><div class="cb-bar-fill cb-dpo" style="width: 10%;"></div></div></div>
+                    <div class="cb-row"><span>Cost</span><div class="cb-bar-bg"><div class="cb-bar-fill cb-dpo" style="width: 10%;"></div></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Instruct Tuning:</strong> Teaches model to follow instructions (~70-80% quality).</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>RLHF:</strong> Uses human ranking + RL to optimize preferences (~95% quality). Expensive ($100K+).</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>DPO:</strong> Simplifies RLHF. Direct preference fine-tuning. Days vs. 10x cheaper.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Quality:</strong> Progression: Pre-trained (50%) → Instruct (75%) → RLHF/DPO (90%+).</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    function initAnimations() {
+        // 1. DPO Animation
+        const line = document.querySelector('.dl-merge');
+        if (line) {
+            // Create a clone to animate separately from the layout flow
+            const clone = line.cloneNode(true);
+            line.parentNode.appendChild(clone);
+            
+            clone.style.transition = 'transform 2s ease-in-out infinite';
+            
+            const anim = () => {
+                clone.style.transform = 'scale(1.5)';
+                setTimeout(() => { clone.style.transform = 'scale(1)'; }, 1000);
+            };
+            setInterval(anim, 2000);
+            anim();
+        }
+    }
+</script>
+
+</body>
+</html>

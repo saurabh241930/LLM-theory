@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Function Calling: Compact Cheat Sheet</title>
+    <style>
+        :root {
+            /* Light Mode Palette (Consistent) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --accent-danger: #b91c1c; /* Red */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. Comparison (Split Flow) */
+        .comp-flow { width: 100%; height: 100px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .comp-row { display: flex; align-items: center; gap: 4px; position: relative; height: 40px; }
+        .cf-node { 
+            border: 1px solid #cbd5e1; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 0.6rem; text-align: center; z-index: 2;
+        }
+        .cf-line { flex: 1; height: 2px; background: #cbd5e1; position: relative; }
+        .cf-packet { 
+            position: absolute; width: 6px; height: 6px; background: #64748b; border-radius: 50%; top: -2px; left: 0;
+            animation: travelLine 2s infinite linear;
+        }
+        
+        /* Bad Packet */
+        .comp-row.bad .cf-packet { background: var(--accent-danger); }
+        /* Good Packet */
+        .comp-row.good .cf-packet { background: var(--accent-success); animation-delay: 1s; }
+
+        @keyframes travelLine { 0% { left: 0; } 90% { left: 100%; } 100% { left: 100%; opacity: 0; } }
+
+        /* 2. Schema (JSON Code) */
+        .json-code-block {
+            background: #1e293b; color: #cbd5e1; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 0.6rem; width: 90%; text-align: left; position: relative; overflow: hidden;
+        }
+        .jc-key { color: #93c5fd; }
+        .jc-str { color: #86efac; }
+        .jc-bool { color: #fdba74; }
+        .jc-scan-line {
+            position: absolute; top: 0; left: 0; width: 2px; height: 100%; background: var(--accent-success); opacity: 0.5;
+            animation: scanDown 3s infinite ease-in-out;
+        }
+        @keyframes scanDown { 0%, 100% { top: 0; opacity: 0; } 50% { opacity: 1; } }
+
+        /* 3. The Loop (Sequential) */
+        .loop-container { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+        .loop-step { 
+            display: flex; flex-direction: column; align-items: center; width: 40px; opacity: 0.3; transition: 0.3s;
+        }
+        .ls-num { width: 20px; height: 20px; background: #cbd5e1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; margin-bottom: 4px; }
+        .ls-text { font-size: 0.55rem; text-align: center; line-height: 1.2; }
+        
+        .loop-step.active .ls-num { background: var(--accent-primary); transform: scale(1.2); }
+        .loop-step.active { opacity: 1; }
+        
+        .loop-conn { flex: 1; height: 2px; background: #e2e8f0; margin: 0 4px; position: relative; }
+        .lc-anim {
+            position: absolute; top: -2px; left: 0; width: 6px; height: 6px; background: var(--accent-primary); border-radius: 50%;
+            display: none;
+        }
+        .loop-step.active ~ .loop-conn .lc-anim { display: block; animation: moveConn 1s linear infinite; }
+
+        @keyframes moveConn { from { left: 0; } to { left: 100%; } }
+
+        /* 4. Agent Pattern (Center Star) */
+        .agent-grid { position: relative; width: 100%; height: 140px; display: flex; align-items: center; justify-content: center; }
+        .ag-center {
+            width: 50px; height: 50px; background: var(--accent-primary); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: bold; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .ag-orbit {
+            position: absolute; width: 100%; height: 100%; border: 1px dashed #cbd5e1; border-radius: 50%; animation: spin 10s linear infinite;
+        }
+        .ag-tool {
+            position: absolute; width: 50px; background: #fff; border: 1px solid #cbd5e1; padding: 4px; border-radius: 4px; font-size: 0.5rem; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            opacity: 0.5; transition: 0.3s;
+        }
+        .ag-t1 { top: 0; left: 50%; transform: translateX(-50%); }
+        .ag-t2 { top: 70%; left: 85%; transform: translateX(-50%); }
+        .ag-t3 { top: 70%; left: 15%; transform: translateX(-50%); }
+        .ag-t4 { top: 25%; left: 85%; transform: translateX(-50%); }
+
+        /* Highlighting tools cyclically */
+        .ag-tool.highlight { border-color: var(--accent-success); background: #f0fdf4; opacity: 1; transform: translateX(-50%) scale(1.1); z-index: 20; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* 5. Pitfalls (Grid) */
+        .pit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; }
+        .pg-item { padding: 6px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.65rem; text-align: center; }
+        .pg-bad { border-color: #fca5a1; background: #fff1f2; color: #991b1b; }
+        .pg-good { border-color: #86efac; background: #f0fdf4; color: #166534; }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body onload="initAnimations()">
+
+<div class="container">
+    <header>
+        <div>
+            <h1>09. Function Calling / Tool Use</h1>
+            <div class="subtitle">LLM Agents • API Integration • Loops</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>What is Function Calling?</h2>
+            <p>Function calling allows LLMs to generate <strong>structured tool calls</strong> (JSON) instead of just text. This enables them to query databases, call APIs, or perform actions.</p>
+            <div class="insight">
+                💡 Bridges the gap between LLM reasoning and external systems.
+            </div>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Isolated vs. Connected</span>
+            <div class="comp-flow">
+                <!-- Bad Flow -->
+                <div class="comp-row bad">
+                    <div class="cf-node">User</div>
+                    <div class="cf-line"><div class="cf-packet"></div></div>
+                    <div class="cf-node">LLM</div>
+                    <div class="cf-line"><div class="cf-packet"></div></div>
+                    <div class="cf-node">Fail</div>
+                </div>
+                <!-- Good Flow -->
+                <div class="comp-row good">
+                    <div class="cf-node">User</div>
+                    <div class="cf-line"><div class="cf-packet"></div></div>
+                    <div class="cf-node">LLM</div>
+                    <div class="cf-line"><div class="cf-packet"></div></div>
+                    <div class="cf-node">API</div>
+                    <div class="cf-line"><div class="cf-packet"></div></div>
+                    <div class="cf-node">Success</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>The Schema (JSON)</h2>
+            <p>The LLM needs a <strong>Schema</strong> to know what tools exist. This JSON defines the function name, description, parameters, and required fields.</p>
+            <p><strong>Key:</strong> Descriptions must be specific. "Get data" is bad; "Get current weather for a city" is good.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Function Definition</span>
+            <div class="json-code-block">
+                <div class="jc-scan-line"></div>
+                <span class="jc-key">{</span><br>
+                &nbsp;&nbsp;<span class="jc-key">"name"</span>: <span class="jc-str">"get_weather"</span>,<br>
+                &nbsp;&nbsp;<span class="jc-key">"desc"</span>: <span class="jc-str">"Get weather for city"</span>,<br>
+                &nbsp;&nbsp;<span class="jc-key">"params"</span>: {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="jc-key">"city"</span>: { <span class="jc-key">"type"</span>: <span class="jc-str">"string"</span> },<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="jc-key">"required"</span>: [<span class="jc-str">"city"</span>]<br>
+                &nbsp;&nbsp;}<br>
+                <span class="jc-key">}</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>The Function Calling Loop</h2>
+            <ol style="font-size: 0.8rem; padding-left: 15px;">
+                <li><strong>User Query:</strong> "Weather in NYC?"</li>
+                <li><strong>LLM Decision:</strong> Needs tool. Generates JSON call.</li>
+                <li><strong>System Execution:</strong> Calls API with params.</li>
+                <li><strong>Result Feed:</strong> Returns API output to LLM.</li>
+                <li><strong>Final Gen:</strong> LLM synthesizes answer.</li>
+            </ol>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Execution Flow</span>
+            <div class="loop-container">
+                <div class="loop-step" id="ls1"><div class="ls-num">1</div><div class="ls-text">User</div></div>
+                <div class="loop-conn"><div class="lc-anim"></div></div>
+                
+                <div class="loop-step" id="ls2"><div class="ls-num">2</div><div class="ls-text">LLM</div></div>
+                <div class="loop-conn"><div class="lc-anim"></div></div>
+                
+                <div class="loop-step" id="ls3"><div class="ls-num">3</div><div class="ls-text">Tool</div></div>
+                <div class="loop-conn"><div class="lc-anim"></div></div>
+                
+                <div class="loop-step" id="ls4"><div class="ls-num">4</div><div class="ls-text">API</div></div>
+                <div class="loop-conn"><div class="lc-anim"></div></div>
+
+                <div class="loop-step" id="ls5"><div class="ls-num">5</div><div class="ls-text">LLM</div></div>
+                <div class="loop-conn"><div class="lc-anim"></div></div>
+                
+                <div class="loop-step" id="ls6"><div class="ls-num">6</div><div class="ls-text">Ans</div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Real-World Agent</h2>
+            <p>Agents use function calling to perform complex multi-step tasks.</p>
+            <p><strong>Example: Returns</strong></p>
+            <ul style="font-size: 0.8rem;">
+                <li>Query Order DB</li>
+                <li>Check Return Policy</li>
+                <li>Initiate Return</li>
+                <li>Send Email Confirmation</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Orchestrator Pattern</span>
+            <div class="agent-grid">
+                <div class="ag-orbit"></div>
+                <div class="ag-center">Agent</div>
+                <div class="ag-tool ag-t1" id="t1">Query</div>
+                <div class="ag-tool ag-t2" id="t2">Policy</div>
+                <div class="ag-tool ag-t3" id="t3">Initiate</div>
+                <div class="ag-tool ag-t4" id="t4">Email</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 5 -->
+    <section class="topic-section">
+        <div>
+            <h2>Pitfalls & Best Practices</h2>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Vague Desc:</strong> "Get data" → Use specific descriptions.</li>
+                <li><strong>Missing Required:</strong> API might crash without args.</li>
+                <li><strong>Infinite Loops:</strong> Tool A calls Tool B which calls Tool A.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Good vs. Bad</span>
+            <div class="pit-grid">
+                <div class="pg-item pg-bad">
+                    ❌ Vague<br><code>"Get data"</code>
+                </div>
+                <div class="pg-item pg-good">
+                    ✅ Specific<br><code>"Get weather for city"</code>
+                </div>
+                <div class="pg-item pg-bad">
+                    ❌ No Required<br><code>"city": string</code>
+                </div>
+                <div class="pg-item pg-good">
+                    ✅ Enforced<br><code>"required": ["city"]</code>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Tool Use:</strong> LLM generates structured JSON to trigger APIs.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Schema is King:</strong> Precise names/descriptions guide the LLM.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>The Loop:</strong> Query -> Tool -> Result -> Synthesize.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Agents:</strong> Chain multiple function calls for complex tasks.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    function initAnimations() {
+        // 1. Loop Animation (Sequential)
+        const steps = [
+            document.getElementById('ls1'),
+            document.getElementById('ls2'),
+            document.getElementById('ls3'),
+            document.getElementById('ls4'),
+            document.getElementById('ls5'),
+            document.getElementById('ls6')
+        ];
+        let stepIndex = 0;
+        
+        function cycleLoop() {
+            steps.forEach(s => s.classList.remove('active'));
+            steps[stepIndex].classList.add('active');
+            stepIndex = (stepIndex + 1) % steps.length;
+        }
+        setInterval(cycleLoop, 1000);
+        cycleLoop();
+
+        // 2. Agent Tool Highlighting (Sequential)
+        const tools = [
+            document.getElementById('t1'),
+            document.getElementById('t2'),
+            document.getElementById('t3'),
+            document.getElementById('t4')
+        ];
+        let toolIndex = 0;
+
+        function cycleTools() {
+            tools.forEach(t => t.classList.remove('highlight'));
+            tools[toolIndex].classList.add('highlight');
+            toolIndex = (toolIndex + 1) % tools.length;
+        }
+        setInterval(cycleTools, 1200);
+        cycleTools();
+    }
+</script>
+
+</body>
+</html>

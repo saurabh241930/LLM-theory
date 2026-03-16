@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+        .one-liner { font-weight: bold; margin-bottom: 10px; }
+        .trap { background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin-top: 10px; }
+        .depth { background-color: #e2e3e5; padding: 10px; border-left: 4px solid #6c757d; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="subtitle">Sharding, Replication & NoSQL</div>
+    </header>
+
+    <div class="content-wrapper">
+<div class="qa-container" id="q78">
+            <h3>Q78: What is event-driven architecture and when do you use it?</h3>
+            <div class="answer">
+                <div class="one-liner">Services communicate via events (Kafka, RabbitMQ) rather than direct API calls — loose coupling, async processing, and natural audit trail.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Producer publishes event to topic; multiple consumers independently react — no direct coupling</li>
+                    <li>between producer and consumer</li>
+                    <li> At-least-once delivery: consumers must be idempotent — process duplicate events safely</li>
+                    <li> Event store: Kafka retains events for days/weeks — consumers can replay from any point</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  Sender["Order Service"] -- "Event: OrderCreated" --> Broker[("Message Broker (Kafka)")]
+  Broker --> Consumer1["Inventory Service"]
+  Broker --> Consumer2["Shipping Service"]
+  Broker --> Consumer3["Email Service"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Event schema evolution: use Avro + Schema Registry — enforce backward/forward compatibility</li>
+                        <li>Consumer lag monitoring: if consumer falls behind, it needs more instances or optimized processing</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Event-driven adds debugging complexity — distributed tracing and correlation IDs are essential to trace a request across events
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q79">
+            <h3>Q79: How do you implement rate limiting at the database level?</h3>
+            <div class="answer">
+                <div class="one-liner">Track request counts in Redis per key with TTL — check and increment atomically before allowing the operation.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Redis INCR + EXPIRE: increment counter, set TTL on first request — atomic with Lua script</li>
+                    <li> Sliding window: ZADD with timestamp scores, ZREMRANGEBYSCORE to remove old entries,</li>
+                    <li>ZCARD for count</li>
+                    <li> Apply at middleware layer: check rate limit before business logic runs</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  API["API Server"] --> Redis[("Redis")]
+  Redis -- "INCR user:123:minute" --> Count{"Count > Limit?"}
+  Count -- "No" --> Proceed["Proceed to DB"]
+  Count -- "Yes" --> Block["Return 429 Too Many Requests"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Distributed rate limiting across multiple API servers: Redis as shared state ensures global limit is</li>
+                        <li>respected</li>
+                        <li>Token bucket in Redis: store remaining tokens as value, replenish on schedule via background job</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> In-memory rate limiting (per server instance) doesn't work with multiple API server instances — must use shared Redis store
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q80">
+            <h3>Q80: Explain write-ahead logging (WAL) in databases</h3>
+            <div class="answer">
+                <div class="one-liner">WAL writes changes to a log before applying to data files — enables crash recovery, replication, and PITR.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Changes logged to WAL first — if crash occurs, DB replays WAL to recover committed transactions</li>
+                    <li> Physical replication: replica streams WAL from primary and applies it — stays in sync</li>
+                    <li> PITR (Point-in-Time Recovery): replay WAL from base backup to any point — essential for disaster</li>
+                    <li>recovery</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  App["App"] -- "Commit Tx" --> RAM["DB Buffer Pool"]
+  RAM -- "1. Append to WAL" --> DiskWAL[("WAL File on Disk")]
+  DiskWAL -- "2. Acknowledge Commit" --> App
+  RAM -- "3. Async Checkpoint" --> DiskData[("Main Data Files")]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Logical replication: sends row-level changes (not physical blocks) — allows replication to different</li>
+                        <li>schema versions</li>
+                        <li>WAL archiving: ship WAL segments to S3 — enables PITR without storing full DB snapshots</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> WAL accumulates until checkpointed — if checkpoint is delayed (heavy writes), WAL directory grows and can fill disk
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q81">
+            <h3>Q81: How do you implement soft deletes?</h3>
+            <div class="answer">
+                <div class="one-liner">Add deleted_at timestamp column — filter WHERE deleted_at IS NULL in queries; retain data for audit and recovery.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> Soft delete: UPDATE records SET deleted_at = NOW() instead of DELETE</li>
+                    <li> All queries must filter deleted_at IS NULL — use DB views or ORM global scope to enforce</li>
+                    <li> Partial index: CREATE INDEX ON records(id) WHERE deleted_at IS NULL — index only active</li>
+                    <li>records</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart LR
+  Delete["User clicks Delete"] --> DB[("Database")]
+  DB -- "Does NOT run DELETE" --> Update["UPDATE users SET deleted_at = NOW()"]
+  AppQuery["SELECT * FROM users"] -- "Must include" --> Clause["WHERE deleted_at IS NULL"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Unique constraints: unique on (email, deleted_at IS NULL) — allows re-registration after soft delete</li>
+                        <li>Scheduled hard delete: after 90 days, permanently delete soft-deleted records for compliance and</li>
+                        <li>performance</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Forgetting to add WHERE deleted_at IS NULL in a query returns deleted records — use a default scope or view to avoid this
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q82">
+            <h3>Q82: How do you handle database backups and disaster recovery?</h3>
+            <div class="answer">
+                <div class="one-liner">Automated daily snapshots + continuous WAL archiving → test restore regularly → RTO/RPO define the strategy.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li> RTO (Recovery Time Objective): max acceptable downtime — drives multi-AZ/active-standby</li>
+                    <li>decisions</li>
+                    <li> RPO (Recovery Point Objective): max acceptable data loss — drives backup frequency and WAL</li>
+                    <li>shipping</li>
+                    <li> AWS RDS: automated backups to S3 with PITR up to 35 days retention — test restore quarterly</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Primary[("Primary DB")] -- "Daily" --> FullBackup[("S3 Full Snapshot")]
+  Primary -- "Continuous (Streaming)" --> WALArchive[("S3 WAL Archive")]
+  Crash{"Disaster Strikes"} --> Recover["Restore Snapshot + Replay WALs"]
+                </div>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Multi-AZ RDS: synchronous standby in another AZ — automatic failover in 60-120 seconds</li>
+                        <li>Cross-region read replica: disaster recovery if entire region goes down — promote to primary in DR</li>
+                        <li>scenario</li>
+                    </ul>
+                </div>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Backups you've never restored are untested backups — schedule quarterly restore drills to a test environment
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+</html>

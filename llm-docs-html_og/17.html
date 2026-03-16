@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Failure Modes & Recovery | LLM Cheat Sheet</title>
+    <style>
+        :root {
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-primary: #0369a1;
+            --accent-secondary: #be185d;
+            --accent-success: #15803d;
+            --accent-warning: #b45309;
+            --accent-danger: #b91c1c;
+            --border-color: #cbd5e1;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--accent-primary);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+            margin-bottom: var(--space-md);
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; }
+        }
+
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+            font-size: 0.9rem;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #fef2f2;
+            border-left: 3px solid var(--accent-danger);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            min-height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ===== INFINITE LOOP ANIMATION ===== */
+        .infinite-loop {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            margin: 0 auto;
+        }
+
+        .loop-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .marker1 {
+            background: var(--accent-danger);
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: orbitalLoop 4s infinite linear;
+        }
+
+        .marker2 {
+            background: #fbbf24;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            animation: orbitalLoop 4s 1.33s infinite linear;
+        }
+
+        .marker3 {
+            background: #ef4444;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: orbitalLoop 4s 2.66s infinite linear;
+        }
+
+        .marker-trail {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px dashed var(--accent-danger);
+            border-radius: 50%;
+            top: 0;
+            left: 0;
+            opacity: 0.3;
+        }
+
+        @keyframes orbitalLoop {
+            0% { top: 0; left: 50%; transform: translateX(-50%); }
+            33% { top: 50%; right: 0; left: auto; transform: translateY(-50%); }
+            66% { bottom: 0; left: 50%; top: auto; transform: translateX(-50%); }
+            100% { top: 0; left: 50%; transform: translateX(-50%); }
+        }
+
+        /* ===== RECOVERY FLOW ANIMATION ===== */
+        .recovery-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 100%;
+        }
+
+        .recovery-step {
+            background: #dbeafe;
+            border: 1px solid var(--accent-primary);
+            border-radius: 3px;
+            padding: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            animation: recoveryPulse 5s infinite;
+        }
+
+        .recovery-step:nth-child(1) { animation-delay: 0s; }
+        .recovery-step:nth-child(3) { animation-delay: 1.2s; }
+        .recovery-step:nth-child(5) { animation-delay: 2.4s; }
+        .recovery-step:nth-child(7) { animation-delay: 3.6s; }
+
+        @keyframes recoveryPulse {
+            0%, 100% { background: #dbeafe; transform: scale(1); }
+            50% { background: var(--accent-primary); color: white; transform: scale(1.05); }
+        }
+
+        .recovery-arrow {
+            text-align: center;
+            color: var(--accent-primary);
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        /* Failure Grid */
+        .failure-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin: 6px 0;
+        }
+
+        .failure-item {
+            background: #fef2f2;
+            border: 1px solid var(--accent-danger);
+            border-radius: 3px;
+            padding: 6px;
+            font-size: 0.8rem;
+        }
+
+        .failure-item strong { color: var(--accent-danger); display: block; margin-bottom: 2px; }
+
+        /* Solution Grid */
+        .solution-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin: 6px 0;
+        }
+
+        .solution-item {
+            background: #f0fdf4;
+            border: 1px solid var(--accent-success);
+            border-radius: 3px;
+            padding: 6px;
+            font-size: 0.8rem;
+        }
+
+        .solution-item strong { color: var(--accent-success); display: block; margin-bottom: 2px; }
+
+        /* Do/Don't Grid */
+        .do-dont-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin: 6px 0;
+        }
+
+        .do-item {
+            background: #f0fdf4;
+            border-left: 3px solid var(--accent-success);
+            padding: 6px;
+            border-radius: 2px;
+            font-size: 0.75rem;
+        }
+
+        .dont-item {
+            background: #fef2f2;
+            border-left: 3px solid var(--accent-danger);
+            padding: 6px;
+            border-radius: 2px;
+            font-size: 0.75rem;
+        }
+
+        .do-item strong, .dont-item strong { display: block; margin-bottom: 2px; }
+        .do-item strong { color: var(--accent-success); }
+        .dont-item strong { color: var(--accent-danger); }
+
+        /* Code Block */
+        .code-block {
+            background: #1e293b;
+            color: #cbd5e1;
+            padding: 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            margin: 4px 0;
+            overflow-x: auto;
+            line-height: 1.3;
+        }
+
+        .code-block .keyword { color: #f59e0b; }
+        .code-block .function { color: #60a5fa; }
+
+        /* Category Cards */
+        .failure-categories {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin: 6px 0;
+        }
+
+        .category-item {
+            background: #fef2f2;
+            border: 1px solid var(--accent-danger);
+            border-radius: 3px;
+            padding: 6px;
+            font-size: 0.75rem;
+        }
+
+        .category-item strong { color: var(--accent-danger); display: block; margin-bottom: 2px; }
+
+        /* Takeaway Box */
+        .takeaway {
+            background: #f0fdf4;
+            border: 2px solid var(--accent-success);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            margin-top: 20px;
+        }
+
+        .takeaway h3 {
+            color: var(--accent-success);
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+        }
+
+        .takeaway ul { list-style: none; }
+        .takeaway li {
+            padding: 3px 0 3px 18px;
+            position: relative;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+
+        .takeaway li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--accent-success);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Agent Failure Modes & Recovery</h1>
+            <p class="subtitle">Common ways agents fail and how to fix them</p>
+            <span class="badge">CHEAT SHEET</span>
+        </header>
+
+        <!-- Section 1: Failure Categories -->
+        <div class="topic-section">
+            <div>
+                <h2>1. Seven Common Failure Modes</h2>
+                <p>Agents can fail in predictable ways. Fix them with specific solutions.</p>
+                <div class="failure-categories">
+                    <div class="category-item">
+                        <strong>Infinite Loops</strong>
+                        Same tool called repeatedly
+                    </div>
+                    <div class="category-item">
+                        <strong>Hallucinated Tools</strong>
+                        Invents non-existent tools
+                    </div>
+                    <div class="category-item">
+                        <strong>Wrong Tools</strong>
+                        Valid tool, wrong task
+                    </div>
+                    <div class="category-item">
+                        <strong>Param Errors</strong>
+                        Invalid tool inputs
+                    </div>
+                    <div class="category-item">
+                        <strong>Tool Failures</strong>
+                        API down, network errors
+                    </div>
+                    <div class="category-item">
+                        <strong>Lost Context</strong>
+                        Forgets original goal
+                    </div>
+                </div>
+                <div class="insight">Most critical: Infinite loops, hallucinated tools, lost context</div>
+            </div>
+            <div class="diagram-box">
+                <div style="width: 100%; text-align: center; font-size: 0.75rem;">
+                    <div style="background: #fef2f2; padding: 6px; border-radius: 3px; border-left: 3px solid var(--accent-danger);">
+                        <strong style="color: var(--accent-danger);">Critical Issues</strong><br>
+                        Loops, hallucinations<br>
+                        Lost context
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Infinite Loops -->
+        <div class="topic-section">
+            <div>
+                <h2>2. Infinite Loops: Detection & Fix</h2>
+                <p><strong>Problem:</strong> Agent calls same tool repeatedly, never progresses.</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;">get_weather("NYC") → get_weather("NYC", detailed=true) → get_weather("NYC", extended=true) → loops forever</p>
+                <p style="margin-top: 6px;"><strong>Solution 1:</strong> Set max_steps limit (5-10) ⭐ ESSENTIAL</p>
+                <p style="margin-top: 6px;"><strong>Solution 2:</strong> Detect repeated actions</p>
+                <p style="font-size: 0.8rem;">if current_action == last_action: force different or end</p>
+                <p style="margin-top: 6px;"><strong>Solution 3:</strong> Track state changes</p>
+                <p style="font-size: 0.8rem;">if state == prev_state: stop (no progress)</p>
+            </div>
+            <div class="diagram-box">
+                <div class="infinite-loop">
+                    <div class="marker-trail"></div>
+                    <div class="loop-marker marker1">1</div>
+                    <div class="loop-marker marker2">2</div>
+                    <div class="loop-marker marker3">3</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Hallucinated Tools -->
+        <div class="topic-section">
+            <div>
+                <h2>3. Hallucinated Tools: Force Valid Choices</h2>
+                <p><strong>Problem:</strong> LLM invents a tool that doesn't exist.</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;">Available: [get_weather, get_news] | LLM tries: get_stock_price ← DOESN'T EXIST!</p>
+                <p style="margin-top: 6px;"><strong>Solution 1:</strong> Include tool list in prompt</p>
+                <p style="margin-top: 6px;"><strong>Solution 2:</strong> Use JSON mode with validation</p>
+                <p style="margin-top: 6px;"><strong>Solution 3:</strong> Error recovery: Send error message, let LLM retry</p>
+                <p style="margin-top: 6px;"><strong>Solution 4:</strong> Better tool descriptions → more context, better choices</p>
+            </div>
+            <div class="diagram-box">
+                <div class="solution-grid">
+                    <div class="solution-item">
+                        <strong>Include list</strong>
+                        Tell LLM all tool names
+                    </div>
+                    <div class="solution-item">
+                        <strong>Describe well</strong>
+                        Use cases, not just name
+                    </div>
+                    <div class="solution-item">
+                        <strong>JSON mode</strong>
+                        Validate before execute
+                    </div>
+                    <div class="solution-item">
+                        <strong>Error recovery</strong>
+                        Let LLM retry
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Wrong Tool Selection -->
+        <div class="topic-section">
+            <div>
+                <h2>4. Wrong Tool Selection: Guide Better</h2>
+                <p><strong>Problem:</strong> Valid tool, but wrong one for task.</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;">Task: "USD to EUR rate?" | Picks: search_web (slow) | Should: get_exchange_rate</p>
+                <p style="margin-top: 6px;"><strong>Solution 1:</strong> Few-shot examples</p>
+                <p style="font-size: 0.8rem;">Show correct tool usage patterns</p>
+                <p style="margin-top: 6px;"><strong>Solution 2:</strong> Tool categories</p>
+                <p style="font-size: 0.8rem;">FINANCIAL: [exchange_rate, stock_price]</p>
+                <p style="margin-top: 6px;"><strong>Solution 3:</strong> Detailed descriptions</strong></p>
+                <p style="font-size: 0.8rem;">Include use-case examples in description</p>
+            </div>
+            <div class="diagram-box">
+                <div class="do-dont-grid">
+                    <div class="dont-item">
+                        <strong>❌ Poor</strong>
+                        "search_web"
+                    </div>
+                    <div class="do-item">
+                        <strong>✅ Better</strong>
+                        "search_web: Search internet"
+                    </div>
+                    <div class="dont-item">
+                        <strong>❌ No categories</strong>
+                        Mixed tools
+                    </div>
+                    <div class="do-item">
+                        <strong>✅ Grouped</strong>
+                        FINANCIAL tools
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5: Parameter Errors & Validation -->
+        <div class="topic-section">
+            <div>
+                <h2>5. Parameter Errors: Schema Validation</h2>
+                <p><strong>Problem:</strong> Tool called with invalid parameters.</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;">Tool: get_weather(city: str, days: int) | Bad call: get_weather(city=123, days="abc")</p>
+                <p style="margin-top: 6px;"><strong>Solution 1:</strong> Define clear schema in prompt</p>
+                <p style="margin-top: 6px;"><strong>Solution 2:</strong> JSON schema validation</p>
+                <p style="font-size: 0.8rem;">Force LLM to output valid JSON, validate before call</p>
+                <p style="margin-top: 6px;"><strong>Solution 3:</strong> Error recovery</p>
+                <p style="font-size: 0.8rem;">"days must be 1-14" → LLM self-corrects</p>
+                <p style="margin-top: 6px;"><strong>Solution 4:</strong> Input sanitization</p>
+                <p style="font-size: 0.8rem;">Clamp to valid ranges: min(14, max(1, days))</p>
+            </div>
+            <div class="diagram-box">
+                <div class="code-block">
+<span class="keyword">if</span> not is_valid_json(output):
+    <span class="keyword">retry</span> = <span class="keyword">True</span>
+
+<span class="keyword">if</span> parameter_dict[<span class="string">"days"</span>] > 14:
+    parameter_dict[<span class="string">"days"</span>] = 14
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 6: Real Tool Failures -->
+        <div class="topic-section">
+            <div>
+                <h2>6. Tool Failures: Graceful Degradation</h2>
+                <p><strong>Problem:</strong> Tool actually fails (API down, network error).</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;">get_weather("NYC") → ConnectionError → crash, LLM never sees error</p>
+                <p style="margin-top: 6px;"><strong>Solution 1:</strong> Timeout limits</p>
+                <p style="font-size: 0.8rem;">If tool takes >5s, timeout. Prevent hanging.</p>
+                <p style="margin-top: 6px;"><strong>Solution 2:</strong> Retry with backoff</p>
+                <p style="font-size: 0.8rem;">Try 3 times: wait 2s, then 4s, then 8s</p>
+                <p style="margin-top: 6px;"><strong>Solution 3:</strong> Fallback to backup</p>
+                <p style="font-size: 0.8rem;">Primary API fails → use backup API</p>
+                <p style="margin-top: 6px;"><strong>Solution 4:</strong> Tell LLM what happened</p>
+                <p style="font-size: 0.8rem;">"Tool failed: API timeout" → LLM adapts</p>
+            </div>
+            <div class="diagram-box">
+                <div class="recovery-flow">
+                    <div class="recovery-step">Try Primary</div>
+                    <div class="recovery-arrow">↓ fails</div>
+                    <div class="recovery-step">Retry (backoff)</div>
+                    <div class="recovery-arrow">↓ fails</div>
+                    <div class="recovery-step">Try Fallback</div>
+                    <div class="recovery-arrow">↓ Or tell LLM</div>
+                    <div class="recovery-step">Recovery</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 7: Lost Context & Irrelevant Answers -->
+        <div class="topic-section">
+            <div>
+                <h2>7. Lost Context & Irrelevant Answers</h2>
+                <p><strong>Lost Context:</strong> Long conversations, LLM forgets original goal.</p>
+                <p style="margin-top: 6px; font-size: 0.8rem;">Q: "Best laptop for coding?" [10 tool calls] A: "Here's best camera for photography"</p>
+                <p style="margin-top: 6px;"><strong>Solution 1:</strong> Track goal explicitly</p>
+                <p style="font-size: 0.8rem;">Include in every prompt: "Goal: Find best laptop for coding"</p>
+                <p style="margin-top: 6px;"><strong>Solution 2:</strong> Summarize frequently</p>
+                <p style="font-size: 0.8rem;">Every 5 steps, summarize → reset messages to summary</p>
+                <p style="margin-top: 6px;"><strong>Irrelevant Answer:</strong> Doesn't address query</p>
+                <p style="margin-top: 6px;"><strong>Solution 3:</strong> Validate answer against query</p>
+                <p style="font-size: 0.8rem;">Before returning: Does it address original question?</p>
+            </div>
+            <div class="diagram-box">
+                <div class="do-dont-grid">
+                    <div class="do-item">
+                        <strong>✅ Do</strong>
+                        Track goal
+                        <br>Summarize (5 steps)
+                    </div>
+                    <div class="dont-item">
+                        <strong>❌ Don't</strong>
+                        Let context grow
+                        <br>Lose track of goal
+                    </div>
+                    <div class="do-item">
+                        <strong>✅ Do</strong>
+                        Validate answer
+                        <br>Check relevance
+                    </div>
+                    <div class="dont-item">
+                        <strong>❌ Don't</strong>
+                        Return off-topic
+                        <br>Assume it's right
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Takeaway -->
+        <div class="takeaway">
+            <h3>🎯 Key Takeaways</h3>
+            <ul>
+                <li><strong>Infinite loops:</strong> Set max_steps (5-10), detect repeated actions, track changes</li>
+                <li><strong>Hallucinated tools:</strong> Include tool list in prompt, validate names, provide descriptions</li>
+                <li><strong>Wrong tools:</strong> Use few-shot examples, tool categories, detailed descriptions</li>
+                <li><strong>Parameter errors:</strong> JSON schema validation, error messages, input sanitization</li>
+                <li><strong>Tool failures:</strong> Timeout + retry (with backoff) + fallbacks + tell LLM what happened</li>
+                <li><strong>Lost context:</strong> Track goal explicitly, summarize frequently, validate final answer</li>
+                <li><strong>Communication is key:</strong> Always tell LLM what went wrong so it can recover</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

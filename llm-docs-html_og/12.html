@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategy: Prompt vs RAG vs Fine-Tune</title>
+    <style>
+        :root {
+            /* Light Mode Palette (Consistent) */
+            --bg-body: #ffffff;
+            --bg-card: #f8fafc;
+            --bg-card-alt: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            
+            /* Accents */
+            --accent-primary: #0369a1; /* Strong Blue */
+            --accent-secondary: #be185d; /* Deep Pink */
+            --accent-success: #15803d; /* Forest Green */
+            --accent-warning: #b45309; /* Dark Orange */
+            --accent-danger: #b91c1c; /* Red */
+            --border-color: #cbd5e1;
+            
+            /* Typography - Dense */
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --space-xs: 2px;
+            --space-sm: 6px;
+            --space-md: 10px;
+            --radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.4;
+            font-size: 13px;
+            padding: var(--space-sm);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        header {
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Section Grid */
+        .topic-section {
+            display: grid;
+            grid-template-columns: 1fr 0.9fr;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .topic-section { grid-template-columns: 1fr; padding: var(--space-sm); }
+            body { padding: 4px; font-size: 14px; }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1rem;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-sm);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        p, li {
+            color: #334155;
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+
+        strong { color: var(--text-primary); font-weight: 700; }
+        
+        code {
+            background: var(--bg-card-alt);
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--accent-secondary);
+        }
+
+        ul { list-style: none; padding-left: var(--space-sm); margin-bottom: var(--space-sm); }
+        li::before { content: "•"; color: var(--accent-primary); display: inline-block; width: 1em; margin-left: -1em; }
+
+        .insight {
+            background: #e0f2fe;
+            border-left: 3px solid var(--accent-primary);
+            padding: 4px 8px;
+            margin-top: var(--space-xs);
+            font-size: 0.8rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        /* Diagram Boxes */
+        .diagram-box {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 160px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .diagram-label {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* 1. The Three Levers (Comparison Cards) */
+        .levers-flex { display: flex; gap: 6px; width: 100%; align-items: stretch; height: 100%; }
+        .l-card { 
+            flex: 1; background: #fff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px; 
+            display: flex; flex-direction: column; align-items: center; text-align: center; position: relative;
+            border-top: 4px solid #cbd5e1;
+            opacity: 0.6; transition: 0.3s;
+        }
+        .lc-prompt { border-color: var(--accent-primary); }
+        .lc-rag { border-color: var(--accent-success); transform: scale(1.05); z-index: 2; opacity: 1; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .lc-ft { border-color: var(--accent-warning); }
+        
+        .lc-icon { width: 24px; height: 24px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 4px; color: #64748b; }
+        .lc-prompt .lc-icon { color: var(--accent-primary); background: #dbeafe; }
+        .lc-rag .lc-icon { color: var(--accent-success); background: #dcfce7; }
+        .lc-ft .lc-icon { color: var(--accent-warning); background: #fef3c7; }
+        
+        .lc-title { font-weight: bold; font-size: 0.7rem; margin-bottom: 2px; }
+        .lc-stat { font-size: 0.6rem; color: var(--text-secondary); margin-top: auto; }
+
+        /* 2. Decision Tree (SVG Flow) */
+        .dt-container { position: relative; width: 100%; height: 140px; }
+        .dt-node {
+            position: absolute; width: 80px; padding: 4px; background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.6rem; text-align: center; z-index: 2;
+        }
+        .dt-start { top: 5%; left: 50%; transform: translateX(-50%); font-weight: bold; background: var(--bg-card-alt); }
+        
+        /* Answers highlight */
+        .highlight-yes { border-color: var(--accent-success); background: #f0fdf4; color: var(--accent-success); }
+        .highlight-no { border-color: var(--accent-warning); background: #fffbeb; color: var(--accent-warning); }
+        .highlight-fail { border-color: var(--accent-danger); background: #fff1f2; color: var(--accent-danger); }
+
+        /* Animation: Token moving down tree */
+        .dt-token {
+            position: absolute; width: 6px; height: 6px; background: var(--accent-primary); border-radius: 50%; top: 10%; left: 50%; z-index: 10;
+            offset-path: path('M 50 10 Q 50 20 50 30 Q 80 30 90 40'); /* Hardcoded path for visualization */
+            animation: moveToken 6s infinite linear;
+        }
+        @keyframes moveToken { 0% { offset-distance: 0%; opacity: 1; } 90% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+
+        /* 3. The Mistake (Comparison) */
+        .mistake-layout { display: flex; width: 100%; height: 120px; gap: 10px; }
+        .mis-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .mis-line { position: absolute; width: 2px; height: 100%; background: #e2e8f0; left: 50%; }
+        
+        /* Bad Path (Left) */
+        .mis-arrow-down { width: 2px; height: 60px; background: var(--accent-danger); position: absolute; top: 10px; }
+        .mis-x { position: absolute; bottom: 20px; font-size: 1.5rem; color: var(--accent-danger); animation: pulseRed 2s infinite; }
+        @keyframes pulseRed { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        /* Good Path (Right - Pyramid) */
+        .pyramid-step {
+            width: 80%; background: var(--accent-success); margin: 2px 0; border-radius: 2px; opacity: 0; transform: translateY(10px); text-align: center; color: white; font-size: 0.6rem;
+        }
+        .ps-1 { height: 20px; animation: stackUp 0.5s 0.2s forwards; }
+        .ps-2 { width: 70%; height: 20px; animation: stackUp 0.5s 0.6s forwards; }
+        .ps-3 { width: 60%; height: 20px; background: var(--accent-warning); animation: stackUp 0.5s 1.0s forwards; }
+
+        @keyframes stackUp { to { opacity: 1; transform: translateY(0); } }
+
+        /* 4. Scenarios (Rows) */
+        .scenario-list { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+        .sc-row { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; background: #f8fafc; padding: 4px; border-radius: 4px; border: 1px solid #e2e8f0; }
+        .sc-prob { flex: 1; font-weight: bold; color: var(--text-primary); }
+        .sc-sol { 
+            padding: 2px 6px; border-radius: 4px; font-weight: bold; color: white; font-size: 0.6rem;
+            position: relative; overflow: hidden;
+        }
+        .sol-rag { background: var(--accent-success); }
+        .sol-ft { background: var(--accent-warning); }
+        .sol-prompt { background: var(--accent-primary); }
+        
+        /* Shimmer effect on solution badge */
+        .sc-sol::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: rgba(255,255,255,0.3);
+            animation: shimmer 2s infinite linear;
+        }
+        @keyframes shimmer { to { left: 100%; } }
+
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>12. Strategy: Prompt vs RAG vs Fine-Tune</h1>
+            <div class="subtitle">Decision Making • Cost Analysis • Mistakes</div>
+        </div>
+        <div style="text-align: right; color: var(--accent-secondary); font-size: 0.75rem; font-weight: bold;">
+            Cheat Sheet
+        </div>
+    </header>
+
+    <!-- Topic 1 -->
+    <section class="topic-section">
+        <div>
+            <h2>The Three Levers</h2>
+            <p>You have three main ways to improve LLM outputs: <strong>Prompting</strong> (Instruction), <strong>RAG</strong> (Knowledge Retrieval), and <strong>Fine-Tuning</strong> (Behavior Change).</p>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Prompting:</strong> Free, fast, immediate. Best for simple tasks.</li>
+                <li><strong>RAG:</strong> Adds knowledge without retraining. Best for docs/FAQs.</li>
+                <li><strong>Fine-Tuning:</strong> Changes style/behavior. Expensive. Last resort.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">The Spectrum</span>
+            <div class="levers-flex">
+                <div class="l-card lc-prompt">
+                    <div class="lc-icon">T</div>
+                    <div class="lc-title">Prompting</div>
+                    <div class="lc-stat">Free / Fast</div>
+                </div>
+                <div class="l-card lc-rag">
+                    <div class="lc-icon">R</div>
+                    <div class="lc-title">RAG</div>
+                    <div class="lc-stat">Moderate Cost</div>
+                </div>
+                <div class="l-card lc-ft">
+                    <div class="lc-icon">F</div>
+                    <div class="lc-title">Fine-Tune</div>
+                    <div class="lc-stat">High / Slow</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 2 -->
+    <section class="topic-section">
+        <div>
+            <h2>The Decision Tree</h2>
+            <p>Don't jump straight to fine-tuning. Follow the logic:</p>
+            <ol style="font-size: 0.8rem; padding-left: 15px;">
+                <li><strong>Does the model lack KNOWLEDGE?</strong> (e.g., specific docs)</li>
+                <ul><li>YES → Use <strong>RAG</strong>.</li><li>NO → Continue.</li></ul>
+                <li><strong>Does the model lack STYLE/BEHAVIOR?</strong> (e.g., tone, strict rules)</li>
+                <ul><li>YES → Use <strong>Fine-Tuning</strong>.</li><li>NO → Continue.</li></ul>
+                <li><strong>Can you solve with PROMPTS?</strong> (e.g., few-shot)</li>
+                <ul><li>YES → Use <strong>Prompting</strong>.</li><li>NO → Fine-Tune (Last Resort).</li></ul>
+            </ol>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Logic Flow</span>
+            <div class="dt-container">
+                <!-- Tree Structure -->
+                <div class="dt-node dt-start">START</div>
+                
+                <div class="dt-node" style="top: 25%; left: 50%;">Lack Knowledge?</div>
+                <div class="dt-node highlight-yes" style="top: 45%; left: 80%;">Use RAG</div>
+                
+                <div class="dt-node" style="top: 45%; left: 50%;">Lack Style?</div>
+                <div class="dt-node highlight-yes" style="top: 65%; left: 80%;">Fine-Tune</div>
+                
+                <div class="dt-node" style="top: 65%; left: 50%;">Prompting Works?</div>
+                <div class="dt-node highlight-yes" style="top: 85%; left: 50%;">Prompting</div>
+                <div class="dt-node highlight-fail" style="top: 85%; left: 80%;">Fine-Tune</div>
+
+                <!-- Animation: Simple vertical drop for visual effect -->
+                <div class="dt-token" style="animation: none; top: 10%; background: #cbd5e1;"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 3 -->
+    <section class="topic-section">
+        <div>
+            <h2>The Common Mistake</h2>
+            <p><strong>The Trap:</strong> People jump straight to fine-tuning because it sounds powerful.</p>
+            <p><strong>Reality:</strong> 80% of problems are solved by Prompting. 15% by RAG. Only 5% require Fine-Tuning.</p>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Expectation vs. Reality</span>
+            <div class="mistake-layout">
+                <!-- Expectation (Bad) -->
+                <div class="mis-col">
+                    <div style="font-size: 0.65rem; font-weight: bold; margin-bottom: 4px;">Expectation</div>
+                    <div class="mis-arrow-down"></div>
+                    <div class="mis-x">✕</div>
+                    <div style="font-size: 0.6rem; color: var(--accent-danger); text-align: center;">Jump straight to Fine-Tune</div>
+                </div>
+                
+                <!-- Reality (Good) -->
+                <div class="mis-col">
+                    <div style="font-size: 0.65rem; font-weight: bold; margin-bottom: 4px;">Reality</div>
+                    <div class="pyramid-step ps-1">1. Prompting</div>
+                    <div class="pyramid-step ps-2">2. RAG</div>
+                    <div class="pyramid-step ps-3">3. Fine-Tune</div>
+                    <div style="font-size: 0.6rem; color: var(--accent-success); text-align: center; margin-top: 2px;">Pyramid Strategy</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Topic 4 -->
+    <section class="topic-section">
+        <div>
+            <h2>Real-World Scenarios</h2>
+            <ul style="font-size: 0.8rem;">
+                <li><strong>Support Chatbot:</strong> External Knowledge (FAQs) → <strong>RAG</strong>.</li>
+                <li><strong>Medical Triage:</strong> Strict Behavior (Rules) → <strong>Fine-Tune</strong>.</li>
+                <li><strong>Code Gen:</strong> External Libs + Style → <strong>RAG + Fine-Tune</strong>.</li>
+            </ul>
+        </div>
+        <div class="diagram-box">
+            <span class="diagram-label">Problem Mapping</span>
+            <div class="scenario-list">
+                <div class="sc-row">
+                    <div class="sc-prob">Customer Support (10k FAQs)</div>
+                    <div class="sc-sol sol-rag">RAG (Knowledge)</div>
+                </div>
+                <div class="sc-row">
+                    <div class="sc-prob">Medical Triage (Strict Rules)</div>
+                    <div class="sc-sol sol-ft">Fine-Tune (Behavior)</div>
+                </div>
+                <div class="sc-row">
+                    <div class="sc-prob">Code Gen (Libs + Style)</div>
+                    <div class="sc-sol sol-rag">RAG</div>
+                    <div style="font-weight: bold; color: var(--text-secondary);">+</div>
+                    <div class="sc-sol sol-ft">Fine-Tune</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Takeaways -->
+    <section class="topic-section takeaway-box">
+        <div>
+            <h2 style="color: var(--accent-primary);">Key Takeaways</h2>
+            <div class="takeaway-list">
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Prompting First:</strong> Free, fast, solves ~80% of problems.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>RAG Second:</strong> Adds knowledge without retraining. Best for docs.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Fine-Tune Last:</strong> Expensive. Only for specific behavior/style changes.</div>
+                <div class="takeaway-item"><span class="check-icon">✅</span><strong>Decision Logic:</strong> Lack Knowledge → RAG. Lack Style → Fine-Tune.</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>

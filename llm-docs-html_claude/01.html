@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embeddings & Vector Search: Complete Guide</title>
+    <style>
+        :root {
+            /* Wikipedia-style Palette */
+            --bg-body: #f6f6f6;
+            --bg-content: #ffffff;
+            --text-primary: #202122;
+            --text-secondary: #54595d;
+            --accent-primary: #0645ad;
+            --accent-secondary: #d73027;
+            --accent-success: #007d2e;
+            --accent-warning: #d46a2a;
+            --border-color: #a2a9b1;
+            --wiki-bg: #f8f9fa;
+            
+            /* Typography */
+            --font-body: Georgia, serif;
+            --font-code: monospace;
+            --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --radius: 2px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            font-size: 15px;
+            padding: var(--space-md);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-content);
+            padding: var(--space-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        /* Header - Wikipedia Style */
+        header {
+            border-bottom: 3px solid var(--accent-primary);
+            padding-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text-primary);
+            font-weight: normal;
+            margin-bottom: 4px;
+            font-family: var(--font-system);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Content Sections */
+        .topic-section {
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-lg);
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .topic-section:last-of-type {
+            border-bottom: none;
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            margin-top: var(--space-lg);
+            margin-bottom: var(--space-md);
+            font-weight: normal;
+            font-family: var(--font-system);
+            border-bottom: 2px solid #e8e8e8;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-top: var(--space-md);
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-family: var(--font-system);
+        }
+
+        p {
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+            text-align: justify;
+            line-height: 1.8;
+        }
+
+        strong { 
+            color: var(--text-primary); 
+            font-weight: bold; 
+        }
+
+        em {
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        code {
+            background: var(--wiki-bg);
+            padding: 2px 4px;
+            border-radius: var(--radius);
+            font-family: var(--font-code);
+            font-size: 0.9em;
+            color: var(--accent-secondary);
+        }
+
+        ul, ol {
+            margin-left: 2em;
+            margin-bottom: var(--space-md);
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+
+        /* Info Box */
+        .infobox {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-left: 4px solid var(--accent-primary);
+            border-radius: var(--radius);
+        }
+
+        .infobox strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--accent-primary);
+        }
+
+        /* Figure Container */
+        .figure-container {
+            background: var(--wiki-bg);
+            border: 1px solid var(--border-color);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            text-align: center;
+            border-radius: var(--radius);
+            position: relative;
+        }
+
+        .figure-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-style: italic;
+            font-family: var(--font-system);
+        }
+
+        /* Enhanced Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes flowPulse {
+            0%, 100% {
+                stroke-width: 2;
+                opacity: 1;
+            }
+            50% {
+                stroke-width: 3;
+                opacity: 0.7;
+            }
+        }
+
+        @keyframes floatIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes slideRight {
+            from {
+                opacity: 0;
+                transform: translateX(-15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes shimmer {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        /* Flow Diagram */
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: var(--space-md) 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .flow-box {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+            border: 2px solid var(--accent-primary);
+            padding: 12px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: var(--text-primary);
+            font-family: var(--font-system);
+            text-align: center;
+            position: relative;
+            animation: floatIn 0.6s ease-out forwards;
+        }
+
+        .flow-box:nth-child(1) { animation-delay: 0s; }
+        .flow-box:nth-child(3) { animation-delay: 0.2s; }
+        .flow-box:nth-child(5) { animation-delay: 0.4s; }
+
+        .flow-arrow {
+            color: var(--accent-primary);
+            font-size: 1.4rem;
+            animation: slideRight 0.6s ease-out forwards;
+        }
+
+        .flow-arrow:nth-child(2) { animation-delay: 0.1s; }
+        .flow-arrow:nth-child(4) { animation-delay: 0.3s; }
+
+        .vector-output {
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            margin-top: 6px;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out 0.5s forwards;
+        }
+
+        /* Vector Map */
+        .vector-map {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            border: 2px dashed var(--border-color);
+            background: radial-gradient(circle at center, #f9f9f9 0%, #ffffff 70%);
+            margin: var(--space-md) auto;
+        }
+
+        .vector-axis {
+            position: absolute;
+            background: var(--text-secondary);
+            opacity: 0.3;
+        }
+
+        .vector-axis-x {
+            width: 100%;
+            height: 1px;
+            bottom: 25%;
+            left: 0;
+        }
+
+        .vector-axis-y {
+            width: 1px;
+            height: 100%;
+            left: 25%;
+            top: 0;
+        }
+
+        .point {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            animation: floatIn 0.5s ease-out forwards;
+        }
+
+        .point-cat {
+            background: var(--accent-primary);
+            top: 35%;
+            left: 40%;
+            box-shadow: 0 0 8px rgba(6, 69, 173, 0.4);
+        }
+
+        .point-feline {
+            background: var(--accent-primary);
+            top: 40%;
+            left: 45%;
+            opacity: 0;
+            animation: floatIn 0.5s ease-out 0.3s forwards;
+            box-shadow: 0 0 8px rgba(6, 69, 173, 0.4);
+        }
+
+        .point-dog {
+            background: var(--accent-warning);
+            top: 65%;
+            left: 25%;
+            opacity: 0.7;
+            animation: floatIn 0.5s ease-out 0.6s forwards;
+        }
+
+        .point-fruit {
+            background: var(--accent-secondary);
+            top: 70%;
+            left: 75%;
+            opacity: 0.7;
+            animation: floatIn 0.5s ease-out 0.9s forwards;
+        }
+
+        /* Connection line */
+        .connector-line {
+            position: absolute;
+            height: 2px;
+            background: var(--accent-primary);
+            transform-origin: left center;
+            top: 37.5%;
+            left: 40%;
+            width: 0;
+            animation: slideRight 0.5s ease-out 1s forwards;
+            opacity: 0.6;
+        }
+
+        /* SVG Chart */
+        .chart-svg {
+            width: 100%;
+            max-width: 280px;
+            margin: var(--space-md) auto;
+            display: block;
+        }
+
+        .chart-vector {
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            animation: flowPulse 2s ease-in-out infinite;
+        }
+
+        /* Grid Animation */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            margin: var(--space-md) 0;
+            padding: var(--space-md);
+            background: var(--wiki-bg);
+            border-radius: var(--radius);
+        }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            background: #e8e8e8;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.4s ease-out forwards;
+            opacity: 0;
+        }
+
+        .grid-cell:nth-child(1) { animation-delay: 0s; }
+        .grid-cell:nth-child(n+2) { animation-delay: calc(0.05s * (var(--cell-index, 1) - 1)); }
+
+        .grid-cluster {
+            background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+            box-shadow: 0 0 8px rgba(7, 125, 46, 0.3);
+        }
+
+        /* Table Styling */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--space-md) 0;
+            background: var(--bg-content);
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #e8f0ff 0%, #f0f4ff 100%);
+            color: var(--text-primary);
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid var(--accent-primary);
+            font-weight: bold;
+            font-family: var(--font-system);
+        }
+
+        .comparison-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .comparison-table tr:hover {
+            background: var(--wiki-bg);
+        }
+
+        /* Processing Pipeline */
+        .pipeline {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: var(--space-md) 0;
+        }
+
+        .pipeline-stage {
+            padding: 16px;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+            border-left: 4px solid var(--accent-primary);
+            border-radius: var(--radius);
+            font-family: var(--font-system);
+            color: var(--text-primary);
+            position: relative;
+            opacity: 0;
+            animation: slideRight 0.5s ease-out forwards;
+        }
+
+        .pipeline-stage:nth-child(1) { animation-delay: 0s; }
+        .pipeline-stage:nth-child(2) { animation-delay: 0.2s; }
+        .pipeline-stage:nth-child(3) { animation-delay: 0.4s; }
+
+        .pipeline-stage strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--accent-primary);
+        }
+
+        /* Warning Card */
+        .warning-card {
+            background: #fff1f0;
+            border: 1px solid #ffa6a6;
+            border-left: 4px solid var(--accent-secondary);
+            padding: var(--space-md);
+            margin: var(--space-md) 0;
+            border-radius: var(--radius);
+        }
+
+        .warning-card strong {
+            color: var(--accent-secondary);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        /* Takeaway Box */
+        .takeaway-section {
+            background: linear-gradient(135deg, #e8f5ff 0%, #f0f8ff 100%);
+            border: 2px solid var(--accent-primary);
+            padding: var(--space-lg);
+            margin-top: var(--space-lg);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-section h2 {
+            color: var(--accent-primary);
+            margin-top: 0;
+        }
+
+        .takeaway-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .takeaway-item {
+            padding: var(--space-md);
+            background: white;
+            border-left: 3px solid var(--accent-success);
+            border-radius: var(--radius);
+        }
+
+        .takeaway-item strong {
+            color: var(--accent-success);
+            display: block;
+            margin-bottom: 6px;
+            font-family: var(--font-system);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--space-md);
+                border: none;
+                box-shadow: none;
+                background: var(--bg-body);
+            }
+            h1 { font-size: 1.4rem; }
+            h2 { font-size: 1.1rem; }
+            .flow-diagram { flex-direction: column; gap: 8px; }
+            .comparison-table { font-size: 0.9rem; }
+        }
+
+        /* 3. Cosine Math SVG Animation */
+        .math-visual { width: 140px; height: 140px; }
+        .formula-box {
+            font-family: 'Times New Roman', serif;
+            background: var(--bg-card-alt);
+            padding: 4px;
+            border-radius: 4px;
+            margin-top: 4px;
+            text-align: center;
+            font-size: 0.8rem;
+            border: 1px solid var(--text-secondary);
+        }
+
+        /* 4. DB Indexing Grid Animation */
+        .grid-index { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; width: 100%; }
+        .grid-cell { aspect-ratio: 1; background: #e2e8f0; border-radius: 1px; transition: background 0.3s; }
+        
+        /* The scanning effect */
+        .grid-index:hover .grid-cluster { background: var(--accent-success); } 
+        .grid-cluster { position: relative; }
+        
+        /* Pseudo-element to simulate scanning */
+        .grid-index::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, transparent 50%, rgba(56, 189, 248, 0.2) 50%);
+            background-size: 100% 20px;
+            animation: scanGrid 2s infinite linear;
+            pointer-events: none;
+            z-index: 1;
+        }
+        @keyframes scanGrid { from { background-position: 0 0; } to { background-position: 0 200px; } }
+
+        /* 5. Tables */
+        .mini-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 4px; }
+        .mini-table th { text-align: left; color: var(--accent-primary); border-bottom: 2px solid var(--border-color); padding: 2px 4px; font-size: 0.7rem; }
+        .mini-table td { border-bottom: 1px solid #f1f5f9; padding: 3px 4px; color: var(--text-secondary); }
+        
+        /* 6. Model Pipe Animation */
+        .model-pipe { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+        .pipe-stage { padding: 6px; text-align: center; border-radius: 4px; font-size: 0.75rem; position: relative; opacity: 0; animation: dropDown 0.5s forwards; }
+        .pipe-stage:nth-child(1) { animation-delay: 0.1s; background: #cbd5e1; }
+        .pipe-stage:nth-child(2) { animation-delay: 0.6s; background: var(--accent-primary); color: white; font-weight: bold; }
+        .pipe-stage:nth-child(3) { animation-delay: 1.1s; background: var(--bg-card-alt); border: 1px dashed var(--accent-secondary); color: var(--accent-secondary); font-family: monospace;}
+        
+        @keyframes dropDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 7. RAG Pipeline */
+        .rag-steps { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+        .rag-step { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; background: #fff; padding: 3px 6px; border: 1px solid var(--border-color); border-radius: 4px; }
+        .rag-arrow { color: var(--text-secondary); font-size: 0.7rem; height: 10px; display: flex; align-items: center; justify-content: center;}
+        
+        /* 8. Pitfalls */
+        .pitfall-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+        .pitfall-card { background: #fff1f2; border: 1px solid #fda4af; padding: 4px; border-radius: 4px; font-size: 0.7rem; color: #be123c; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        
+        /* Footer */
+        .takeaway-box { background: #eff6ff; border: 1px solid var(--accent-primary); grid-column: 1 / -1; padding: var(--space-sm); }
+        .takeaway-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-sm); margin-top: 4px; }
+        .takeaway-item { display: flex; gap: 6px; font-size: 0.85rem; }
+        .check-icon { color: var(--accent-success); min-width: 14px; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Embeddings & Vector Search</h1>
+            <div class="subtitle">Converting Meaning into Mathematics: A Comprehensive Guide to Vector Representations in Language Models</div>
+        </div>
+    </header>
+
+    <!-- Section 1: Understanding Embeddings -->
+    <section class="topic-section">
+        <h2>What Are Embeddings?</h2>
+        
+        <p>At the foundation of modern language models lies a crucial transformation: the conversion of human language into mathematical structures that machines can process and reason about. This transformation is accomplished through <strong>embeddings</strong>&mdash;dense numerical representations that encapsulate semantic meaning within high-dimensional vector spaces.</p>
+
+        <p>An embedding is fundamentally a mapping from discrete symbols (words, phrases, or concepts) to continuous numerical vectors. When we process the sentence "The cat sat on the mat," each word is transformed into an array of floating-point numbers, typically containing hundreds or thousands of dimensions. These dimensions don't correspond to human-interpretable features like "feline-ness" or "action-ness." Rather, they represent abstract learned patterns from training data that collectively capture semantic relationships.</p>
+
+        <p>The elegance of this approach lies in its <em>geometric properties</em>. Words with similar meanings naturally cluster together in vector space. The vector for "cat" lies near "feline," while "pizza" is distant from both. This geometric arrangement emerges automatically during training without explicit programming. It's discovered by neural networks through exposure to vast amounts of text, where the network learns to position words so that word prediction tasks become solvable.</p>
+
+        <div class="infobox">
+            <strong>Key Insight:</strong> Embeddings transform language into a mathematical landscape where meaning is encoded as spatial position. The proximity of vectors becomes a proxy for semantic similarity.
+        </div>
+
+        <!-- Flow Diagram -->
+        <div class="figure-container">
+            <div class="flow-diagram">
+                <div class="flow-box">Text Input</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">Embedding Model</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">Vector Space</div>
+            </div>
+            <div class="vector-output">[0.245, -0.512, 0.837, ..., 0.064]</div>
+            <div class="figure-label">Figure 1: Text-to-Vector Transformation Pipeline</div>
+        </div>
+    </section>
+
+    <!-- Section 2: Why Embeddings Matter -->
+    <section class="topic-section">
+        <h2>The Semantic Search Advantage</h2>
+        
+        <p>Traditional information retrieval systems operate on a fundamentally different principle than embedding-based search. Legacy keyword-matching approaches scan documents for exact or near-exact string matches. This strategy has inherent limitations: the query "What is a feline?" will fail to retrieve documents about "cats" unless the system explicitly knows that these terms are synonymous.</p>
+
+        <p><strong>Embedding-based semantic search</strong> solves this problem elegantly. When you construct embeddings for both documents and queries using the same model, semantically related content automatically appears nearby in vector space. The system doesn't require a dictionary linking "feline" to "cat"—the embedding model has already learned this relationship from training data.</p>
+
+        <p>Consider a practical example: A retrieval system might have indexed a document stating "I watched my cat chase birds in the garden." If a user queries "What animals were outside?", the query embedding will be geometrically close to the document embedding not because of keyword overlap, but because their semantic content is related. The embedding model understands that cats are animals and that bird-chasing happens outside, even though the exact words don't match.</p>
+
+        <h3>Semantic Clustering in Vector Space</h3>
+
+        <div class="figure-container">
+            <div class="vector-map">
+                <div class="vector-axis vector-axis-x"></div>
+                <div class="vector-axis vector-axis-y"></div>
+                <div class="connector-line"></div>
+                <div class="point point-cat">C</div>
+                <div class="point point-feline">F</div>
+                <div class="point point-dog">D</div>
+                <div class="point point-fruit">🍎</div>
+            </div>
+            <div class="figure-label">Figure 2: Related concepts cluster together in embedding space. C: Cat, F: Feline, D: Dog, 🍎: Fruit. The distance between Cat and Feline is smaller than between Cat and Fruit.</div>
+        </div>
+
+        <p>This clustering property emerges naturally from how embeddings are trained. The language model must predict the next word in sentences, which creates pressure to position related words nearby. Over billions of training examples, this optimization process builds the rich semantic structure we see in embedding spaces.</p>
+    </section>
+
+    <!-- Section 3: Cosine Similarity -->
+    <section class="topic-section">
+        <h2>Measuring Similarity: Cosine Distance</h2>
+        
+        <p>Now that we understand embeddings as points in space, we need a rigorous method to quantify how similar two vectors are. The most widely adopted metric in embedding-based systems is <strong>cosine similarity</strong>&mdash;a measurement based not on distance, but on the angle between vectors.</p>
+
+        <p>Mathematically, cosine similarity is defined as the dot product of two normalized vectors, yielding a value between -1 and 1:</p>
+
+        <div class="figure-container" style="background: var(--wiki-bg); padding: var(--space-lg);">
+            <div style="font-family: var(--font-code); font-size: 1.1rem; color: var(--accent-primary); margin: var(--space-md) 0;">
+                cos(θ) = (A · B) / (||A|| × ||B||)
+            </div>
+            <ul style="text-align: left; margin: var(--space-md) 0;">
+                <li><strong>cos(θ) = 1.0:</strong> Vectors point in identical directions (semantically identical)</li>
+                <li><strong>cos(θ) = 0.0:</strong> Vectors are orthogonal (semantically unrelated)</li>
+                <li><strong>cos(θ) = -1.0:</strong> Vectors point in opposite directions (semantically opposite)</li>
+            </ul>
+        </div>
+
+        <p>The intuition behind cosine similarity differs from Euclidean distance in a crucial way. Cosine similarity measures the <em>angle</em> between vectors, not their magnitude. This property proves invaluable in text processing because it makes the metric robust to document length differences. A long document and a short document discussing the same topic will have embeddings pointing in similar directions, even if their magnitudes differ.</p>
+
+        <p>This explains why cosine similarity became the standard in retrieval systems. It correctly treats "The cat sat quietly and waited for hours" and "cat" as related documents, despite the vast difference in their embedding magnitudes, instead incorrectly penalizing length as Euclidean distance would.</p>
+
+        <h3>Geometric Visualization</h3>
+        <div class="figure-container">
+            <svg class="chart-svg" viewBox="0 0 200 200">
+                <!-- Grid -->
+                <g stroke="#e8e8e8" stroke-width="0.5">
+                    <line x1="0" y1="100" x2="200" y2="100"/>
+                    <line x1="100" y1="0" x2="100" y2="200"/>
+                </g>
+                
+                <!-- Axes -->
+                <line x1="100" y1="100" x2="200" y2="100" stroke="var(--text-secondary)" stroke-width="1"/>
+                <line x1="100" y1="100" x2="100" y2="0" stroke="var(--text-secondary)" stroke-width="1"/>
+                
+                <!-- Origin -->
+                <circle cx="100" cy="100" r="2" fill="var(--text-secondary)"/>
+                
+                <!-- Vector A -->
+                <line x1="100" y1="100" x2="170" y2="40" stroke="var(--accent-primary)" stroke-width="2.5" class="chart-vector"/>
+                <circle cx="170" cy="40" r="3" fill="var(--accent-primary)"/>
+                <text x="175" y="40" fill="var(--accent-primary)" font-size="12" font-weight="bold">A</text>
+                
+                <!-- Vector B -->
+                <line x1="100" y1="100" x2="180" y2="70" stroke="var(--accent-secondary)" stroke-width="2.5" class="chart-vector"/>
+                <circle cx="180" cy="70" r="3" fill="var(--accent-secondary)"/>
+                <text x="185" y="70" fill="var(--accent-secondary)" font-size="12" font-weight="bold">B</text>
+                
+                <!-- Angle arc -->
+                <path d="M 130 100 Q 140 80 150 75" fill="none" stroke="var(--accent-warning)" stroke-width="1.5" stroke-dasharray="3" opacity="0.6"/>
+                <text x="135" y="85" fill="var(--accent-warning)" font-size="10">θ</text>
+            </svg>
+            <div class="figure-label">Figure 3: Cosine similarity measures the angle between vectors. Smaller angles indicate greater similarity.</div>
+        </div>
+    </section>
+
+    <!-- Section 4: Vector Database Indexing -->
+    <section class="topic-section">
+        <h2>Scaling Search: Vector Database Indexing</h2>
+        
+        <p>The geometric intuition behind embeddings becomes complicated at scale. In research settings, computing similarity between a query embedding and a million document embeddings is simple: multiply each document embedding by the query, collect the results, sort them. This is a <strong>brute force</strong> or <strong>linear search</strong>, requiring O(n) time complexity—completely impractical for production systems with billions of vectors.</p>
+
+        <p>Instead, specialized vector databases employ <strong>Approximate Nearest Neighbor (ANN)</strong> algorithms that sacrifice perfect accuracy for dramatic speed improvements. Rather than checking every single vector, ANN algorithms intelligently partition the space into regions, allowing them to skip irrelevant sections entirely.</p>
+
+        <h3>Common Indexing Strategies</h3>
+
+        <p><strong>HNSW (Hierarchical Navigable Small-World)</strong> constructs a multi-layer graph structure. Vectors are organized into layers where higher layers contain representative points, allowing the search to navigate efficiently from rough approximations to precise neighbors. This approach achieves O(log n) search time for well-distributed embeddings, providing orders of magnitude speedup over linear search.</p>
+
+        <p><strong>IVF (Inverted File Index)</strong> partitions the vector space into clusters using k-means clustering or similar techniques. During search, the query embedding first determines which clusters are most likely to contain relevant results, then searches only within those clusters. This approach trades some accuracy for speed, making it ideal for situations where a small percentage of irrelevant results are acceptable.</p>
+
+        <h3>Spatial Clustering Visualization</h3>
+
+        <div class="figure-container">
+            <div class="grid-container" style="gap: 8px; max-width: 240px; margin: var(--space-md) auto;">
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+
+                <div class="grid-cell"></div>
+                <div class="grid-cell grid-cluster"></div>
+                <div class="grid-cell grid-cluster"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+
+                <div class="grid-cell"></div>
+                <div class="grid-cell grid-cluster"></div>
+                <div class="grid-cell grid-cluster"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+            </div>
+            <div class="figure-label">Figure 4: Vector space partitioning clusters relevant vectors together. ANN algorithms query only the highlighted cluster instead of examining all cells.</div>
+        </div>
+
+        <p>These indexing structures represent a careful trade-off. HNSW maintains higher accuracy at the cost of more memory usage, while IVF saves memory but potentially returns less relevant results. The choice depends on application requirements—a search engine might prefer HNSW for precision, while a recommendation system might choose IVF for speed.</p>
+    </section>
+
+    <!-- Section 5: Embedding Models -->
+    <section class="topic-section">
+        <h2>Embedding Models and Training</h2>
+        
+        <p>Embeddings don't magically appear; they're learned through training neural networks on text data. The most successful embedding models use <strong>transformer architectures</strong>—the same technology underlying ChatGPT and other large language models.</p>
+
+        <h3>How Embedding Models Are Trained</h3>
+
+        <p>Modern embedding models are typically trained using one of several approaches:</p>
+
+        <ul>
+            <li><strong>Contrastive Learning:</strong> Pairs of similar texts are pushed close in embedding space while dissimilar pairs are pushed apart. This directly optimizes for the clusters we want in semantic search.</li>
+            <li><strong>Masked Language Modeling:</strong> The model learns to predict hidden words in context, naturally developing representations where contextually appropriate words are nearby.</li>
+            <li><strong>Triplet Loss:</strong> The model learns by comparing an anchor text to both a positive (similar) and negative (dissimilar) example, creating strong directional forces in the embedding space.</li>
+        </ul>
+
+        <h3>Popular Embedding Models</h3>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th style="font-family: var(--font-system);">Model</th>
+                    <th style="font-family: var(--font-system);">Approach</th>
+                    <th style="font-family: var(--font-system);">Best For</th>
+                    <th style="font-family: var(--font-system);">Deployment</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>OpenAI text-embedding-3</strong></td>
+                    <td>Proprietary, large-scale trained</td>
+                    <td>General-purpose tasks</td>
+                    <td>API (cloud)</td>
+                </tr>
+                <tr>
+                    <td><strong>Sentence-BERT (SBERT)</strong></td>
+                    <td>Open-source, fine-tuned</td>
+                    <td>Sentence similarity, clustering</td>
+                    <td>Local, self-hosted</td>
+                </tr>
+                <tr>
+                    <td><strong>BGE (BAAI General Embedding)</strong></td>
+                    <td>Dense retrieval optimized</td>
+                    <td>Retrieval tasks, high precision</td>
+                    <td>Local or API</td>
+                </tr>
+                <tr>
+                    <td><strong>Voyage AI Embeddings</strong></td>
+                    <td>Specialized training</td>
+                    <td>Enterprise search, RAG</td>
+                    <td>API (cloud)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Model Selection Considerations</h3>
+
+        <div class="pipeline">
+            <div class="pipeline-stage">
+                <strong>Dimension Size</strong>
+                <p>Smaller dimensions (768) are faster but lose detail. Larger dimensions (1536+) preserve nuance but increase computational cost and storage.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Domain Specificity</strong>
+                <p>General models work adequately for most tasks, but legal, medical, or scientific texts benefit from domain-specific embeddings trained on specialized corpora.</p>
+            </div>
+            <div class="pipeline-stage">
+                <strong>Inference Speed vs. Quality</strong>
+                <p>Some models optimize for speed (useful for real-time applications), others for quality (better for offline batch processing or retrieval where latency is less critical).</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 6: RAG Architecture -->
+    <section class="topic-section">
+        <h2>Embeddings in Retrieval-Augmented Generation</h2>
+        
+        <p><strong>Retrieval-Augmented Generation (RAG)</strong> represents one of the most effective applications of embeddings in modern language models. RAG systems combine the retrieval power of vector search with the generative capabilities of large language models, enabling systems to ground their outputs in specific, relevant documents.</p>
+
+        <h3>The RAG Pipeline: Offline Indexing Phase</h3>
+
+        <p>RAG systems operate in two distinct phases. During offline indexing, documents are processed asynchronously and indexed for later retrieval:</p>
+
+        <ol>
+            <li><strong>Document Chunking:</strong> Large documents are split into manageable pieces (typically 256-1024 tokens) to ensure that embeddings capture focused, coherent content.</li>
+            <li><strong>Embedding Generation:</strong> Each chunk is embedded using a consistent embedding model, producing numerical vectors that preserve semantic meaning.</li>
+            <li><strong>Vector Storage:</strong> These embeddings are indexed in a vector database with appropriate data structures (HNSW, IVF) for efficient retrieval.</li>
+        </ol>
+
+        <h3>The RAG Pipeline: Runtime Retrieval Phase</h3>
+
+        <p>At inference time, when a user poses a question, the system:</p>
+
+        <ol>
+            <li><strong>Embeds the Query:</strong> The user's question is embedded using the same model as the documents.</li>
+            <li><strong>Searches for Relevant Context:</strong> Vector similarity search returns the k most similar document chunks.</li>
+            <li><strong>Augments Prompt:</strong> These retrieved chunks are inserted into the language model's context window.</li>
+            <li><strong>Generates Response:</strong> The language model generates an answer grounded in the specific retrieved documents.</li>
+        </ol>
+
+        <div class="figure-container">
+            <div class="pipeline">
+                <div class="pipeline-stage">
+                    <strong>📄 User Query</strong>
+                    <p>"What are the benefits of embeddings?"</p>
+                </div>
+                <div class="pipeline-stage">
+                    <strong>🔍 Vector Search</strong>
+                    <p>Find semantically similar passages from indexed documents</p>
+                </div>
+                <div class="pipeline-stage">
+                    <strong>🤖 LLM with Context</strong>
+                    <p>Generate answer using retrieved passages as reference</p>
+                </div>
+            </div>
+            <div class="figure-label">Figure 5: RAG Pipeline integrates retrieval with generation for accurate, grounded responses.</div>
+        </div>
+
+        <p>RAG architectures solve a critical limitation of traditional language models: their knowledge cutoff. While the model weights represent training data from a specific point in time, RAG systems can incorporate real-time information through semantic search, enabling current, applicable answers.</p>
+    </section>
+
+    <!-- Section 7: Common Pitfalls -->
+    <section class="topic-section">
+        <h2>Common Pitfalls and Limitations</h2>
+        
+        <p>Despite their power, embedding-based systems face several practical challenges that organizations must navigate:</p>
+
+        <div class="warning-card">
+            <strong>Chunk Boundary Problems:</strong> Splitting documents into chunks can inadvertently separate related information. A question about "car maintenance" might not retrieve a passage that discusses oil changes if the chunk boundary separates them unexpectedly. Careful chunk sizing and overlap strategies are essential.
+        </div>
+
+        <div class="warning-card">
+            <strong>Model Drift:</strong> If you initially embed documents with one model and later switch to a newer, better embedding model, your stored vectors become incompatible with the new embeddings. Re-embedding entire databases is computationally expensive, creating data decay problems.
+        </div>
+
+        <div class="warning-card">
+            <strong>Domain Mismatch:</strong> General-purpose embedding models trained on broad internet text sometimes perform poorly on specialized domains like legal documents or medical literature. A general embedding model might consider "python" and "snake" very similar, appropriate for general text but problematic in software documentation.
+        </div>
+
+        <div class="warning-card">
+            <strong>Cosine Similarity Doesn't Mean Truth:</strong> High semantic similarity doesn't guarantee factual accuracy. An embedding system might retrieve "The Earth is flat" as highly relevant to "Is the Earth round?" because both discuss Earth shape, despite the contradiction. Reranking systems and fact-checking components are necessary.
+        </div>
+
+        <h3>Mitigation Strategies</h3>
+
+        <p>Effective RAG systems implement multiple layers of quality control: semantic reranking to improve top-k results, explicit fact verification, multi-hop retrieval to gather related information, and human-in-the-loop evaluation to identify failure modes.</p>
+    </section>
+
+    <!-- Takeaway Section -->
+    <section class="takeaway-section">
+        <h2>Key Takeaways</h2>
+        
+        <div class="takeaway-list">
+            <div class="takeaway-item">
+                <strong>Embeddings are Geometry:</strong> Text is transformed into points in high-dimensional space where proximity encodes semantic similarity.
+            </div>
+            <div class="takeaway-item">
+                <strong>Cosine Similarity Rules:</strong> Angle-based measurement makes embedding search robust to magnitude differences, ideal for variable-length documents.
+            </div>
+            <div class="takeaway-item">
+                <strong>Indexing Enables Scale:</strong> ANN algorithms like HNSW reduce search from O(n) to O(log n), making billion-scale retrieval practical.
+            </div>
+            <div class="takeaway-item">
+                <strong>Model Choice Matters:</strong> Different embedding models optimize for different trade-offs—accuracy, speed, domain, dimension—requiring careful selection based on application needs.
+            </div>
+            <div class="takeaway-item">
+                <strong>RAG is Powerful but Imperfect:</strong> Combining retrieval with generation creates capable systems, but careful attention to chunking, drift, and domain-specificity prevents failures.
+            </div>
+            <div class="takeaway-item">
+                <strong>Quality Control is Essential:</strong> Similarity alone doesn't guarantee relevance or truthfulness; robust systems layer reranking, verification, and human oversight.
+            </div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>

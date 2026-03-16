@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alignment Techniques: RLHF and DPO - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .progression-viz {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 25px 0;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .prog-step {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            border: 2px solid #ccc;
+            margin: 0 5px;
+            font-size: 0.85em;
+        }
+
+        .prog-step.active {
+            border-color: var(--wp-accent);
+            background: #eef2ff;
+            color: var(--wp-accent);
+            font-weight: bold;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .hhh-card {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .hhh-item {
+            background: #eef2ff;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid var(--wp-border);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Alignment Techniques</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Alignment</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <rect x="10" y="15" width="80" height="10" rx="5" fill="#eef2ff" stroke="#36c" />
+                    <circle cx="50" cy="20" r="12" fill="none" stroke="#36c" stroke-width="2" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Standard</div>
+                    <div class="infobox-value">"H-H-H" Framework</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Role</div>
+                    <div class="infobox-value">Helpful Behavior</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">SOTA</div>
+                    <div class="infobox-value">DPO / RLHF</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p><strong>Alignment</strong> refers to the process of training a Large Language Model to behave in
+                accordance with human values and specific operational constraints. While pre-training provides
+                general-purpose linguistic knowledge, the resulting model (often called a "Base Model") is not
+                inherently optimized for being helpful or conversational. Alignment techniques transform these base
+                models into Assistant Models by refining their outputs to be <strong>Helpful, Harmless, and Honest
+                    (H-H-H)</strong>.</p>
+
+            <h2>The H-H-H Framework</h2>
+            <div class="hhh-card animate-on-scroll">
+                <div class="hhh-item"><strong>Helpful</strong> (Answer the intent)</div>
+                <div class="hhh-item"><strong>Harmless</strong> (Safety & Toxic-Free)</div>
+                <div class="hhh-item"><strong>Honest</strong> (Admit Limits)</div>
+            </div>
+
+            <h2>Progression of Training</h2>
+            <div class="progression-viz animate-on-scroll">
+                <div class="prog-step">Pre-training<br><small>Predict Next Token</small></div>
+                <div class="prog-step">Instruct-tuning<br><small>Follow Orders</small></div>
+                <div class="prog-step active">Alignment<br><small>Preference Tuning</small></div>
+            </div>
+
+            <h2>Instruction Tuning (SFT)</h2>
+            <p>The first stage of alignment is <strong>Supervised Fine-Tuning (SFT)</strong>. A base model is fed
+                high-quality pairs of instruction and response (e.g., from the Alpaca or ShareGPT datasets). After this
+                stage, the model understands the "format" of an assistant-user interaction but lacks a fine-grained
+                sense of which nuance humans prefer.</p>
+
+            <h2>Reinforcement Learning from Human Feedback (RLHF)</h2>
+            <p>RLHF was the breakthrough that enabled models like GPT-4. It works in three distinct phases:</p>
+            <ol>
+                <li><strong>Sampling:</strong> Generate multiple responses for the same prompt.</li>
+                <li><strong>Ranking:</strong> Humans rank the responses from best to worst.</li>
+                <li><strong>Reward Model:</strong> Train a separate neural network to predict these human scores.</li>
+                <li><strong>Policy Optimization:</strong> Use Reinforcement Learning (PPO) to shift the model's behavior
+                    toward high-reward outputs.</li>
+            </ol>
+
+            <h2>Direct Preference Optimization (DPO)</h2>
+            <p><strong>DPO</strong> is a more recent, computationally efficient alternative to RLHF. Instead of training
+                an explicit reward model and using complex Reinforcement Learning, DPO treats preference learning as a
+                simple classification problem. It bypasses the reward model entirely by optimizing the model's
+                likelihood of choosing "Winning" responses over "Losing" responses directly.</p>
+
+            <h2>Comparison Table: RLHF vs DPO</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>RLHF</th>
+                        <th>DPO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Computational Complexity</strong></td>
+                        <td>High (requires 4 models)</td>
+                        <td>Moderate (2 models)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Deployment Complexity</strong></td>
+                        <td>High (RL is unstable)</td>
+                        <td>Low (Standard SFT)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Stability</strong></td>
+                        <td>Low</td>
+                        <td>High</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Performance</strong></td>
+                        <td>SOTA for large scale</td>
+                        <td>Competitive / Better</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>When to Align</h2>
+            <div class="side-note">
+                💡 <strong>Pro-Tip:</strong> Most developers should start with a model that has <em>already</em> been
+                aligned (e.g., Llama-3-Instruct). You only need to perform your own alignment if you need to enforce
+                highly specific corporate standards or brand-voice preferences that generic alignment doesn't cover.
+            </div>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>The <strong>RSA Sales QA Dashboard</strong> requires a bot that is perfectly aligned with "Insurance
+                Ethics." during training, the developers used <strong>DPO (Direct Preference Optimization)</strong> to
+                provide the model with pairs of responses. For example, given a transcript where an advisor slightly
+                pressures a customer, the model was trained to prefer a response that <em>flags the ethical
+                    violation</em> over one that <em>praises the successful sale</em>. This alignment ensures the AI
+                acts as a safeguard for the company's legal reputation rather than just a sales-tracking tool.</p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: DPO Preference Pair</span>
+                dpo_dataset = {
+                <span class="string">"prompt"</span>: <span class="string">"Audit: Advisor failed to mention RSA $50
+                    fee."</span>,
+                <span class="string">"chosen"</span>: <span class="string">"FLAG: Compliance violation. Mandatory fee
+                    disclosure missing."</span>,
+                <span class="string">"rejected"</span>: <span class="string">"The advisor was very polite and closed the
+                    sale successfully."</span>
+                }
+                <span class="comment"># Model learns to prioritize legal safety over sales success.</span>
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ Alignment ensures models are safe and useful for humans.<br>
+                ✅ SFT is the "Foundation" of alignment; DPO/RLHF is the "Polish."<br>
+                ✅ DPO is rapidly replacing RLHF for smaller production teams.<br>
+                ✅ Always aim for the H-H-H criteria in your evaluation rubrics.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

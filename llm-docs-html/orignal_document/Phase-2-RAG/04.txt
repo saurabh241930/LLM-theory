@@ -1,0 +1,297 @@
+import React from 'react';
+import { 
+  FileText, Scissors, Layers, CheckCircle2, 
+  AlertCircle, MessageSquare, Database, 
+  SplitSquareHorizontal, GitMerge, FileDigit, 
+  HelpCircle, Sparkles, BookOpen, ArrowRight,
+  GitPullRequest
+} from 'lucide-react';
+
+// --- STYLING CONSTANTS (ByteByteGo Aesthetic) ---
+const THEME = {
+  cardBg: "bg-white",
+  cardBorder: "border-slate-200",
+  titleBg: "bg-[#41d8a0]",
+  titleBorder: "border-[#2e9e73]",
+  primaryNode: "bg-[#a6f0d4] border-[#31a67a] text-slate-900",
+  secondaryNode: "bg-white border-slate-300 text-slate-700 shadow-sm",
+  dashedNode: "bg-[#f8fafc] border-slate-400 border-dashed text-slate-700",
+  errorNode: "bg-[#ffe4e6] border-[#f43f5e] text-slate-900",
+  warningNode: "bg-[#fef3c7] border-[#d97706] text-slate-900",
+  line: "#64748b"
+};
+
+// --- CORE UI COMPONENTS ---
+
+const Card = ({ title, children, tall = false }) => (
+  <div className={`relative ${THEME.cardBg} rounded-2xl shadow-sm border ${THEME.cardBorder} overflow-hidden flex flex-col items-center w-full ${tall ? 'h-[550px]' : 'h-[400px]'} mb-6 hover:shadow-md transition-shadow`}>
+    <div className={`mt-5 ${THEME.titleBg} text-slate-900 font-extrabold text-lg py-2 px-6 rounded-xl border-2 ${THEME.titleBorder} w-[85%] text-center z-20 shadow-sm tracking-tight`}>
+      {title}
+    </div>
+    <div className="absolute inset-0 top-[60px] w-full p-4 flex items-center justify-center">
+      {children}
+    </div>
+  </div>
+);
+
+const Node = ({ top, left, title, subtitle, icon: Icon, type = "primary", className = "", width = "w-[130px]" }) => {
+  const styleClass = THEME[`${type}Node`] || THEME.primaryNode;
+  return (
+    <div 
+      className={`absolute z-10 flex flex-col items-center justify-center p-2 rounded-lg border-2 ${width} text-center transition-transform hover:scale-105 ${styleClass} ${className}`}
+      style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+    >
+      {Icon && <Icon className="mb-1 opacity-80" size={18} strokeWidth={2} />}
+      <span className="text-[11px] font-bold leading-tight">{title}</span>
+      {subtitle && <span className="text-[9px] opacity-80 mt-1 leading-tight whitespace-pre-line">{subtitle}</span>}
+    </div>
+  );
+};
+
+const Label = ({ top, left, text, icon: Icon, type="default", width="w-auto" }) => (
+  <div 
+    className={`absolute z-20 flex flex-col items-center justify-center px-3 py-1.5 rounded-full text-[10px] font-bold shadow-sm border border-slate-200 ${width} ${type === 'error' ? 'bg-red-50 text-red-600 border-red-200' : type === 'success' ? 'bg-[#e6fcf5] text-[#2e9e73] border-[#31a67a]' : type === 'warning' ? 'bg-[#fef3c7] text-[#d97706] border-[#f59e0b]' : 'bg-white text-slate-700'}`}
+    style={{ top: `${top}%`, left: `${left}%`, transform: 'translate(-50%, -50%)' }}
+  >
+    {Icon && <Icon size={14} className={`mb-1 ${type === 'error' ? 'text-red-500' : type === 'warning' ? 'text-[#d97706]' : 'text-[#2e9e73]'}`} />}
+    {text}
+  </div>
+);
+
+const SvgCanvas = ({ children }) => (
+  <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+    <defs>
+       <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill={THEME.line} />
+       </marker>
+       <marker id="arrow-red" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+       </marker>
+       <marker id="arrow-green" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 0 L 10 5 L 0 10 z" fill="#31a67a" />
+       </marker>
+    </defs>
+    {children}
+  </svg>
+);
+
+const Connection = ({ x1, y1, x2, y2, dashed = false, arrow = true, color = THEME.line }) => {
+  let marker = "none";
+  if (arrow) {
+    if (color === '#ef4444') marker = "url(#arrow-red)";
+    else if (color === '#31a67a') marker = "url(#arrow-green)";
+    else marker = "url(#arrow)";
+  }
+  return (
+    <line 
+      x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} 
+      stroke={color} strokeWidth="2" strokeDasharray={dashed ? "5,5" : "none"} 
+      markerEnd={marker} 
+    />
+  );
+};
+
+// --- SPECIFIC DIAGRAM CARDS ---
+
+// Card 1: Why Chunking Exists
+const CardWhyChunking = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={20} y1={50} x2={40} y2={25} color="#ef4444" />
+      <Connection x1={20} y1={50} x2={40} y2={75} />
+      <Connection x1={60} y1={75} x2={75} y2={75} color="#31a67a" />
+    </SvgCanvas>
+    
+    <Node top={50} left={20} title="Long Document" subtitle="10,000 tokens" icon={FileText} type="secondary" />
+    
+    {/* Failing Path */}
+    <Node top={25} left={55} title="Context Window" subtitle="2,000 max capacity" icon={SplitSquareHorizontal} type="error" />
+    <Label top={25} left={85} text="❌ Can't fit directly" type="error" />
+
+    {/* Success Path */}
+    <Node top={75} left={50} title="Split into 4 Chunks" subtitle="500 tokens each" icon={Scissors} type="primary" width="w-[140px]" />
+    <Node top={75} left={85} title="Context Window" subtitle="Fits perfectly!" icon={CheckCircle2} type="secondary" />
+    
+    <div className="absolute top-[88%] left-[50%] -translate-x-1/2 text-[10px] font-bold text-slate-500 uppercase">
+      Goal: Preserve meaning while keeping pieces small
+    </div>
+  </div>
+);
+
+// Card 2: Fixed-Size vs Sliding Window
+const CardFixedVsSliding = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[8%] left-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Strategy 1: Fixed-Size</div>
+    <div className="absolute top-[52%] left-4 text-xs font-bold text-[#31a67a] uppercase tracking-widest">Strategy 2: Sliding Window</div>
+    <div className="absolute top-[48%] left-[5%] right-[5%] border-t-2 border-dashed border-slate-200"></div>
+
+    <SvgCanvas>
+      {/* Fixed: Hard Cut */}
+      <Connection x1={30} y1={30} x2={70} y2={30} dashed={true} color="#ef4444" arrow={false} />
+      {/* Sliding: Overlap */}
+      <Connection x1={30} y1={75} x2={50} y2={75} color="#31a67a" arrow={false} />
+      <Connection x1={70} y1={75} x2={50} y2={75} color="#31a67a" arrow={false} />
+    </SvgCanvas>
+
+    {/* Fixed Size */}
+    <Node top={30} left={30} title="Chunk 1" subtitle='"The cat is a very"' type="secondary" width="w-[150px]" />
+    <Node top={30} left={70} title="Chunk 2" subtitle='"smart animal"' type="secondary" width="w-[150px]" />
+    <Label top={30} left={50} text="❌ Breaks Meaning" type="error" />
+
+    {/* Sliding Window */}
+    <Node top={75} left={30} title="Chunk 1 (0-500)" subtitle='"The cat is a very"' type="primary" width="w-[160px]" />
+    <Node top={75} left={70} title="Chunk 2 (250-750)" subtitle='"very smart animal"' type="primary" width="w-[160px]" />
+    <Label top={75} left={50} text="Overlap Context" icon={GitMerge} type="success" />
+  </div>
+);
+
+// Card 3: Semantic & Recursive Chunking
+const CardAdvancedStrategies = () => (
+  <div className="relative w-full h-full">
+    <div className="absolute top-[5%] left-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Strategy 3: Semantic</div>
+    <div className="absolute top-[52%] left-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Strategy 4: Recursive</div>
+    <div className="absolute top-[48%] left-[5%] right-[5%] border-t-2 border-dashed border-slate-200"></div>
+
+    <SvgCanvas>
+      {/* Semantic */}
+      <Connection x1={20} y1={25} x2={45} y2={25} />
+      <Connection x1={45} y1={25} x2={75} y2={25} color="#ef4444" />
+      {/* Recursive */}
+      <Connection x1={15} y1={75} x2={35} y2={75} />
+      <Connection x1={35} y1={75} x2={60} y2={75} />
+      <Connection x1={60} y1={75} x2={85} y2={75} />
+    </SvgCanvas>
+
+    {/* Semantic */}
+    <Node top={25} left={20} title="Sentence 1" subtitle='"Economy grew..."' type="primary" width="w-[120px]" />
+    <Node top={25} left={45} title="Sentence 2" subtitle='"Good news" \n (High Sim: 0.75)' type="primary" width="w-[120px]" />
+    <Node top={25} left={75} title="Sentence 3" subtitle='"However, inflation" \n (Low Sim: 0.1)' type="secondary" width="w-[130px]" />
+    <Label top={25} left={60} text="Split Here ✂️" type="error" />
+    <div className="absolute top-[40%] left-[50%] -translate-x-1/2 text-[9px] text-slate-500">Groups by meaning using embeddings</div>
+
+    {/* Recursive */}
+    <Node top={75} left={15} title="Paragraphs" subtitle='Split by "\n\n"' type="primary" width="w-[100px]" />
+    <Node top={75} left={35} title="Lines" subtitle='Split by "\n"' type="primary" width="w-[100px]" />
+    <Node top={75} left={60} title="Sentences" subtitle='Split by "."' type="primary" width="w-[100px]" />
+    <Node top={75} left={85} title="Words" subtitle='Split by " "' type="dashed" width="w-[100px]" />
+    <div className="absolute top-[90%] left-[50%] -translate-x-1/2 text-[9px] text-slate-500">Falls back to smaller delimiters until chunk fits</div>
+  </div>
+);
+
+// Card 4: Document-Aware Chunking (Legal Contract)
+const CardDocAware = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      <Connection x1={30} y1={50} x2={55} y2={30} />
+      <Connection x1={30} y1={50} x2={55} y2={50} />
+      <Connection x1={30} y1={50} x2={55} y2={70} />
+    </SvgCanvas>
+
+    {/* Left: Raw Document */}
+    <div className="absolute top-[50%] left-[20%] -translate-x-1/2 -translate-y-1/2 w-[180px] bg-slate-800 text-slate-300 p-3 rounded-xl font-mono text-[9px] shadow-md border border-slate-700">
+      <span className="text-[#41d8a0] font-bold"># SECTION 1: PARTIES</span><br/>
+      This agreement is...<br/><br/>
+      <span className="text-[#41d8a0] font-bold"># SEC 2: PAYMENT</span><br/>
+      2.1 Due by...<br/>
+      2.2 Late fees...<br/><br/>
+      <span className="text-[#41d8a0] font-bold"># SEC 3: TERM</span><br/>
+      If breach occurs...
+    </div>
+
+    {/* Right: Chunks with Metadata */}
+    <Node top={25} left={75} title="Chunk 1" subtitle="Content: 'This agreement...'\nMeta: [Sec 1: Parties]" icon={Database} type="primary" width="w-[200px]" />
+    <Node top={50} left={75} title="Chunk 2" subtitle="Content: '2.1 Due by...'\nMeta: [Sec 2: Payment]" icon={Database} type="primary" width="w-[200px]" />
+    <Node top={75} left={75} title="Chunk 3" subtitle="Content: 'If breach...'\nMeta: [Sec 3: Term]" icon={Database} type="primary" width="w-[200px]" />
+    
+    <Label top={85} left={20} text="Strategy 5: Uses structural headers" icon={BookOpen} type="success" />
+  </div>
+);
+
+// Card 5: Decision Tree
+const CardDecisionTree = () => (
+  <div className="relative w-full h-full">
+    <SvgCanvas>
+      {/* Node 1 to branches */}
+      <Connection x1={20} y1={25} x2={20} y2={45} />
+      <Connection x1={20} y1={25} x2={50} y2={25} dashed={true} />
+      
+      {/* Node 2 to branches */}
+      <Connection x1={50} y1={25} x2={50} y2={45} />
+      <Connection x1={50} y1={25} x2={80} y2={25} dashed={true} />
+
+      {/* Node 3 to branches */}
+      <Connection x1={80} y1={25} x2={80} y2={45} />
+      <Connection x1={80} y1={25} x2={80} y2={75} dashed={true} />
+      <Connection x1={80} y1={75} x2={60} y2={75} dashed={true} />
+    </SvgCanvas>
+
+    {/* Level 1 */}
+    <Node top={20} left={20} title="Structured?" subtitle="(Headers, Sections)" icon={HelpCircle} type="secondary" width="w-[140px] z-20" />
+    <Label top={35} left={20} text="YES" />
+    <Node top={55} left={20} title="Doc-Aware" subtitle="Best for Legal/Docs" icon={BookOpen} type="success" width="w-[130px] z-20" />
+    <Label top={20} left={35} text="NO" type="warning" />
+
+    {/* Level 2 */}
+    <Node top={20} left={50} title="Semantic Critical?" subtitle="(Medicine, Law)" icon={HelpCircle} type="secondary" width="w-[140px] z-20" />
+    <Label top={35} left={50} text="YES" />
+    <Node top={55} left={50} title="Semantic" subtitle="Embeds all sentences" icon={Sparkles} type="success" width="w-[130px] z-20" />
+    <Label top={20} left={65} text="NO" type="warning" />
+
+    {/* Level 3 */}
+    <Node top={20} left={80} title="Need Fast/Simple?" icon={HelpCircle} type="secondary" width="w-[140px] z-20" />
+    <Label top={35} left={80} text="YES" />
+    <Node top={55} left={80} title="Recursive / Fixed" subtitle="Good balance" icon={GitPullRequest} type="success" width="w-[130px] z-20" />
+    
+    {/* Final Fallback */}
+    <Label top={65} left={80} text="NO" type="warning" />
+    <Node top={75} left={45} title="Semantic (If Budget Allows)" icon={Database} type="dashed" width="w-[190px] z-20" />
+  </div>
+);
+
+
+// --- MAIN APP LAYOUT ---
+export default function App() {
+  return (
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-800">
+      
+      <header className="max-w-7xl mx-auto mb-10 border-b border-slate-200 pb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+             Visual Dev Guides <span className="text-slate-400 font-normal">| Chunking Strategies</span>
+          </h1>
+          <p className="text-slate-500 mt-2 text-sm max-w-lg">
+            Phase 1 Theory: Techniques to break down massive documents into context-window-friendly pieces while preserving meaning.
+          </p>
+        </div>
+        <div className="bg-slate-800 text-white text-sm font-bold py-2 px-5 rounded-full shadow-md flex items-center gap-2">
+          <Scissors size={16} /> Chunking & Parsing
+        </div>
+      </header>
+      
+      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-10">
+         <Card title="01. Why Chunking Exists">
+           <CardWhyChunking />
+         </Card>
+
+         <Card title="02. Fixed-Size vs Sliding Window">
+           <CardFixedVsSliding />
+         </Card>
+
+         <Card title="03. Semantic & Recursive Chunking" tall={true}>
+           <CardAdvancedStrategies />
+         </Card>
+
+         <Card title="04. Document-Aware Chunking (Best for Structs)" tall={true}>
+           <CardDocAware />
+         </Card>
+      </main>
+
+      <div className="max-w-7xl mx-auto mt-6">
+        <Card title="05. How to Choose: Decision Tree" tall={false}>
+            <CardDecisionTree />
+        </Card>
+      </div>
+
+    </div>
+  );
+}

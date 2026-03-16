@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic RAG</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Agentic RAG</h1>
+        <div class="subtitle">Autonomous Routing and Tool Use</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container" id="agentic-rag">
+            <h3>How does Agentic RAG change the retrieval paradigm?</h3>
+            <div class="answer">
+                <div class="one-liner">Instead of a static sequence, an LLM Agent dynamically decides what, when, and
+                    how many times to retrieve information.</div>
+
+                <p>Agentic RAG provides the LLM with a <strong>Routing Agent</strong> and access to multiple tools (SQL
+                    DB, Vector DB, Web Search).</p>
+                <h4>Agent Tool Options:</h4>
+                <ul>
+                    <li><strong>Vector Store Tool:</strong> For conceptual or unstructured text queries.</li>
+                    <li><strong>SQL Tool:</strong> For aggregations and relational data.</li>
+                    <li><strong>Web Search Tool:</strong> For real-time context missing from the DB.</li>
+                </ul>
+                <div class="mermaid">
+                    flowchart TD
+                    Q["User Query"] --> Agent["LLM Router / Agent"]
+                    Agent -- "Decides Needs SQL" --> SQL[("SQL DB")]
+                    Agent -- "Decides Needs Concepts" --> Vector[("Vector DB")]
+                    Agent -- "Needs Web Info" --> Web["Tavily / Google Search"]
+
+                    SQL --> Eval["Agent Evaluates Result"]
+                    Vector --> Eval
+                    Web --> Eval
+                    Eval -- "Information Sufficient" --> Output["Final Answer"]
+                    Eval -- "Needs more info" --> Agent
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

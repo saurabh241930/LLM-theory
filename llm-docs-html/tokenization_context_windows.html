@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tokenization and Context Windows - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .token-block-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .token-block {
+            padding: 8px 12px;
+            border-radius: 4px;
+            background: #eef2ff;
+            border: 1px solid var(--wp-accent);
+            font-family: monospace;
+            font-size: 14px;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .animate-active .token-block {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.4s ease-out;
+        }
+
+        .token-block:nth-child(1) {
+            transition-delay: 0.1s;
+        }
+
+        .token-block:nth-child(2) {
+            transition-delay: 0.3s;
+        }
+
+        .token-block:nth-child(3) {
+            transition-delay: 0.5s;
+        }
+
+        .token-block:nth-child(4) {
+            transition-delay: 0.7s;
+        }
+
+        .context-window-viz {
+            width: 100%;
+            height: 100px;
+            border: 1px solid var(--wp-border);
+            position: relative;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        .sliding-window {
+            position: absolute;
+            top: 10px;
+            bottom: 10px;
+            width: 50%;
+            background: rgba(54, 102, 204, 0.1);
+            border-left: 2px solid var(--wp-accent);
+            border-right: 2px solid var(--wp-accent);
+            left: 10%;
+            animation: slideWindow 8s infinite ease-in-out;
+        }
+
+        .token-stream {
+            display: flex;
+            gap: 5px;
+            position: absolute;
+            top: 40px;
+            left: 0;
+            white-space: nowrap;
+        }
+
+        .stream-token {
+            width: 15px;
+            height: 15px;
+            background: #ccc;
+            border-radius: 2px;
+        }
+
+        @keyframes slideWindow {
+
+            0%,
+            100% {
+                left: 10%;
+            }
+
+            50% {
+                left: 40%;
+            }
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .keyword {
+            color: #d73a49;
+        }
+
+        .string {
+            color: #032f62;
+        }
+
+        .comment {
+            color: #6a737d;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Tokenization and Context Windows</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Tokenization</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <rect x="5" y="10" width="25" height="20" rx="2" fill="#eef2ff" stroke="#36c" />
+                    <rect x="35" y="10" width="30" height="20" rx="2" fill="#eef2ff" stroke="#36c" />
+                    <rect x="70" y="10" width="25" height="20" rx="2" fill="#eef2ff" stroke="#36c" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Role</div>
+                    <div class="infobox-value">Data Preprocessing</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Unit</div>
+                    <div class="infobox-value">Token (Sub-word)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Algorithm</div>
+                    <div class="infobox-value">BPE, WordPiece</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Limit</div>
+                    <div class="infobox-value">Context Window</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>In the architecture of Large Language Models (LLMs), <strong>tokenization</strong> is the process of
+                translating human-readable text into a sequence of discrete units called <strong>tokens</strong>. These
+                tokens are more granular than words but more meaningful than individual characters. For a model, text
+                like "Hello, world!" is decomposed into numeric IDs (e.g., [15496, 11, 28357, 28808]) which are then
+                processed as tensors.</p>
+
+            <h2>How Tokenization Works</h2>
+            <p>Modern LLMs use sub-word tokenization algorithms such as <strong>Byte-Pair Encoding (BPE)</strong>. BPE
+                iteratively merges the most frequent pairs of characters or character sequences in a corpus to build a
+                vocabulary. This allows the model to handle "apple" as a single token while breaking "tokenization" into
+                sub-pieces like ["token", "iz", "ation"].</p>
+
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Model Family</th>
+                        <th>Tokenizer Architecture</th>
+                        <th>Tokens Per Word (Avg)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>GPT-4 (OpenAI)</strong></td>
+                        <td>cl100k_base</td>
+                        <td>~1.3</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Claude (Anthropic)</strong></td>
+                        <td>Claude-specific</td>
+                        <td>~1.2</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Llama 2 (Meta)</strong></td>
+                        <td>tiktoken-based</td>
+                        <td>~1.2</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GPT-2</strong></td>
+                        <td>BPE (original)</td>
+                        <td>~1.4</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="diagram-container animate-on-scroll">
+                <div class="token-block-container">
+                    <div class="token-block">Token</div>
+                    <div class="token-block">iz</div>
+                    <div class="token-block">ation</div>
+                    <div class="token-block">_is_key</div>
+                </div>
+                <div class="diagram-caption">Figure 1: Demonstration of how sub-word tokenization fragments a string.
+                </div>
+            </div>
+
+            <h2>The Context Window</h2>
+            <p>The <strong>context window</strong> is the maximum number of tokens an LLM can process in a single
+                inference step. It defines the model's "total memory," encompassing the system prompt, user messages,
+                and historical context. As the conversation progresses, the combined token count must remain below this
+                fixed ceiling.</p>
+
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Context Window Limit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>GPT-4o mini</strong></td>
+                        <td>128,000 tokens</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Claude 3.5 Sonnet</strong></td>
+                        <td>200,000 tokens</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Gemini 1.5 Pro</strong></td>
+                        <td>2,000,000 tokens</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Llama 3.1 (8B)</strong></td>
+                        <td>128,000 tokens</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="diagram-container">
+                <div class="context-window-viz">
+                    <div class="token-stream">
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                        <div class="stream-token"></div>
+                    </div>
+                    <div class="sliding-window"></div>
+                </div>
+                <div class="diagram-caption">Figure 2: The sliding window mechanism managing recent vs. dropped context.
+                </div>
+            </div>
+
+            <h3>The Quadratic Complexity Trap</h3>
+            <p>Historically, increasing context windows was difficult due to <strong>Attention mechanisms</strong>
+                scaling at $O(n²)$—meaning doubling the context quadrupled the compute cost. Modern optimizations like
+                <strong>Flash Attention</strong> and <strong>Ring Attention</strong> have mitigated this, enabling the
+                "long-context" era where entire codebases can be analyzed at once.
+            </p>
+
+            <h2>What Happens at the Limit?</h2>
+            <p>When an input exceeds the model's limit, the system typically responds in one of three ways:</p>
+            <ul>
+                <li><strong>Hard Error:</strong> The API rejects the request completely.</li>
+                <li><strong>Truncation:</strong> The system keeps the earliest tokens (the head) and discards the rest.
+                </li>
+                <li><strong>Sliding Window:</strong> The system keeps the most recent tokens (the tail) and drops older
+                    history, maintaining a "rolling memory."</li>
+            </ul>
+
+            <h2>Token Counting and Optimization</h2>
+            <p>Accurately counting tokens before an API call is essential for cost management and preventing errors. A
+                reliable "rule of thumb" is that 1,000 tokens represent approximately 750 words.</p>
+
+            <div class="code-block">
+                <span class="keyword">import</span> tiktoken<br>
+                enc = tiktoken.encoding_for_model(<span class="string">"gpt-4"</span>)<br>
+                text = <span class="string">"Hello, world!"</span><br>
+                tokens = enc.encode(text)<br>
+                <span class="keyword">print</span>(<span class="keyword">len</span>(tokens)) <span class="comment">#
+                    Output: 4</span>
+            </div>
+
+            <h3>Optimization Strategies</h3>
+            <ul>
+                <li><strong>Summarization:</strong> Compressing 8,000 tokens of history into a 500-token summary.</li>
+                <li><strong>Chunking (RAG):</strong> Splitting long docs into small, searchable pieces to only include
+                    the relevant 5% in the window.</li>
+                <li><strong>Prompt Compression:</strong> Removing filler words to retain semantic meaning while reducing
+                    token count.</li>
+            </ul>
+
+            <div class="side-note">
+                💡 <strong>Special Tokens:</strong> LLMs use invisible markers like <code>&lt;|im_start|&gt;</code> and
+                <code>&lt;|im_end|&gt;</code> to separate dialogue turns. These consume tokens and must be accounted for
+                in your total budget.
+            </div>
+
+            <h2>Common Pitfalls</h2>
+            <ul>
+                <li><strong>Missing Token Buffer:</strong> Failing to account for the model's output tokens (the
+                    response also counts toward the window limit).</li>
+                <li><strong>Inconsistent Tokenizers:</strong> Counting tokens with a GPT-3 tokenizer and sending them to
+                    a GPT-4 model.</li>
+                <li><strong>Context Bloat:</strong> Including irrelevant metadata (URLs, timestamps) that wastes
+                    valuable window space.</li>
+            </ul>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>During the auditing of <strong>Roadside Assistance (RSA)</strong> sales calls, the choice of tokenizer is
+                critical. Insurance policies contain unique alpha-numeric codes like <code>RSA-24-PREM-DISC</code>. A
+                sub-word tokenizer like <strong>tiktoken</strong> ensures these aren't broken into meaningless fragments
+                (e.g., ["R", "SA", "-", "24"]), allowing the model to recognize them as distinct insurance products.
+                Furthermore, because call transcripts are long (30+ minutes), the 128k context window of models like
+                GPT-4o allows the dashboard to "read" the entire conversation at once without losing the beginning of
+                the sale when the mandatory disclosures are usually made.</p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Managing Long Transcripts</span>
+                <span class="keyword">import</span> tiktoken
+
+                tokenizer = tiktoken.encoding_for_model(<span class="string">"gpt-4o"</span>)
+                transcript = <span class="string">"Advisor: Welcome to RSA Sales... [30 minutes of dialogue] ...End of
+                    Call."</span>
+                token_count = <span class="keyword">len</span>(tokenizer.encode(transcript))
+
+                <span class="keyword">if</span> token_count > 120000:
+                <span class="keyword">print</span>(<span class="string">"Transcript exceeds standard context. Applying
+                    summarization window."</span>)
+                <span class="keyword">else</span>:
+                <span class="keyword">print</span>(f<span class="string">"Audit safe: {token_count} tokens
+                    used."</span>)
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ Tokens are sub-word units, not whole words.<br>
+                ✅ Context windows define the model's operational memory depth.<br>
+                ✅ Quadratic scaling (Attention) makes long context computationally expensive.<br>
+                ✅ Use <code>tiktoken</code> or specific libraries to count tokens accurately before execution.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

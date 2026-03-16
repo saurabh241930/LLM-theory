@@ -1,0 +1,3026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>20. Interview Questions Recap</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+        .qa-container pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1em 0;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+        .qa-container code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            background: rgba(0,0,0,0.05);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .qa-container pre code {
+            background: none;
+            padding: 0;
+        }
+        .qa-container table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        .qa-container th, .qa-container td {
+            border: 1px solid var(--wp-border);
+            padding: 8px;
+            text-align: left;
+        }
+        .qa-container th {
+            background-color: #eaecf0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>20. Interview Questions Recap</h1>
+        <div class="subtitle">Quick recap of Phase 1 to Phase 5 for interview preparation</div>
+    </header>
+
+    <aside class="infobox">
+        <div class="infobox-title">Interview Prep</div>
+        <div class="infobox-data">
+            <div class="infobox-row">
+                <div class="infobox-label">Scope</div>
+                <div class="infobox-value">Phases 1 - 5</div>
+            </div>
+            <div class="infobox-row">
+                <div class="infobox-label">Type</div>
+                <div class="infobox-value">Q&A Recap</div>
+            </div>
+            <div class="infobox-row">
+                <div class="infobox-label">Topics</div>
+                <div class="infobox-value">Foundations, RAG, Structured Outputs, Fine-Tuning, Agents</div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="content-wrapper">
+<h2 id="phase-1-foundations">Phase 1: Foundations</h2>
+<h2>Category 1: Embeddings &amp; Vector Search</h2>
+<div class="qa-container">
+<h3>Q1: Explain embeddings and why we need them. What's the difference from traditional text search?</h3>
+<div class="answer">
+
+<p><strong>A:</strong>
+An embedding is a dense numerical representation of text meaning. Instead of storing words, we store high-dimensional vectors (e.g., 768 numbers for SBERT). Similar meanings cluster close together in vector space.</p>
+<p><strong>Why we need them:</strong>
+Traditional text search (keyword matching) only finds exact word matches.</p>
+<pre><code>Query: &quot;cat&quot;
+Doc 1: &quot;cat&quot; ✅ match
+Doc 2: &quot;feline&quot; ❌ no match (but semantically related)
+</code></pre>
+<p>With embeddings:</p>
+<pre><code>Query: &quot;cat&quot; → [0.8, 0.2, 0.5]
+Doc 1: &quot;cat&quot; → [0.79, 0.21, 0.51] ✅ similar (cosine = 0.99)
+Doc 2: &quot;feline&quot; → [0.77, 0.19, 0.48] ✅ similar (cosine = 0.98)
+Doc 3: &quot;pizza&quot; → [0.1, 0.1, 0.9] ❌ different (cosine = 0.3)
+</code></pre>
+<p><strong>Trade-off:</strong> Embeddings capture semantics but are slow to compute for ALL docs. That's why we pre-compute offline and store in vector DBs.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q2: How does cosine similarity work? Why not use Euclidean distance?</h3>
+<div class="answer">
+
+<p><strong>A:</strong>
+Cosine similarity measures the <strong>angle</strong> between two vectors:</p>
+<p>$$\text{cosine_similarity} = \frac{A \cdot B}{||A|| \times ||B||}$$</p>
+<p>Result: -1 to 1 (1 = identical direction, 0 = orthogonal, -1 = opposite)</p>
+<p><strong>Why not Euclidean distance?</strong>
+Distance measures straight-line distance between points. Two problems:
+1. <strong>Magnitude matters:</strong> Two vectors with identical direction but different magnitude would have large distance
+2. <strong>Curse of dimensionality:</strong> In high-dimensional space (768 dims), all vectors are far from each other!</p>
+<pre><code>Vector A: [1, 0, 0, ..., 0]       (unit vector, norm = 1)
+Vector B: [100, 0, 0, ..., 0]     (scaled version, norm = 100)
+
+Euclidean: distance = 99 (far!)
+Cosine: similarity = 1.0 (identical direction!)  ✅ right answer
+</code></pre>
+<p>Cosine ignores magnitude and focuses on <strong>direction = meaning</strong>.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q3: A database has 1 million documents. How do vector databases make similarity search fast?</h3>
+<div class="answer">
+
+<p><strong>A:</strong>
+Naive approach: For each query, compute cosine similarity with all 1M docs → O(n) = slow!</p>
+<p>Vector DBs use <strong>spatial indexing</strong> to skip irrelevant vectors:</p>
+<p><strong>HNSW (Hierarchical Navigable Small World):</strong></p>
+<pre><code>Layer 3:  A --- B --- C           (few neighbors, sparse)
+           \   / \   /
+Layer 2:  A-D-B-E-C-F            (more neighbors)
+           |/ \| |/ \|
+Layer 1:  A-D-G-B-E-H-C-F       (dense, all neighbors)
+           └─→ Dense layer at bottom
+
+Query: Find documents similar to X
+Step 1: Start at top layer (Layer 3)
+Step 2: Move to closest neighbor (fewer comparisons)
+Step 3: Drop to next layer
+Step 4: Refine search
+Result: O(log n) instead of O(n) ✅
+</code></pre>
+<p>Other strategies: IVF (partitioning space into clusters), LSH (hashing)</p>
+<p><strong>Cost:</strong> HNSW is ~10x faster but uses more memory.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q4: You're building a RAG system. Should you use OpenAI's embedding API or a open-source model like BGE?</h3>
+<div class="answer">
+
+<p><strong>A:</strong>
+<strong>Factors to decide:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Criteria</th>
+<th>OpenAI (API)</th>
+<th>BGE (Open-source)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cost</td>
+<td>$$ per query</td>
+<td>$ (free locally)</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>Slower (API call)</td>
+<td>Faster (local inference)</td>
+</tr>
+<tr>
+<td>Privacy</td>
+<td>Data to OpenAI</td>
+<td>Local (data stays home)</td>
+</tr>
+<tr>
+<td>Domain shift</td>
+<td>General (works OK for specialized)</td>
+<td>Fine-tunable for your domain</td>
+</tr>
+<tr>
+<td>Reliability</td>
+<td>Depends on OpenAI API uptime</td>
+<td>You manage it</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Decision tree:</strong></p>
+<pre><code>Cost is a concern? → BGE
+Privacy matters? → BGE
+Need best general performance? → OpenAI
+Need to fine-tune for domain? → BGE
+Query volume &gt; 100K/month? → BGE (API would cost $$$)
+Need simplicity? → OpenAI (no infrastructure)
+</code></pre>
+<p><strong>My recommendation:</strong> Start with free BGE locally, switch to OpenAI if performance is bad.</p>
+<hr />
+<h2>Category 2: Tokenization &amp; Context Windows</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q5: You have a 10-page document (4000 tokens). Your model's context window is 2000 tokens. What do you do?</h3>
+<div class="answer">
+
+<p><strong>A:</strong>
+You <strong>cannot</strong> fit it directly. Options:</p>
+<p><strong>Option 1: Summarization</strong>
+- Summarize each page → 200 tokens per page
+- Total: 2000 tokens ✅ fits
+- Trade-off: Lose detail</p>
+<p><strong>Option 2: Chunking (RAG approach)</strong> ⭐ Best for search/QA
+- Split into 5 chunks (800 tokens each)
+- For each chunk: Create separate embeddings
+- At query time: Retrieve only relevant chunks
+- Include only 1-2 relevant chunks in prompt
+- Trade-off: Need a good retrieval mechanism</p>
+<p><strong>Option 3: Filtering</strong>
+- Extract only relevant sections (e.g., "Financial" section for Q: "What's the revenue?")
+- Drop everything else
+- Total: 500 tokens ✅ fits
+- Trade-off: Manual extraction</p>
+<p><strong>For production RAG:</strong> Option 2 (chunking + retrieval) is standard. You pre-chunk offline, embed each chunk, store in vector DB. At runtime, retrieve only relevant chunks.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q6: Same model, same document. User asks: "Compare findings from page 3 and page 8."</h3>
+<div class="answer">
+
+<p><strong>A:</strong>
+Chunking alone won't work — you need <strong>both</strong> pieces of info.</p>
+<p><strong>Solutions:</strong></p>
+<p><strong>Solution 1: Hybrid retrieval</strong>
+- Retrieve chunk from page 3 (300 tokens)
+- Retrieve chunk from page 8 (300 tokens)
+- Include both in prompt (600 tokens total, fits in 2K window)
+- Good if question is clear</p>
+<p><strong>Solution 2: Adaptive retrieval</strong>
+- Detect this is a "comparison" query
+- Automatically retrieve multiple chunks
+- Include relevant chunks from multiple pages</p>
+<p><strong>Solution 3: Summarize + Compare</strong>
+- Summarize page 3 (100 tokens)
+- Summarize page 8 (100 tokens)
+- Ask comparison on summaries (200 tokens)
+- Faster but loses detail</p>
+<p><strong>Best practice:</strong> Use vector search to find relevant chunks, <strong>then</strong> validate that you have all pieces needed to answer the query. If not, retrieve additional chunks.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q7: How many tokens does "The quick brown fox" have in GPT-4?</h3>
+<div class="answer">
+
+<p><strong>A:</strong>
+Use the tokenizer!</p>
+<pre><code class="language-python">import tiktoken
+enc = tiktoken.encoding_for_model(&quot;gpt-4&quot;)
+text = &quot;The quick brown fox&quot;
+tokens = enc.encode(text)
+print(len(tokens))  # Likely 5-6 tokens
+</code></pre>
+<p><strong>Without computing:</strong> Use the rule of thumb:
+- 1 word ≈ 1.3 tokens
+- "The quick brown fox" = 4 words ≈ 5 tokens ✅</p>
+<p><strong>But remember:</strong> Different models have different tokenizers!
+- GPT-4: 5 tokens
+- Claude: 4 tokens (might be different)
+- Llama: 5 tokens</p>
+<p><strong>Always count</strong> before sending to API if cost/latency matters.</p>
+<hr />
+<h2>Category 3: Prompt Engineering</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q8: You ask an LLM a complex reasoning task and it fails. What are 3 prompting techniques to fix this?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Technique 1: Chain-of-Thought (CoT)</strong></p>
+<pre><code>❌ Bad: &quot;Is 23 × 45 = 1035?&quot;
+
+✅ Good: &quot;Let's work through this step by step:
+   - 23 × 40 = 920
+   - 23 × 5 = 115
+   - 920 + 115 = 1035
+   Is this correct?&quot;
+</code></pre>
+<p><strong>Effect:</strong> Forces intermediate steps, catches reasoning errors.</p>
+<p><strong>Technique 2: Few-Shot Prompting</strong></p>
+<pre><code>❌ Bad: &quot;Translate 'hello' to French&quot;
+✅ Good: &quot;
+Example: 'goodbye' → 'au revoir'
+Example: 'good morning' → 'bonjour'
+Now translate: 'hello' → ?&quot;
+</code></pre>
+<p><strong>Effect:</strong> Teaches the model by example, especially useful for specific formats.</p>
+<p><strong>Technique 3: Structured Output</strong></p>
+<pre><code>❌ Bad: &quot;Extract entities from: 'John works at Google'&quot;
+✅ Good: &quot;Extract entities in JSON:
+{
+  'person': '...',
+  'company': '...'
+}&quot;
+</code></pre>
+<p><strong>Effect:</strong> Constrains output format, reduces hallucinations.</p>
+<p><strong>General rule:</strong> CoT for reasoning, few-shot for formats, structured output for extraction.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q9: What's the difference between zero-shot and few-shot prompting? When use each?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Zero-Shot</th>
+<th>Few-Shot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Definition</td>
+<td>No examples provided</td>
+<td>Examples shown before task</td>
+</tr>
+<tr>
+<td>Accuracy</td>
+<td>Lower (relies on pretraining)</td>
+<td>Higher (learns from examples)</td>
+</tr>
+<tr>
+<td>Tokens</td>
+<td>Fewer</td>
+<td>More (examples consume tokens)</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>Faster</td>
+<td>Slower</td>
+</tr>
+</tbody>
+</table>
+<p><strong>When to use zero-shot:</strong>
+- Simple, unambiguous tasks ("Classify as positive/negative")
+- You're prototyping fast
+- Token budget is tight</p>
+<p><strong>When to use few-shot:</strong>
+- Complex/ambiguous tasks (NL-to-SQL, entity extraction)
+- Output format is non-standard
+- Accuracy is critical</p>
+<p><strong>Example:</strong></p>
+<pre><code>Zero-shot: &quot;Translate 'hello' to French&quot;
+→ Output: &quot;Bonjour&quot; ✅ (works, pretraining covers it)
+
+Zero-shot: &quot;Convert English to Pig Latin&quot;
+→ Output: Garbage ❌ (not in pretraining)
+
+Few-shot: Show 2 examples, then convert
+→ Output: &quot;ellohay&quot; ✅ (learns from examples)
+</code></pre>
+<p><strong>Rule of thumb:</strong> If output accuracy is low with zero-shot, add few-shot.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q10: You need to extract structured data from user input. Describe your prompt design.</h3>
+<div class="answer">
+
+<p><strong>A:</strong>
+<strong>Structured approach:</strong></p>
+<pre><code>SYSTEM PROMPT:
+&quot;You are a data extraction assistant. Extract only the requested fields.
+If a field is missing, return null.&quot;
+
+TASK DEFINITION:
+&quot;Extract from: 'John Smith, age 28, works at Google as engineer'&quot;
+
+OUTPUT FORMAT:
+{
+  &quot;name&quot;: &quot;...&quot;,
+  &quot;age&quot;: &quot;...&quot;,
+  &quot;company&quot;: &quot;...&quot;,
+  &quot;title&quot;: &quot;...&quot;
+}
+
+OPTIONAL: Provide 1-2 examples
+{
+  &quot;name&quot;: &quot;Alice&quot;, &quot;age&quot;: 25, &quot;company&quot;: &quot;Meta&quot;, &quot;title&quot;: &quot;PM&quot;
+}
+</code></pre>
+<p><strong>Why this design:</strong>
+1. <strong>System prompt</strong> sets role and constraints
+2. <strong>Task definition</strong> is clear
+3. <strong>Output format</strong> is specified (JSON) → easier to parse
+4. <strong>Examples</strong> show edge cases (what if data is ambiguous?)</p>
+<p><strong>Extra: Use JSON mode</strong> (if available)</p>
+<pre><code class="language-python">response = client.chat.completions.create(
+  messages=[...],
+  response_format={&quot;type&quot;: &quot;json_object&quot;}
+)
+
+</code></pre>
+<hr />
+<h2>Category 4: Integration (Cross-Topic)</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q11: You're building a legal document QA system. Design the full Phase 1 pipeline (embeddings + chunking + prompting).</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>STEP 1: EMBEDDING CHOICE
+├─ Domain: Legal documents (specialized)
+├─ Volume: ~5,000 documents
+├─ Decision: Use open-source BGE (fine-tuned for long texts)
+├─ Why: Legal specificity matters, cost-effective for this volume
+└─ Embedding dim: 768
+
+STEP 2: TOKENIZATION &amp; CHUNKING
+├─ Token limit: Target 1000 tokens per chunk (fits in context)
+├─ Strategy: Semantic chunking (split at paragraph level, not mid-sentence)
+├─ Why: Legal paragraphs form semantic units
+└─ Result: ~50,000 chunks from 5,000 docs
+
+STEP 3: STORAGE
+├─ Tool: pgvector (PostgreSQL) — no infrastructure, already using DB
+├─ Index: HNSW for fast search
+├─ Metadata: {doc_id, page_num, section, date}
+└─ Total index size: ~40MB
+
+STEP 4: RETRIEVAL
+├─ User asks: &quot;What are penalties for breach?&quot;
+├─ Embed query: &quot;penalties breach&quot; → [0.5, -0.3, ...]
+├─ Search: Top-5 chunks from pgvector
+├─ Rerank: (optional) use Cohere Rerank if precision matters
+└─ Result: 2-3 most relevant chunks
+
+STEP 5: PROMPTING
+Prompt template:
+  &quot;You are a legal assistant. Answer based ONLY on provided docs.
+
+  DOCUMENTS:
+  {retrieved_chunks}
+
+  QUESTION: {user_query}
+
+  Answer in 3 bullet points. If unsure, say so.&quot;
+
+Why this design:
+- Few-shot optional (add 1 example for complex Q&amp;A)
+- Structured output (bullet points) for clarity
+- Token-aware chunking (fits in context window)
+- Semantic retrieval (legal documents need meaning, not keywords)
+</code></pre>
+<hr />
+<h2>Key Insights (Distilled)</h2>
+<p>✅ <strong>Embeddings</strong> capture meaning as vectors; retrieve semantically similar docs</p>
+<p>✅ <strong>Cosine similarity</strong> measures angle (direction = meaning); ignore magnitude</p>
+<p>✅ <strong>Vector DBs</strong> use spatial indexing (HNSW, IVF) → O(log n) instead of O(n)</p>
+<p>✅ <strong>Tokens</strong> are variable-length; count before sending to API</p>
+<p>✅ <strong>Context windows</strong> are hard limits; use chunking/summarization for long docs</p>
+<p>✅ <strong>CoT prompting</strong> ("think step by step") fixes reasoning tasks</p>
+<p>✅ <strong>Few-shot</strong> beats zero-shot for accuracy; costs more tokens</p>
+<p>✅ <strong>Structured output</strong> prompting reduces hallucinations and parsing errors</p>
+<p>✅ <strong>Integration:</strong> Embeddings → retrieval → chunking → prompting = RAG foundation</p>
+</div>
+</div>
+<h2 id="phase-2-rag">Phase 2: RAG</h2>
+<h2>Category 1: Chunking Strategies</h2>
+<div class="qa-container">
+<h3>Q1: You have documents of varying sizes (100 tokens to 5000 tokens). How should you chunk them?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p>Use <strong>recursive chunking</strong>. It respects document structure while preserving semantics.</p>
+<pre><code>Algorithm:
+1. Try splitting by paragraph (\n\n)
+   → If all chunks &lt; 500 tokens: Done!
+   → If some chunks &gt; 500 tokens: Next step
+
+2. Split oversized chunks by line (\n)
+   → If all chunks &lt; 500 tokens: Done!
+   → If some still &gt; 500 tokens: Next step
+
+3. Split by sentence (.)
+   → Continue until all chunks fit
+
+Benefits:
+- Respects document structure (paragraphs before sentences)
+- Preserves meaning boundaries
+- O(n) complexity, simple to implement
+</code></pre>
+<p><strong>Alternative if documents are structured (headers, sections):</strong>
+Use <strong>document-aware chunking</strong> — split by section headers.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q2: Should you use fixed-size or semantic chunking? What are the trade-offs?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Fixed-size chunking:</strong></p>
+<pre><code>Chunk size: 500 tokens
+Simple split: every 500 tokens
+
+Pros:
+✓ Predictable sizes (cache planning)
+✓ Fast (no embedding needed)
+✓ Simple to implement
+
+Cons:
+✗ Breaks meaning boundaries
+✗ May split mid-sentence
+✗ Poor retrieval quality
+</code></pre>
+<p><strong>Semantic chunking:</strong></p>
+<pre><code>Chunk based on similarity between sentences
+If similarity &lt; 0.5 between sentences → new chunk
+
+Pros:
+✓ Preserves meaning boundaries
+✓ Better retrieval quality
+✓ Variable-sized chunks (natural clustering)
+
+Cons:
+✗ Expensive (embed every sentence)
+✗ Need threshold tuning
+✗ Slower to implement
+</code></pre>
+<p><strong>Decision tree:</strong></p>
+<pre><code>Need production-quality RAG?
+  ├─ YES → Semantic chunking (better quality is worth cost)
+  └─ NO → Fixed-size/Recursive (fast prototyping)
+
+Many documents (&gt; 10K)?
+  ├─ YES → Fixed-size (semantic is too expensive)
+  └─ NO → Can afford semantic
+
+Documents structured (headers)?
+  ├─ YES → Document-aware (best for structure)
+  └─ NO → Semantic or Recursive
+</code></pre>
+<p><strong>My recommendation:</strong> Start recursive (good balance), switch to semantic if quality is low.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q3: What chunk size should you target (in tokens)?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Rule of thumb:</strong> <code>chunk_size = context_window / 3</code></p>
+<p><strong>Example:</strong></p>
+<pre><code>Model: GPT-4 (context = 128K tokens)
+Chunk size: 128K / 3 ≈ 40K tokens per chunk
+
+Wait, that's huge!
+</code></pre>
+<p><strong>Better rule:</strong> <code>chunk_size = 500-1000 tokens</code></p>
+<p><strong>Rationale:</strong></p>
+<pre><code>Context window: 4K tokens (typical endpoint)
+├─ System prompt: 200 tokens
+├─ User query: 100 tokens
+├─ Retrieved chunks: X tokens
+├─ Space for answer: Y tokens
+└─ Total: ≤ 4000 tokens
+
+If chunk = 500 tokens: Can fit 7-8 chunks ✓
+If chunk = 2000 tokens: Can fit 2 chunks only ✗
+If chunk = 100 tokens: Creates 100+ chunks (expensive) ✗
+</code></pre>
+<p><strong>Practical guidance:</strong>
+| Document Type | Chunk Size |
+|---|---|
+| Legal/Medical | 800-1000 tokens |
+| Customer support | 500-700 tokens |
+| Long documents | 300-500 tokens |
+| Code | 200-400 tokens |</p>
+<p><strong>Validation:</strong> Test on your domain and measure RAGAS metrics.</p>
+<hr />
+<h2>Category 2: Naive vs Advanced RAG</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q4: You built a naive RAG system but queries with multiple parts fail. Why and how to fix?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Problem:</strong></p>
+<pre><code>Query: &quot;Compare Q3 earnings and Q4 earnings&quot;
+Naive RAG embedding:
+  [0.5, 0.3, ...]  ← Generic &quot;earnings&quot; direction
+
+Retrieved chunks:
+  Only Q3 chunks (maybe zero Q4 chunks)
+
+Answer: Incomplete (can't compare with missing Q4)
+</code></pre>
+<p><strong>Solutions (ranked by effort):</strong></p>
+<p><strong>Solution 1: Query Rewriting (⭐ Recommended)</strong></p>
+<pre><code>LLM rewrites complex query:
+Original: &quot;Compare Q3 earnings and Q4 earnings&quot;
+Rewritten:
+  1. &quot;What were Q3 earnings?&quot;
+  2. &quot;What were Q4 earnings?&quot;
+  3. &quot;What's the change from Q3 to Q4?&quot;
+
+For each rewritten query:
+  → Retrieve relevant chunks
+  → Combine results
+
+Effort: 1-2 hours (implement LLM rewrite)
+Impact: High (handles most complex queries)
+</code></pre>
+<p><strong>Solution 2: Multi-Query Retrieval (with same embedding)</strong></p>
+<pre><code>Smart system recognizes &quot;Compare X and Y&quot;
+Automatically constructs multiple searches:
+  → Search &quot;X&quot;
+  → Search &quot;Y&quot;
+  → Search &quot;X vs Y&quot;
+
+Effort: 2-3 hours
+Impact: Medium (heuristic-based, not general)
+</code></pre>
+<p><strong>Solution 3: Better Chunking</strong></p>
+<pre><code>Instead of chunk-level retrieval, use hierarchical:
+  Section level (higher) for broad search
+  Paragraph level (detail) for specific search
+
+For comparison query:
+  → Find Q3 and Q4 sections
+  → Then find relevant paragraphs in each
+
+Effort: 1-2 days
+Impact: Medium (helps some cases)
+</code></pre>
+<p><strong>Choose Solution 1 (Query Rewriting)</strong> — best balance of effort and generality.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q5: What's the difference between Naive RAG and Advanced RAG?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Naive RAG</th>
+<th>Advanced RAG</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Retrieval</td>
+<td>Direct embedding → top-k</td>
+<td>Embedding + query rewriting + reranking</td>
+</tr>
+<tr>
+<td>Query handling</td>
+<td>Single search</td>
+<td>Multiple rewrites, multiple searches</td>
+</tr>
+<tr>
+<td>Chunk quality</td>
+<td>Raw cosine scores</td>
+<td>Reranked by cross-encoder</td>
+</tr>
+<tr>
+<td>Ambiguity handling</td>
+<td>Fails on vague queries</td>
+<td>Rewrites to clarify</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>Low (just vector search)</td>
+<td>Higher (LLM rewrites + reranking)</td>
+</tr>
+<tr>
+<td>Latency</td>
+<td>50ms</td>
+<td>500ms-1s</td>
+</tr>
+<tr>
+<td>Accuracy</td>
+<td>⭐⭐ Medium</td>
+<td>⭐⭐⭐ High</td>
+</tr>
+</tbody>
+</table>
+<p><strong>When to use Naive RAG:</strong>
+- Simple Q&amp;A (straightforward questions)
+- Speed critical (&lt; 100ms)
+- Small budget</p>
+<p><strong>When to use Advanced RAG:</strong>
+- Complex queries
+- Accuracy critical
+- Can afford 500ms latency</p>
+<hr />
+<h2>Category 3: Reranking</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q6: You're building a medical RAG system. Should you use reranking? Why?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Yes, absolutely.</strong> Medical domain requires <strong>high accuracy</strong>.</p>
+<p><strong>Reasoning:</strong></p>
+<pre><code>Medical queries are high-risk:
+├─ Wrong answer can harm patients
+├─ Need 100% accuracy, not 90%
+└─ Can afford higher latency
+
+Reranking helps:
+├─ Catches wrong chunks retrieved by embedding
+├─ Validates relevance decision
+├─ Improves from 0.90 → 0.98 accuracy
+
+Worth the cost:
+├─ Cost: $0.001 per query
+├─ Latency: 500ms extra (acceptable)
+└─ Benefit: High confidence in answer
+</code></pre>
+<p><strong>Implementation:</strong></p>
+<pre><code>Stage 1: Embedding retrieval
+├─ Retrieve top-100 chunks fast
+└─ Cost: $0.0001
+
+Stage 2: Reranking
+├─ Input all 100 to cross-encoder
+├─ Get relevance scores
+├─ Return top-5
+└─ Cost: $0.001
+
+Total: ~$0.0011 per query
+
+For medical accuracy: Worth it ✓
+</code></pre>
+<p><strong>Alternative if API cost matters:</strong>
+Use open-source BGE Reranker (local, free).</p>
+<pre><code class="language-python">from sentence_transformers import CrossEncoder
+
+model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+
+
+scores = model.predict(
+    [[query, chunk[&quot;text&quot;] for chunk in retrieved_chunks]]
+)
+
+
+top_k = sorted(zip(chunks, scores), key=lambda x: x[1], reverse=True)[:5]
+</code></pre>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q7: When should you NOT use reranking?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>Latency &lt; 100ms required?
+  ├─ YES → Don't use reranking (too slow: 500ms)
+  └─ NO → Can use
+
+Embedding quality already excellent?
+  ├─ YES → Maybe skip (cosine similarity fine)
+  └─ NO → Add reranking
+
+Query volume &gt; 1M/day and cost matters?
+  ├─ YES → Skip (API cost will explode)
+  └─ NO → Can afford
+
+Domain where wrong answer = minor inconvenience?
+  ├─ YES → Skip reranking (extra 0.05 accuracy not worth 10x cost)
+  └─ NO → Add reranking
+
+Decision: Track your data!
+├─ Without reranking: Measure RAGAS scores
+├─ Is Context_Precision &gt; 0.85?
+│   ├─ YES → Don't need reranking
+│   ├─ NO → Add reranking
+</code></pre>
+<p><strong>Cost-benefit analysis:</strong></p>
+<pre><code>Cost of reranking: $10 per 10K queries
+Benefit: +5% accuracy improvement
+
+Your use case:
+├─ FAQ bot: Not worth it (5% matters little)
+├─ Legal system: Worth it (5% matters a lot)
+└─ Customer support: Depends on impact
+</code></pre>
+<hr />
+<h2>Category 4: RAG Evaluation</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q8: You evaluated your RAG with RAGAS and got: F=0.92, AR=0.88, CR=0.7, CP=0.6. What's wrong?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>RAGAS Scores:
+├─ Faithfulness = 0.92     ✅ Good (answer is truthful)
+├─ Answer_Relevancy = 0.88 ✅ Good (addresses question)
+├─ Context_Recall = 0.7    🟡 Medium (missing some chunks)
+└─ Context_Precision = 0.6 🔴 Poor (retrieved irrelevant chunks)
+
+Problem Analysis:
+├─ Faithfulness &amp; Answer_Relevancy OK → Generation is good
+├─ Context_Recall = 0.7 → Missing 30% of needed info
+├─ Context_Precision = 0.6 → 40% of retrieved chunks irrelevant
+
+Root Cause: RETRIEVAL IS BAD
+├─ Finding wrong chunks
+├─ Missing necessary chunks
+└─ LLM works around it, but fragile
+</code></pre>
+<p><strong>Fixes (in priority order):</strong></p>
+<p><strong>1. Improve Embedding Quality (2-3 hours)</strong></p>
+<pre><code>Issue: Generic embeddings miss domain specifics
+Solution:
+  ├─ Switch to domain embedding (legal, medical, code)
+  ├─ Or fine-tune embedding on your domain
+  └─ Expected improvement: 0.6 → 0.75
+
+Test: Already have embedding model?
+  └─ If not, try: BGE-large (better than OpenAI for precision)
+</code></pre>
+<p><strong>2. Add Reranking (1 hour)</strong></p>
+<pre><code>Issue: Cosine similarity ranks wrong chunks first
+Solution:
+  ├─ Add cross-encoder reranker
+  └─ Expected improvement: 0.6 → 0.75
+
+Tool: Cohere Rerank or BGE Reranker
+Cost: ~$0.001 per query
+</code></pre>
+<p><strong>3. Fix Chunking (2-4 hours)</strong></p>
+<pre><code>Issue: Chunks not semantic units
+Solution:
+  ├─ Switch to semantic chunking
+  └─ Or document-aware chunking
+  └─ Expected improvement: 0.6 → 0.7
+
+Validate: Manually check 10 retrieved chunks
+</code></pre>
+<p><strong>4. Hybrid Search (1-2 hours)</strong></p>
+<pre><code>Issue: Keyword relevance missed by embedding
+Solution:
+  ├─ Add BM25 (sparse retrieval)
+  ├─ Combine with dense (reciprocal rank fusion)
+  └─ Expected improvement: 0.6 → 0.7
+
+Simple to implement, effective for keyword-heavy queries
+</code></pre>
+<p><strong>Start with #1 or #2 (quick wins), then #3 if needed.</strong></p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q9: How many test cases do you need for RAGAS evaluation?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Depends on your sampling error tolerance:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Data Quality Requirement</th>
+<th>Min Test Cases</th>
+<th>Ideal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prototype/POC</td>
+<td>5-10</td>
+<td>10</td>
+</tr>
+<tr>
+<td>Internal tool</td>
+<td>20-30</td>
+<td>50</td>
+</tr>
+<tr>
+<td>Production system</td>
+<td>50-100</td>
+<td>100-200</td>
+</tr>
+<tr>
+<td>High-accuracy system</td>
+<td>100+</td>
+<td>500+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Practical approach:</strong></p>
+<pre><code>Week 1: Collect 10 test cases
+  ├─ Run RAGAS evaluation
+  ├─ Identify main issues
+  └─ Iterate on system
+
+Week 2: Expand to 30 test cases
+  ├─ Re-evaluate
+  ├─ Confirm improvements
+  └─ Identify edge cases
+
+Week 3: Expand to 100 test cases
+  ├─ Final validation
+  ├─ Compare to human evaluation
+  └─ Deploy to production
+</code></pre>
+<p><strong>Test case distribution:</strong></p>
+<pre><code>Aim for diversity:
+├─ 30% simple questions (one-fact answers)
+├─ 40% moderate questions (multi-part)
+├─ 20% complex questions (comparison, reasoning)
+├─ 10% edge cases (ambiguous, contradictory)
+</code></pre>
+<p><strong>Example </strong>30-case dataset:**</p>
+<pre><code>9 simple:   &quot;What is X?&quot;, &quot;Who is Y?&quot;, &quot;When was Z?&quot;
+12 moderate: &quot;Compare X and Y&quot;, &quot;List advantages&quot;, &quot;How to do X?&quot;
+6 complex:  &quot;Analyze X in context of Y&quot;, &quot;Recommend based on...&quot;
+3 edge:     &quot;Contradicting docs&quot;, &quot;No relevant docs&quot;, &quot;Ambiguous terms&quot;
+</code></pre>
+<hr />
+<h2>Category 5: Integration (Cross-Topic)</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q10: Design a complete RAG system for a startup's internal knowledge base (5000 documents, 50 employees).</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>REQUIREMENTS ANALYSIS:
+├─ Volume: 5000 docs (manageable)
+├─ Users: 50 internal (safety critical)
+├─ Use cases: FAQ, onboarding, policy lookup
+└─ Latency budget: 1 second OK
+
+ARCHITECTURE:
+├─ Documents: Wiki pages, policy docs, meeting notes
+├─ Chunk size: 500-800 tokens (semantic unit)
+├─ Embedding: BGE or OpenAI (domain: generic, so OpenAI OK)
+├─ Vector DB: Pinecone (serverless, low maintenance)
+├─ Reranking: Yes (internal use → accuracy &gt; speed)
+├─ LLM: Claude or GPT-4 (quality matters)
+
+IMPLEMENTATION PLAN:
+
+PHASE 1: INDEXING (1 week)
+├─ Load all 5000 docs
+├─ Chunk with recursive strategy
+│  └─ Respect headers/sections when present
+├─ Embed with BGE
+│  └─ ~5K chunks × 768 dims = 40MB index size
+├─ Store in Pinecone
+│  └─ Free tier might work initially
+└─ Add metadata: {doc_id, section, file_type, updated_at}
+
+PHASE 2: RAG PIPELINE (2 weeks)
+├─ Retrieval:
+│  ├─ User query → embed
+│  ├─ Search Pinecone (top-20)
+│  └─ Rerank with BGE reranker (top-5)
+├─ Prompt:
+│  ├─ System: &quot;You are a helpful assistant...&quot;
+│  ├─ Context: {top_5_chunks}
+│  ├─ User question: {query}
+│  └─ Format: Clear, concise answer with sources
+├─ Generation:
+│  └─ Claude answers with citations to source docs
+└─ Return: Answer + source links
+
+PHASE 3: EVALUATION (1 week)
+├─ Create 30 test questions (diverse)
+├─ Run RAGAS evaluation
+├─ Target scores:
+│  ├─ Faithfulness: &gt; 0.90
+│  ├─ Answer_Relevancy: &gt; 0.85
+│  ├─ Context_Recall: &gt; 0.80
+│  └─ Context_Precision: &gt; 0.75
+├─ Human spot-check: 5-10 answers
+└─ Iterate (improve chunking, reranking if scores low)
+
+PHASE 4: DEPLOYMENT (1 week)
+├─ Integrate with company Slack/website
+├─ Set up logging (track usage, failures)
+├─ Establish feedback loop (users rate answers)
+└─ Weekly metrics review
+
+TIMELINE: 4-5 weeks
+TEAM: 1-2 engineers (no ML experts needed)
+COST: $100-500/month (embedding API + Pinecone)
+
+KEY DECISIONS:
+√ Recursive chunking: Balance quality/speed
+√ Reranking: Yes (accuracy &gt; speed for internal tool)
+√ BGE embedding: Free, good quality
+√ Pinecone: Low ops overhead
+
+RISKS &amp; MITIGATIONS:
+├─ Hallucination
+│  └─ Mitigation: Few-shot examples, &quot;answer only from context&quot;
+├─ Missing docs
+│  └─ Mitigation: Feedback loop, metadata to route questions
+├─ Stale docs
+│  └─ Mitigation: Re-index weekly, track doc update dates
+└─ Quality regression
+│  └─ Mitigation: Automated RAGAS evals, human spot-checks
+</code></pre>
+<hr />
+<h2>Key Insights (Distilled)</h2>
+<p>✅ <strong>Chunking:</strong> Recursive (default), semantic (high quality), document-aware (structured)</p>
+<p>✅ <strong>Chunk size:</strong> ~500-1000 tokens (context_window / 3-5)</p>
+<p>✅ <strong>Naive RAG:</strong> Simple, fast, good for straightforward QA</p>
+<p>✅ <strong>Advanced RAG:</strong> Add query rewriting, reranking for complex/accurate queries</p>
+<p>✅ <strong>Reranking:</strong> Worth cost for medical/legal/financial (high-risk domains)</p>
+<p>✅ <strong>RAGAS metrics:</strong> Diagnose problems (retrieval vs generation)</p>
+<p>✅ <strong>Low Context_Precision?</strong> → Problem is retrieval, fix embedding/chunking</p>
+<p>✅ <strong>Low Context_Recall?</strong> → Missing needed chunks, add more or rewrite query</p>
+<p>✅ <strong>Test dataset:</strong> 30-100 cases, diverse difficulty levels</p>
+<p>✅ <strong>Iteration:</strong> Measure → identify bottleneck → improve → repeat</p>
+</div>
+</div>
+<h2 id="phase-3-structured-outputs">Phase 3: Structured Outputs & NL-to-SQL</h2>
+<h2>Category 1: Function Calling / Tool Use</h2>
+<div class="qa-container">
+<h3>Q1: Explain function calling. Why is it important for agents?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Function calling</strong> is when an LLM generates structured requests to call external functions instead of just generating text.</p>
+<pre><code>Without function calling:
+User: &quot;What's the weather in NYC?&quot;
+LLM: &quot;I don't have access to real-time data&quot;
+❌ Dead end
+
+With function calling:
+User: &quot;What's the weather in NYC?&quot;
+LLM: { &quot;function&quot;: &quot;get_weather&quot;, &quot;parameters&quot;: {&quot;city&quot;: &quot;NYC&quot;} }
+System: Calls weather API → &quot;72°F, sunny&quot;
+LLM: &quot;The weather in NYC is 72°F and sunny&quot;
+✅ Answered!
+</code></pre>
+<p><strong>Why it's important for agents:</strong>
+Agents need to <strong>take actions</strong>, not just talk:
+- Query databases (SQL)
+- Call APIs (weather, payment)
+- Execute code
+- Trigger workflows
+- Update records</p>
+<p>Function calling is the bridge between LLM reasoning and real-world action.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q2: You're building a tool-use system. What are the key design principles for schemas?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>PRINCIPLE 1: Clarity
+├─ Description should be clear (not vague)
+├─ Example:
+│  ❌ &quot;Get data&quot;
+│  ✅ &quot;Retrieve weather for a city. Returns temp, humidity, condition&quot;
+
+PRINCIPLE 2: Explicit Parameters
+├─ Every parameter should have type + description
+├─ Mark required vs optional
+├─ Example:
+│  {
+│    &quot;parameters&quot;: {
+│      &quot;city&quot;: {
+│        &quot;type&quot;: &quot;string&quot;,
+│        &quot;description&quot;: &quot;City name (e.g., NYC, London)&quot;,
+│        &quot;required&quot;: true
+│      },
+│      &quot;units&quot;: {
+│        &quot;type&quot;: &quot;string&quot;,
+│        &quot;enum&quot;: [&quot;celsius&quot;, &quot;fahrenheit&quot;],
+│        &quot;required&quot;: false,
+│        &quot;default&quot;: &quot;fahrenheit&quot;
+│      }
+│    },
+│    &quot;required&quot;: [&quot;city&quot;]
+│  }
+
+PRINCIPLE 3: Limit Scope
+├─ One function = one well-defined task
+├─ Don't combine unrelated functionality
+├─ Example:
+│  ❌ { &quot;function&quot;: &quot;do_everything&quot; }
+│  ✅ { &quot;function&quot;: &quot;query_database&quot; }, { &quot;function&quot;: &quot;call_api&quot; }
+
+PRINCIPLE 4: Error Handling
+├─ Define what happens when parameters are invalid
+├─ Example: City doesn't exist → return error, don't crash
+
+PRINCIPLE 5: Consistent Naming
+├─ Function names: snake_case (get_weather)
+├─ Parameter names: snake_case
+├─ Enum values: consistent case
+</code></pre>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q3: You notice the LLM keeps calling the wrong function for a task. How do you fix it?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>Problem diagnosis:
+1. Check LLM logs — is it choosing right function?
+2. If wrong consistently → Schema is unclear
+
+Solutions (in order):
+
+SOLUTION 1: Improve Description (Quick)
+├─ Current: &quot;Get information&quot;
+├─ Better: &quot;Get weather forecast for a specific city&quot;
+├─ Even better: &quot;Get current weather (temp, humidity, condition) for any city.
+│              Use for questions about weather, climate, temperature.&quot;
+
+SOLUTION 2: Add Examples in System Prompt (Medium)
+├─ Prompt: &quot;Example 1: User asks 'Is it raining in Paris?'
+│           → Call get_weather(city='Paris')
+│
+│           Example 2: User asks 'Calculate 2+3'
+│           → Call calculator(expression='2+3')&quot;
+
+SOLUTION 3: Reorder Functions (Easy)
+├─ Put most relevant functions first in schema list
+├─ LLM might pick first matching function
+├─ Put get_weather before get_news
+
+SOLUTION 4: Split Ambiguous Functions (Structural)
+├─ Current: { &quot;function&quot;: &quot;get_info&quot; }
+│           (used for weather, news, sports)
+├─ Better:  { &quot;function&quot;: &quot;get_weather&quot; },
+│           { &quot;function&quot;: &quot;get_news&quot; },
+│           { &quot;function&quot;: &quot;get_sports_scores&quot; }
+
+SOLUTION 5: Use Constraints (Advanced)
+├─ LLM version with better instruction following
+├─ Explicitly tell LLM when to use each function
+├─ &quot;Use get_weather ONLY for questions about temperature, rain, etc.&quot;
+</code></pre>
+<p><strong>Recommended approach:</strong> Start with Solution 1 (improve descriptions).</p>
+<hr />
+<h2>Category 2: NL-to-SQL</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q4: You're building NL-to-SQL for a large database (200 tables). How do you handle schema size?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p>Full schema (200 tables) won't fit in context window.</p>
+<p><strong>Solution: Retrieve only relevant tables.</strong></p>
+<pre><code>Step 1: KEYWORD EXTRACTION
+├─ Question: &quot;Revenue by region last month?&quot;
+├─ Keywords: [&quot;revenue&quot;, &quot;region&quot;, &quot;month&quot;]
+└─ Extract terms LLM will use
+
+Step 2: TABLE RETRIEVAL
+├─ Method A (Keyword): Find tables with matching column names
+│  └─ tables with &quot;revenue&quot; column: sales, transactions
+│  └─ tables with &quot;region&quot; column: customers, offices
+│  └─ Result: sales, transactions, customers (retrieved: 3 of 200)
+│
+├─ Method B (Vector Search): (More sophisticated)
+│  └─ Embed all table descriptions once (offline)
+│  └─ At runtime: Embed question, find most similar tables
+│  └─ Result: same, but finds less obvious matches
+
+Step 3: BUILD PROMPT WITH SUBSET
+├─ You have 3 tables (vs 200)
+├─ Include:
+│  - Relevant table descriptions
+│  - Example queries using these tables
+│  - Relationships between tables
+└─ LLM has full context!
+
+Step 4: EXECUTE
+└─ LLM generates SQL using only retrieved schema
+</code></pre>
+<p><strong>Code sketch:</strong></p>
+<pre><code class="language-python">def retrieve_relevant_schema(question, all_tables):
+    keywords = extract_keywords(question)  # [&quot;revenue&quot;, &quot;region&quot;]
+
+    relevant_tables = []
+    for table in all_tables:
+        score = 0
+        for col in table.columns:
+            for keyword in keywords:
+                if keyword in col.lower():
+                    score += 1
+
+        if score &gt; 0:
+            relevant_tables.append((table, score))
+
+    # Return top-10 tables
+    return sorted(relevant_tables, key=lambda x: x[1])[:10]
+</code></pre>
+<p><strong>For very large databases (1000+ tables/columns):</strong>
+Use vector search instead of keyword matching.</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q5: The LLM generates SQL with the wrong column names. How do you fix it?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>Symptom: LLM generates SQL with wrong column names
+├─ Query asks about &quot;revenue&quot;, but table has &quot;total_amount&quot;
+└─ Result: &quot;Unknown column 'revenue'&quot;
+
+Root causes:
+├─ Column naming not clear in schema
+├─ No examples showing correct names
+├─ LLM doesn't know table structure
+
+SOLUTION 1: Add Column Specifications (Quick)
+├─ Current schema:
+│  &quot;TABLE: orders
+│   Columns: id, customer_id, amount, date&quot;
+│
+├─ Better schema:
+│  &quot;TABLE: orders
+│   - id (INT): Order ID
+│   - customer_id (INT): Foreign key to customers
+│   - amount (DECIMAL): Order total (renamed from revenue)  ← Clarify!
+│   - order_date (DATE, not 'date'): When order was placed&quot;
+
+SOLUTION 2: Show Examples Using Exact Column Names
+├─ Example 1:
+│  Q: &quot;Total sales?&quot;
+│  A: SELECT SUM(amount) FROM orders  ← Shows 'amount', not 'revenue'
+│
+├─ Example 2:
+│  Q: &quot;Orders in March?&quot;
+│  A: SELECT * FROM orders WHERE MONTH(order_date) = 3
+
+SOLUTION 3: Add Retry Loop with Error Feedback
+├─ SQL executes → &quot;Unknown column 'revenue'&quot;
+├─ Feed back to LLM: &quot;Column 'revenue' not found. Did you mean 'amount'?&quot;
+├─ LLM regenerates with correct name
+└─ Retry mechanism fixes most issues
+
+SOLUTION 4: Column Aliases (If you control docs)
+├─ In DB, column name: total_amount
+├─ In schema doc: &quot;total_amount (alias: revenue)&quot;
+├─ Helps LLM recognize both names
+</code></pre>
+<p><strong>Recommended:</strong> Combine Solutions 1 + 3 (clear schema + retry loop).</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q6: User asks an ambiguous question like "Show me the top customers". How do you handle it?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Ambiguity sources:</strong></p>
+<pre><code>&quot;Top customers&quot; could mean:
+├─ Top by spending (highest revenue)
+├─ Top by order count (most frequent)
+├─ Top by recency (most recent purchase)
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<p><strong>Solution 1: Default Assumption (Immediate, risky)</strong></p>
+<pre><code class="language-python">
+if &quot;top customers&quot; in question:
+    question = &quot;Top 10 customers by total spending?&quot;
+</code></pre>
+<p><strong>Pro:</strong> Fast
+<strong>Con:</strong> Might be wrong</p>
+<p><strong>Solution 2: Ask User for Clarification (Safe, slower)</strong></p>
+<pre><code>System: &quot;Did you mean top customers by:
+         a) Total spending (highest revenue)
+         b) Order frequency (most orders)
+         c) Recency (most recent activity)?&quot;
+
+User: &quot;a) Total spending&quot;
+
+LLM: Generates SQL with correct interpretation
+</code></pre>
+<p><strong>Pro:</strong> Always correct
+<strong>Con:</strong> Extra round trip</p>
+<p><strong>Solution 3: Return All Interpretations (Comprehensive)</strong></p>
+<pre><code>System returns 3 queries:
+├─ &quot;Top 10 by spending: [Alice ($50K), Bob ($40K), ...]&quot;
+├─ &quot;Top 10 by frequency: [Carol (25 orders), Dave (18 orders), ...]&quot;
+├─ &quot;Top 10 by recency: [Eve (yesterday), Frank (2 days ago), ...]&quot;
+
+User picks which one they want
+</code></pre>
+<p><strong>Solution 4: Use Context (Smart)</strong></p>
+<pre><code>If user previously asked &quot;highest revenue questions&quot;:
+  └─ Default to &quot;top by spending&quot;
+
+If user previously asked &quot;most active customers&quot;:
+  └─ Default to &quot;by recency&quot;
+</code></pre>
+<p><strong>Recommendation for production:</strong>
+Use <strong>Solution 2 (ask for clarification)</strong> when ambiguity detected, otherwise use <strong>Solution 4 (context-based default)</strong>.</p>
+<hr />
+<h2>Category 3: Improving NL-to-SQL</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q7: Your NL-to-SQL system has 70% accuracy. What's the fastest way to improve it?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Bottleneck identification (key first!):</strong></p>
+<pre><code>Measure where failures happen:
+├─ 30% of failures: Wrong table picked
+├─ 20% of failures: Wrong column names
+├─ 30% of failures: Wrong JOIN logic
+├─ 20% of failures: Wrong WHERE conditions
+
+Main bottleneck: Table selection (30%) + JOIN logic (30%) = 60% of errors
+</code></pre>
+<p><strong>Fast improvements (by ROI):</strong></p>
+<p><strong>Improvement 1: Add Schema Retrieval (1-2 hours, +15%)</strong></p>
+<pre><code>If currently: Full schema in prompt
+Change to: Retrieve only relevant tables
+
+Impact: LLM sees less noise, better focus
+Expected improvement: 70% → 85%
+</code></pre>
+<p><strong>Improvement 2: Better Examples (2-3 hours, +10%)</strong></p>
+<pre><code>If currently: Generic SQL examples
+Change to: Domain-specific examples with JOINs
+
+Example to add:
+&quot;Q: Customers from NYC with 3+ orders?
+ A: SELECT c.name
+    FROM customers c
+    JOIN orders o ON c.id = o.customer_id
+    WHERE c.city = 'NYC'
+    GROUP BY c.id
+    HAVING COUNT(o.id) &gt;= 3&quot;
+
+Expected improvement: 85% → 95%
+</code></pre>
+<p><strong>Improvement 3: Retry Loop (1 hour, +5%)</strong></p>
+<pre><code>If currently: Generate SQL once
+Change to: Try → execute → if error, retry with feedback
+
+Catches 50% of initial errors
+Expected improvement: 95% → 98%
+</code></pre>
+<p><strong>Full approach (optimal):</strong>
+1. Implement Improvement 1 → 70% to 85%
+2. Implement Improvement 2 → 85% to 95%
+3. Implement Improvement 3 → 95% to 98%
+4. For remaining 2%, do manual inspection/fix</p>
+<p><strong>Total time: ~4-5 hours</strong>
+<strong>Total improvement: 70% → 98% accuracy</strong></p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q8: You need to support complex multi-step queries like "Top 3 regions by revenue, excluding Q1". Design the approach.</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Multi-step approach:</strong></p>
+<pre><code>DECOMPOSITION:
+User: &quot;Top 3 regions by revenue, excluding Q1&quot;
+
+Break down:
+├─ Step 1: Calculate revenue by region
+├─ Step 2: Filter out Q1 data
+├─ Step 3: Get top 3 regions
+
+Or maybe:
+├─ Step 1: Calculate revenue by region (non-Q1 only)
+├─ Step 2: Sort descending
+├─ Step 3: Limit to top 3
+
+OPTION A: One Complex Query
+LLM generates a single SQL:
+  SELECT region, SUM(amount) as revenue
+  FROM orders o
+  JOIN customers c ON o.customer_id = c.id
+  WHERE MONTH(o.order_date) NOT IN (1)
+  GROUP BY region
+  ORDER BY revenue DESC
+  LIMIT 3
+
+OPTION B: Step-by-Step Queries (More Robust)
+1. LLM generates: &quot;Get revenue by region (all months)&quot;
+   SELECT region, MONTH(date) as month, SUM(amount) as revenue ...
+
+2. System filters: Remove month = 1 rows
+
+3. System aggregates: Group by region, sum across months
+
+4. System sorts: Top 3
+
+Issue: More complex to orchestrate, but sometimes works better
+
+OPTION C: Hierarchical Decomposition
+LLM first understands structure:
+  └─ &quot;This is a GROUP-BY with WHERE filtering + sorting + LIMIT&quot;
+
+Then generates SQL:
+  └─ Correct SQL with all clauses
+</code></pre>
+<p><strong>Recommended: OPTION A (One Query)</strong></p>
+<pre><code>Why:
+├─ Simpler orchestration
+├─ Fewer round-trips
+├─ LLMs are decent at complex SQL now
+└─ Easy to validate
+
+How:
+├─ Good examples
+├─ Explicitly mention: &quot;WHERE, GROUP BY, ORDER BY, LIMIT all available&quot;
+├─ Schema clarity
+└─ Retry on error
+</code></pre>
+<p><strong>How to improve accuracy:</strong></p>
+<pre><code class="language-python">
+def handle_complex_query(question):
+    # Step 1: Detect complexity
+    if &quot;top &quot; in question and &quot;exclude&quot; in question:
+        complexity = &quot;high&quot;
+
+    # Step 2: Add extra guidance
+    guidance = &quot;&quot;&quot;
+    For queries with multiple conditions:
+    1. Use WHERE for filtering (e.g., exclude Q1)
+    2. Use GROUP BY for aggregation (e.g., by region)
+    3. Use ORDER BY for sorting
+    4. Use LIMIT for top-k results
+
+    Example:
+    &quot;Top 3 products by sales, excluding clearance?&quot;
+    SELECT product, SUM(sales) as total_sales
+    FROM orders
+    WHERE category != 'clearance'
+    GROUP BY product
+    ORDER BY total_sales DESC
+    LIMIT 3
+    &quot;&quot;&quot;
+
+    # Step 3: Generate with guidanceSQL = llm.generate(question, schema, guidance)
+
+    # Step 4: Validate &amp; retry
+    return validate_and_retry(sql)
+</code></pre>
+<hr />
+<h2>Category 4: All Together</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q9: Design a production NL-to-SQL system for a fintech company with strict accuracy requirements.</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>REQUIREMENTS:
+├─ Can't have wrong answers (financial impact)
+├─ Schema: 50 tables, constantly growing
+├─ Query types: Complex (multi-step reasoning)
+├─ Latency: &lt; 2 seconds acceptable
+└─ Accuracy target: 100% (any wrong answer = failure)
+
+ARCHITECTURE:
+
+LAYER 1: SCHEMA MANAGEMENT
+├─ Maintain table descriptions with examples
+├─ Tag tables: [revenue, customer, trading, risk, ...]
+├─ For each table: explicit column descriptions
+└─ Update descriptions when schema changes
+
+LAYER 2: SCHEMA RETRIEVAL
+├─ Extract keywords from question
+├─ Vector search: Find relevant tables (top-5)
+├─ Only pass relevant schema to LLM
+└─ Saves context window, improves accuracy
+
+LAYER 3: FEW-SHOT EXAMPLES
+├─ Maintain ~50 example queries (domain-specific)
+├─ Examples for: joins, aggregations, filtering, time handling
+├─ Update examples based on failure cases
+└─ Include: revenue calculations, risk metrics, trading volumes
+
+LAYER 4: QUERY GENERATION
+├─ LLM: GPT-4 (best accuracy)
+├─ Prompt:
+│  - System: &quot;You are a SQL expert for fintech&quot;
+│  - Schema: Retrieved tables only
+│  - Examples: 5-10 most relevant examples
+│  - Question: User's question
+│  - Constraint: &quot;Return ONLY SQL, no explanation&quot;
+└─ Generate SQL
+
+LAYER 5: VALIDATION
+├─ Syntax check: Parse SQL
+├─ Schema check: All tables/columns exist
+├─ Safety check: No DROP/DELETE/INSERT
+├─ Logic check: JOINs make sense
+└─ Return: Pass or fail
+
+LAYER 6: EXECUTION &amp; RETRY
+├─ Execute SQL with 5-second timeout
+├─ On error:
+│  - Capture error message
+│  - Feed back to LLM: &quot;SQL failed: {error}&quot;
+│  - Retry (max 3 times)
+└─ On success: Return raw result
+
+LAYER 7: RESULT FORMATTING
+├─ Convert raw SQL result to natural language
+├─ Add currency symbols ($) for financial metrics
+├─ Format numbers: 1000000 → 1_000,000.00$
+├─ Add units: &quot;Revenue (USD)&quot;
+└─ Include query used (for audit trail)
+
+LAYER 8: HUMAN REVIEW (For High-Risk)
+├─ If query involves:
+│  - Regulatory/compliance data
+│  - Unusual aggregations
+│  - Large amounts
+├─ Flag for human review before returning
+└─ Approval required
+
+MONITORING &amp; IMPROVEMENT:
+├─ Log every query: {question, sql, result, latency}
+├─ Track failures:
+│  - SQL syntax errors
+│  - Incorrect results (user reports)
+│  - Timeouts
+├─ Weekly analysis:
+│  - Top failure patterns
+│  - Improve examples based on failures
+│  - Update schema documentation
+└─ Test set:
+   - 100+ financial questions
+   - RAGAS-style evaluation
+   - Compare to ground truth
+
+TIMELINE:
+├─ Week 1: Core system + schema retrieval
+├─ Week 2: Validation + retry + formatting
+├─ Week 3: Testing + refinement
+├─ Week 4: Deploy + monitoring
+└─ Ongoing: Improve based on failures
+
+SUCCESS METRICS:
+├─ Accuracy: &gt; 98% (measured on test set)
+├─ Latency: &lt; 2s (p99)
+├─ User satisfaction: &gt; 95% thumbs-up
+└─ Failures: &lt; 1% per month
+</code></pre>
+<hr />
+<h2>Key Insights</h2>
+<p>✅ <strong>Function calling</strong> = structured outputs; schemas are contracts between LLM and system</p>
+<p>✅ <strong>Clear schemas</strong> with explicit types/descriptions prevent wrong function calls</p>
+<p>✅ <strong>NL-to-SQL at scale</strong> requires schema retrieval (large DBs don't fit in context)</p>
+<p>✅ <strong>Multi-table queries</strong> need good examples; JOINs are hard for LLMs</p>
+<p>✅ <strong>Validation + retry</strong> fixes 50% of errors automatically</p>
+<p>✅ <strong>Ambiguity detection</strong> → ask user or use context-based defaults</p>
+<p>✅ <strong>Production systems</strong> need monitoring, human review for high-risk, and continuous improvement</p>
+<p>✅ <strong>Start simple, iterate:</strong> Get 70% → 85% → 95% → 99%</p>
+</div>
+</div>
+<h2 id="phase-4-fine-tuning">Phase 4: Fine-Tuning</h2>
+<h2>Category 1: When to Fine-Tune</h2>
+<div class="qa-container">
+<h3>Q1: A colleague suggests fine-tuning your RAG system to improve accuracy. Should you do it?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>Likely NO.</strong> Before fine-tuning, ask:</p>
+<pre><code>Diagnostic questions:
+1. What's the current accuracy? (Measure with RAGAS)
+   └─ If 60-70% → Problem is retrieval, not generation
+   └─ If 85-90% → Close, might be worth fine-tuning
+   └─ If &lt;60% → RAG is broken, fix first
+
+2. Have you tried:
+   □ Better prompting? (few-shot examples)
+   □ Reranking? (cross-encoders)
+   □ Better chunking? (semantic, document-aware)
+   └─ If no to any → Fix those first (cheaper, faster)
+
+3. Do you have labeled data?
+   └─ If no → Can't fine-tune
+   └─ If yes → How many examples? (need 50-100 minimum)
+
+4. What would fine-tuning improve?
+   └─ If &quot;answer quality&quot; → Problem is retrieval or LLM prompt
+       Solution: Better prompting, not fine-tuning
+   └─ If &quot;specific domain style&quot; → Fine-tuning makes sense
+       Example: &quot;Always include confidence scores&quot;
+</code></pre>
+<p><strong>Recommended flow:</strong></p>
+<pre><code>Current accuracy: 70%
+
+Step 1: Improve RAG
+├─ Add reranking
+├─ Better chunking
+└─ Result: 70% → 80%
+
+Step 2: Better prompting
+├─ Few-shot examples
+├─ Structured output
+└─ Result: 80% → 85%
+
+Step 3: Only if still not good, fine-tune
+└─ Cost: $1000, time: 1 week
+└─ Result: 85% → 90%
+</code></pre>
+<p><strong>Answer to colleague:</strong> "Let's try RAG improvements and better prompting first. If that doesn't work, we'll revisit fine-tuning."</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q2: When is fine-tuning worth it? Give specific scenarios.</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>SCENARIO 1: Medical Diagnosis Assistant
+├─ Requirement: 98% accuracy (wrong answer = patient harm)
+├─ Current: Few-shot prompting = 85%
+├─ Gap: 13 percentage points (significant)
+├─ Decision: ✅ FINE-TUNE
+│  └─ ROI: High (saves lives, avoids liability)
+│  └─ Cost: Justified
+│  └─ Timeline: Worth the wait
+
+SCENARIO 2: Customer Support Chatbot
+├─ Requirement: 80% accuracy (nice-to-have, not critical)
+├─ Current: Prompting + RAG = 78%
+├─ Gap: 2 percentage points (tiny)
+├─ Decision: ❌ DON'T FINE-TUNE
+│  └─ ROI: Negative (2% improvement not worth $1000)
+│  └─ Alternative: Improve RAG instead
+
+SCENARIO 3: Code Generation for Proprietary API
+├─ Requirement: Custom code style + domain-specific patterns
+├─ Current: GPT-4 doesn't know your APIs
+├─ Problem: Knowledge gap, not quality gap
+├─ Decision: ❌ DON'T FINE-TUNE
+│  └─ Better solution: RAG + few-shot examples
+│  └─ Feed API docs + code examples in prompt
+
+SCENARIO 4: Classifier for Internal Email Triage
+├─ Requirement: Classify 100K emails/month by category
+├─ Current: Prompting = 88%, but costs $10/month in API
+├─ Goal: Reduce costs by using smaller model
+├─ Decision: ✅ FINE-TUNE (smaller, cheaper model)
+│  └─ Fine-tune Llama-7B with LoRA (costs $1, not $10)
+│  └─ Achieves 88% at 10x lower cost
+│  └─ ROI: Positive after 100 days
+
+SCENARIO 5: Legal Clause Extraction
+├─ Requirement: Extract clauses from contracts
+├─ Current: Few-shot example approach = 70%
+├─ Gap: 20 percentage points → significant
+├─ Problem: Complex pattern matching (legal domain)
+├─ Decision: ✅ FINE-TUNE
+│  └─ Collect 500 legal contracts with labels
+│  └─ Fine-tune on domain-specific task
+│  └─ Expected improvement: 70% → 88%
+</code></pre>
+<p><strong>Decision rule:</strong></p>
+<pre><code>Fine-tune if:
+  (Accuracy gap &gt; 10%) AND
+  (Cost benefit &gt; $5K) AND
+  (Have 50+ labeled examples)
+</code></pre>
+<hr />
+<h2>Category 2: Fine-Tuning Methods</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q3: You have $2000 budget and RTX 4090. Which fine-tuning approach?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>BUDGET BREAKDOWN:
+├─ Data labeling: $500-1000
+├─ Compute (GPU hours): $500
+└─ API calls + overhead: $500
+
+APPROACH 1: LoRA Fine-Tuning ⭐ BEST
+├─ Method: LoRA on Llama-7B or similar
+├─ Training time: 6-12 hours on RTX 4090
+├─ Cost: $0 (free GPU time) + $500 data + API
+├─ Result: 88-92% accuracy achievable
+├─ Why: Good balance of cost/accuracy/speed
+
+APPROACH 2: QLoRA Fine-Tuning
+├─ Method: Quantized LoRA (even more compressed)
+├─ Advantage: Could train 13B model instead of 7B
+├─ Cost: Same, but better potential performance
+├─ Result: 90-93% accuracy
+├─ Why: Only slightly more complex, better results
+
+APPROACH 3: Full Fine-Tuning
+├─ Method: Fine-tune all params
+├─ Cost: Compute costs explode ($2000+ for GPUs)
+├─ Result: 93-95% accuracy
+├─ Why: Too expensive for this budget
+
+APPROACH 4: Hybrid (RAG + Light Fine-Tune)
+├─ Method: Build RAG system ($1000), then LoRA fine-tune ($500)
+├─ Cost: $1500 total
+├─ Result: 88-92% (combined RAG + fine-tuning)
+├─ Why: More comprehensive, better for knowledge+behavior gaps
+
+RECOMMENDATION: Go with APPROACH 1 (LoRA)
+├─ Easiest to implement
+├─ Under budget
+├─ Good results from RTX 4090
+├─ If results not good enough, upgrade to APPROACH 2
+</code></pre>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q4: Explain LoRA. Why is rank=16 a good default?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>LoRA (Low-Rank Adaptation):</strong></p>
+<pre><code>Concept:
+└─ Don't update all 7B parameters
+└─ Instead, add a small &quot;correction matrix&quot; that's trainable
+
+The math (simplified):
+  Standard: Output = W × Input
+  LoRA: Output = (W + A @ B) × Input
+
+  Where:
+  └─ W = original 7B params (frozen)
+  └─ A @ B = small update matrix (trainable, rank × embedding_dim)
+
+Memory impact:
+├─ Base model: 56GB (7B params × 4 bytes)
+├─ LoRA rank=16: 56GB + 0.3GB = 56.3GB
+│  └─ (only 0.5% overhead!)
+└─ Trainable: 0.3GB (tiny!)
+</code></pre>
+<p><strong>Why rank=16?</strong></p>
+<pre><code>Trade-off spectrum:
+
+Rank 4 (smallest):
+├─ Params: 1M
+├─ Memory: 12GB
+├─ Accuracy: 84%
+└─ Use when: Super resource-constrained
+
+Rank 8:
+├─ Params: 2M
+├─ Memory: 14GB
+├─ Accuracy: 87%
+└─ Use when: Limited budget
+
+Rank 16 ⭐ SWEET SPOT:
+├─ Params: 3.7M
+├─ Memory: 16GB
+├─ Accuracy: 90%
+└─ Use when: Production, good balance
+
+Rank 32:
+├─ Params: 7.4M
+├─ Memory: 24GB
+├─ Accuracy: 91%
+└─ Use when: Need top accuracy
+
+Rank 64 (large):
+├─ Params: 14.8M
+├─ Memory: 40GB
+├─ Accuracy: 92%
+└─ Use when: Approaching full fine-tune
+</code></pre>
+<p><strong>Why 16 is the default:</strong></p>
+<pre><code>Empirical finding:
+└─ rank=16 captures 80-90% of improvement vs full fine-tune
+└─ rank=32+ shows diminishing returns (small accuracy gain)
+
+Cost-benefit:
+├─ rank=8 → rank=16: +3% accuracy, +50% cost (worth it)
+├─ rank=16 → rank=32: +1% accuracy, +50% cost (marginal)
+└─ rank=32 → rank=64: +0.5% accuracy, +100% cost (not worth it)
+
+Practical: Start with 16, adjust if needed
+</code></pre>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q5: You tried LoRA but got worse accuracy (from 85% to 82%). What went wrong?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>Diagnosis: LoRA made accuracy worse!
+
+Possible causes (in order of likelihood):
+
+CAUSE 1: Overfitting (Most common)
+├─ Symptom: Training loss drops, validation loss increases
+├─ Problem: Too many epochs on small dataset
+├─ Fix: 
+│  └─ Reduce epochs from 5 to 2
+│  └─ Add early stopping (stop when loss plateaus)
+│  └─ Or collect more training data
+
+CAUSE 2: Wrong learning rate
+├─ Symptom: Loss is erratic or doesn't decrease
+├─ Problem: Learning rate too high (unstable) or too low (no learning)
+├─ Fix:
+│  └─ Try learning rates: 5e-5, 1e-4, 2e-4, 5e-4
+│  └─ Usually 2e-4 works well
+
+CAUSE 3: Rank too large
+├─ Symptom: Model learns noise in training data
+├─ Problem: rank=64 is overparameterized for your data
+├─ Fix:
+│  └─ Reduce rank from 64 to 16
+│  └─ Re-train
+
+CAUSE 4: Bad training data
+├─ Symptom: Accuracy decreases across the board
+├─ Problem: Labels are wrong or data is misaligned
+├─ Fix:
+│  └─ Manually inspect training examples
+│  └─ Check for label errors
+│  └─ Verify ground truth
+
+CAUSE 5: Not actually using LoRA
+├─ Symptom: Using default model (not the fine-tuned one)
+├─ Problem: Forgot to load LoRA weights
+├─ Fix:
+│  └─ Verify LoRA model is loaded at inference
+
+RECOMMENDED DEBUG PROCESS:
+1. Check loss curves (are they going down?)
+   └─ If no → adjust learning rate
+
+2. Check validation accuracy per epoch
+   └─ If decreasing after epoch 2 → overfitting, reduce epochs
+
+3. Inspect training data
+   └─ If noisy → clean labels
+
+4. Try rank=8 (smaller)
+   └─ If better → original rank was too large
+
+5. If still worse, revert to base model
+   └─ LoRA didn't help for this task
+   └─ Use RAG or prompt engineering instead
+</code></pre>
+<hr />
+<h2>Category 3: Alignment</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q6: Explain RLHF. Why is DPO becoming popular?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<p><strong>RLHF (Reinforcement Learning from Human Feedback):</strong></p>
+<pre><code>Goal: Train model to match human preferences
+
+Process:
+1. Instruction-tune base model
+   └─ Teaches model to follow instructions
+
+2. Gather human preferences
+   ├─ Show humans 2-3 model responses
+   ├─ Ask: &quot;Which is better?&quot;
+   └─ Collect 10K+ pairwise rankings
+
+3. Train reward model
+   ├─ Learn: &quot;What makes a response good?&quot;
+   ├─ Input: response text
+   ├─ Output: score (0-100)
+
+4. Use RL to optimize model
+   ├─ Objective: Maximize reward
+   ├─ Method: Policy Gradient (PPO algorithm)
+   └─ Result: Model generates high-reward responses
+
+Timeline: 4-8 weeks
+Cost: $100K+ (human labeling + compute)
+Result: ChatGPT-level quality (90%+)
+</code></pre>
+<p><strong>DPO (Direct Preference Optimization):</strong></p>
+<pre><code>Goal: Same as RLHF, but simpler
+
+Process:
+1. Instruction-tune base model
+   └─ Same as RLHF
+
+2. Gather human preferences
+   ├─ Show humans 2 model responses
+   ├─ Ask: &quot;Which is better?&quot;
+   └─ Collect 5K+ pairwise preferences
+
+3. Fine-tune directly
+   ├─ Objective: Make preferred responses more likely
+   ├─ No separate reward model needed!
+   ├─ No PPO algorithm needed!
+   └─ Just standard supervised fine-tuning
+
+Timeline: 3-5 days
+Cost: $10-40K (cheaper human labeling + compute)
+Result: Similar to RLHF (89-91%)
+</code></pre>
+<p><strong>Why DPO is winning:</strong></p>
+<pre><code>DPO advantages:
+├─ No separate reward model (simpler)
+├─ No PPO training (less complex, fewer bugs)
+├─ Faster (days vs weeks)
+├─ Cheaper ($10K vs $100K)
+├─ Empirically similar results to RLHF
+└─ Can implement in a week if you know fine-tuning
+
+RLHF advantages:
+├─ Slightly better results (91-92% vs 89-91%)
+├─ More flexible (reward model is separate)
+└─ More established (studied longer)
+</code></pre>
+<p><strong>Current trend:</strong></p>
+<pre><code>2022: Everyone using RLHF
+2023: DPO research shows it works well
+2024: Companies switching to DPO (simpler, faster)
+
+Why DPO is practical:
+└─ Fine-tuning is now easier (LoRA, QLoRA, Unsloth)
+└─ DPO is essentially fine-tuning on preferences
+└─ So: Instruction tune → DPO → Done! (weeks, not months)
+</code></pre>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q7: You have preference data for 1000 examples. Which alignment method?</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>Given: 1000 human preference pairs {response_A, response_B, preference}
+
+DECISION:
+├─ Budget: &lt;$20K? → DPO
+├─ Budget: $50K+? → RLHF (slightly better results)
+├─ Timeline: &lt;1 week? → DPO
+└─ Timeline: 2+ weeks? → RLHF
+
+RECOMMENDATION: DPO ⭐
+
+Why:
+├─ 1000 examples is moderate (fits DPO well)
+├─ DPO results are nearly as good as RLHF
+├─ Much faster to implement
+├─ Easier to debug
+└─ Save money for other things
+
+Process:
+1. Instruction-tune base model
+   ├─ Dataset: Alpaca or ShareGPT (50K examples)
+   ├─ Time: 1-2 days
+   └─ Result: Base model that follows instructions
+
+2. Run DPO on preferences
+   ├─ Dataset: Your 1000 preference pairs
+   ├─ Time: 4-6 hours
+   ├─ Result: Aligned model that matches your preferences
+   └─ Expected accuracy: 88-91%
+
+Total timeline: 2-3 days
+Total cost: &lt;$5K
+Result: Production-ready aligned model
+</code></pre>
+<hr />
+<h2>Category 4: Integration</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q8: Design a complete fine-tuning system for classifying customer feedback (50K reviews/year).</h3>
+<div class="answer">
+
+<p><strong>A:</strong></p>
+<pre><code>REQUIREMENTS ANALYSIS:
+├─ Task: Classify reviews (positive/negative/mixed)
+├─ Volume: 50K reviews/year (4.2K/month)
+├─ Current state: Zero in-house
+├─ Accuracy need: 90%+ (business decision matters)
+└─ Timeline: 4 weeks to production
+
+APPROACH CHOICE:
+├─ Start with: Prompting (good baseline)
+├─ If needed: Fine-tune smaller model (cost-effective)
+└─ Don't use: RAG (this is classification, not retrieval)
+
+ARCHITECTURE:
+
+PHASE 1: BASELINE (Week 1)
+├─ Use GPT-4 with few-shot prompting
+├─ Cost: $50/month for 50K reviews
+├─ Accuracy: ~85% (baseline)
+└─ Use while building custom solution
+
+PHASE 2: FINE-TUNING PREP (Week 2)
+├─ Collect labeled data
+│  ├─ Label 500 reviews manually or semi-auto
+│  ├─ Split: 400 train, 100 test
+│  └─ Cost: $500 (or internal if you label)
+│
+├─ Data format:
+│  {&quot;instruction&quot;: &quot;Classify sentiment&quot;,
+│   &quot;input&quot;: &quot;I love this product!&quot;,
+│   &quot;output&quot;: &quot;Positive&quot;}
+│
+└─ Validate labelin (check agreement of 20%)
+
+PHASE 3: FINE-TUNING (Week 3)
+├─ Choose model: Llama-7B (open, cheap to run)
+├─ Method: LoRA (cost-effective)
+├─ Configuration:
+│  ├─ Rank: 16
+│  ├─ Learning rate: 2e-4
+│  ├─ Epochs: 3
+│  └─ Batch size: 8
+│
+├─ Training:
+│  ├─ Hardware: RTX 4090 (6 hours)
+│  ├─ Cost: $50-100
+│  └─ Result: ~90% accuracy on test set
+│
+└─ Save model: 7.2GB merged weights
+
+PHASE 4: EVALUATION (Week 3)
+├─ Evaluate on 100 test reviews
+├─ Compare to baseline (GPT-4 ~ 85%)
+├─ Expected: 90-91% (5-6% improvement)
+└─ If good, move to production
+
+PHASE 5: DEPLOYMENT (Week 4)
+├─ Load fine-tuned model on-premises (GPU server)
+├─ Build inference API:
+│  ├─ Input: review text
+│  ├─ Output: sentiment + confidence
+│  └─ Latency: &lt;1 second
+│
+├─ Monitor:
+│  ├─ Accuracy vs ground truth
+│  ├─ Latency
+│  └─ Cost
+│
+└─ Feedback loop:
+   ├─ Collect human corrections
+   ├─ Periodically retrain (quarterly)
+   └─ Improve over time
+
+COST ANALYSIS:
+├─ Phase 1 (baseline): $50
+├─ Phase 2 (labeling): $500
+├─ Phase 3 (training): $100
+├─ Phase 5 (deployment): ~$200/month (GPU server)
+│
+└─ Total first year: $50 + $500 + $100 + $2400 = $3050
+
+ROI:
+├─ GPT-4 API: $50 × 12 = $600/year
+├─ Fine-tuned model: ~$3000 first year
+├─ After breakeven (5 years), fine-tuned is cheaper
+└─ Plus: Own data, integrated system, fast inference
+
+EXPECTED ACCURACY:
+├─ Baseline (prompting): 85%
+├─ Fine-tuned: 90-91%
+└─ Improvement: 5-6 percentage points
+
+SUCCESS METRICS:
+├─ Accuracy: &gt; 90% (target met)
+├─ Latency: &lt; 1 second (acceptable)
+├─ Cost: &lt; $300/month (within budget)
+└─ User satisfaction: Human spot-checks pass
+</code></pre>
+<hr />
+<h2>Key Insights</h2>
+<p>✅ <strong>Fine-tune only after trying prompting + RAG first</strong></p>
+<p>✅ <strong>LoRA is the default</strong> for parameter-efficient fine-tuning</p>
+<p>✅ <strong>Rank=16 is the sweet spot</strong> for most use cases</p>
+<p>✅ <strong>DPO is the modern choice</strong> for alignment (replacing RLHF)</p>
+<p>✅ <strong>Overfitting is common</strong> with small datasets; watch your validation loss</p>
+<p>✅ <strong>Test thoroughly</strong> before deploying fine-tuned models</p>
+<p>✅ <strong>Monitor continuously</strong> after deployment</p>
+</div>
+</div>
+<h2 id="phase-5-agents">Phase 5: Agents & Agentic Systems</h2>
+<h2>Category 1: ReAct Pattern &amp; Loops</h2>
+<div class="qa-container">
+<h3>Q1: Define the ReAct pattern and explain what happens in each step.</h3>
+<div class="answer">
+
+<p><strong>Define:</strong>
+ReAct (Reasoning + Acting) is a prompting pattern that gives LLMs a structured loop to solve problems. Instead of jumping straight to action, they think → act on tools → observe → repeat. This mimics human problem-solving.</p>
+<p><strong>Mechanism Explained:</strong></p>
+<p>The loop has 4 components:
+- <strong>Thought:</strong> LLM reasons about what to do next
+- <strong>Action:</strong> LLM decides which tool to call and with what parameters
+- <strong>Observation:</strong> System returns tool result to LLM
+- <strong>Answer:</strong> When confident, LLM outputs final answer</p>
+<p>Visual flow:</p>
+<pre><code>User Query
+    ↓
+[THOUGHT] &quot;I need to find...&quot;
+    ↓
+[ACTION] Call tool X with params
+    ↓
+[OBSERVATION] Tool returns result
+    ↓
+Does LLM know answer?
+├─ YES → [ANSWER] Output result
+└─ NO → Loop back to THOUGHT
+</code></pre>
+<p><strong>Trade-offs:</strong>
+- ✅ Better reasoning (thinks before acting vs blind tool calling)
+- ✅ Flexible (can call multiple tools, combine results)
+- ✅ Debuggable (you see thinking process)
+- ❌ Slower (multiple LLM calls)
+- ❌ Costs more (tokens for reasoning)
+- ❌ Needs good tool descriptions (or LLM picks wrong tools)</p>
+<p><strong>Real Interview Example:</strong></p>
+<p>Interviewer: "Walk me through how you'd debug a slow API endpoint."</p>
+<p>Your Answer:
+"I'd use ReAct. First, <strong>Thought</strong>: check if it's database queries or code. <strong>Action</strong>: run profiling tool. <strong>Observation</strong>: see N+1 queries. <strong>Thought</strong>: that's the issue. <strong>Action</strong>: check the ORM code. <strong>Observation</strong>: find loop making extra queries. <strong>Answer</strong>: fix by using includes/joins. The loop structure lets me debug methodically instead of guessing."</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q2: When should you use ReAct vs blind tool calling? What are the differences?</h3>
+<div class="answer">
+
+<p><strong>Blind Tool Calling:</strong>
+LLM sees query → immediately calls tool(s) without thinking.</p>
+<pre><code>Query: &quot;Find the cheapest flight&quot;
+→ Immediately call search_flights()
+→ Return results
+</code></pre>
+<p>Fast, but often wrong (wrong route, wrong dates, etc.).</p>
+<p><strong>ReAct Pattern:</strong>
+LLM thinks first, then acts.</p>
+<pre><code>Query: &quot;Find cheapest flight NYC to LA, departing Friday&quot;
+→ THOUGHT: &quot;I need dates, airport codes, budget&quot;
+→ ACTION: get_current_date()
+→ OBSERVATION: &quot;Today is Monday, March 10&quot;
+→ THOUGHT: &quot;Friday is March 15. NYC = JFK. LA = LAX&quot;
+→ ACTION: search_flights(from=JFK, to=LAX, date=2025-03-15)
+→ OBSERVATION: [flights...]
+→ ANSWER: &quot;Cheapest is Delta at $245&quot;
+</code></pre>
+<p><strong>When to Use Each:</strong></p>
+<pre><code>USE BLIND TOOL CALLING when:
+├─ Task is simple (one tool call)
+├─ Tool is obvious
+├─ Speed matters more than accuracy
+└─ Example: &quot;What's 2+2?&quot; → Use calculator
+
+USE ReAct WHEN:
+├─ Task is complex (multiple steps)
+├─ Need information before deciding which tool
+├─ Reasoning helps accuracy
+├─ Tool might fail (need backup plan)
+└─ Example: &quot;Find a flight that's under $300, convenient time&quot;
+</code></pre>
+<p><strong>Trade-off Table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>Blind</th>
+<th>ReAct</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speed</td>
+<td>Fast</td>
+<td>Slower (multiple LLM calls)</td>
+</tr>
+<tr>
+<td>Accuracy (complex)</td>
+<td>Poor</td>
+<td>Good</td>
+</tr>
+<tr>
+<td>Debugging</td>
+<td>Hard</td>
+<td>Easy (see thinking)</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>Cheap</td>
+<td>Higher</td>
+</tr>
+<tr>
+<td>Implementation</td>
+<td>Simple</td>
+<td>Needs loop</td>
+</tr>
+</tbody>
+</table>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q3: What causes infinite loops in ReAct? How do you prevent them?</h3>
+<div class="answer">
+
+<p><strong>What Causes Them:</strong>
+LLM keeps calling same tool, never progresses.</p>
+<p>Example:</p>
+<pre><code>STEP 1:
+Thought: &quot;I need weather&quot;
+Action: get_weather(&quot;NYC&quot;)
+Observation: &quot;72F&quot;
+
+STEP 2:
+Thought: &quot;Need more details&quot;
+Action: get_weather(&quot;NYC&quot;)  ← SAME CALL
+Observation: &quot;72F&quot;
+
+STEP 3:
+...forever repeating
+</code></pre>
+<p>Causes:
+- LLM doesn't understand tool returned useful info
+- Tool descriptions are vague
+- No diversity in tool options
+- LLM confused about what to do next</p>
+<p><strong>Prevention (Priority Order):</strong></p>
+<p>1️⃣ <strong>Set max_steps limit</strong> (ESSENTIAL)</p>
+<pre><code>for step in range(MAX_STEPS):  # Usually 5-10
+    if step &gt;= MAX_STEPS:
+        return &quot;Max steps reached&quot;
+    # Continue loop
+</code></pre>
+<p>This is your safety net. Every agent needs this.</p>
+<p>2️⃣ <strong>Detect repeated actions</strong></p>
+<pre><code>if current_action == last_action:
+    # Force different approach
+    return &quot;Cannot use same tool twice&quot;
+</code></pre>
+<p>3️⃣ <strong>Better tool descriptions</strong>
+Instead of: <code>"get_weather: Returns weather"</code>
+Use: <code>"get_weather: Returns current temperature and conditions. 
+       Returns same result if called multiple times. Use only once per location."</code></p>
+<p>4️⃣ <strong>Track state changes</strong></p>
+<pre><code>if observation == prev_observation:
+    # No new info learned
+    return &quot;No progress made&quot;
+</code></pre>
+<hr />
+<h2>Category 2: LangGraph &amp; Multi-Agent Systems</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q4: What is LangGraph and how does it differ from LangChain?</h3>
+<div class="answer">
+
+<p><strong>Quick Definition:</strong></p>
+<p>LangChain: For building chains of LLM calls (sequential).</p>
+<pre><code>LLM → Parse → Tool → LLM → Return
+</code></pre>
+<p>LangGraph: For building graphs of nodes and edges with state management (agentic).</p>
+<pre><code>     ┌─────────────────┐
+     │   Input Node    │
+     └────────┬────────┘
+              ↓
+        ┌──────────────┐
+    ┌───→│  Tool Node  │ ←──┐
+    │   └──────────────┘    │
+    │   (loops back)        │
+    │                       │
+    └───────────────────────┘
+              ↓
+        ┌──────────────┐
+        │ Output Node  │
+        └──────────────┘
+</code></pre>
+<p><strong>Key Differences:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>LangChain</th>
+<th>LangGraph</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flow</td>
+<td>Linear (A→B→C)</td>
+<td>Graph (nodes + edges)</td>
+</tr>
+<tr>
+<td>Loops</td>
+<td>Not natural</td>
+<td>Built-in</td>
+</tr>
+<tr>
+<td>State</td>
+<td>No</td>
+<td>Yes (persistent)</td>
+</tr>
+<tr>
+<td>Common Use</td>
+<td>Simple chains</td>
+<td>Agents, workflows</td>
+</tr>
+<tr>
+<td>Complexity</td>
+<td>Quick</td>
+<td>Full control</td>
+</tr>
+</tbody>
+</table>
+<p><strong>LangGraph Concepts:</strong></p>
+<ol>
+<li>
+<p><strong>Nodes:</strong> Functions that process state
+   <code>def process_node(state):
+       return {"result": "something"}</code></p>
+</li>
+<li>
+<p><strong>Edges:</strong> Connections between nodes
+   <code>graph.add_edge("node_a", "node_b")</code></p>
+</li>
+<li>
+<p><strong>Conditional Edges:</strong> Route based on state
+   ```
+   def should_continue(state):
+       if state["tool_called"]:
+           return "tool_node"
+       else:
+           return "answer_node"</p>
+</li>
+</ol>
+<p>graph.add_conditional_edges("llm_node", should_continue)
+   ```</p>
+<ol>
+<li><strong>State:</strong> Persistent data across nodes
+   <code>state = {
+       "input": user_query,
+       "tool_results": [],
+       "iterations": 0
+   }</code></li>
+</ol>
+<p><strong>Real Example: ReAct in LangGraph</strong></p>
+<pre><code>Nodes:
+├─ llm_node: LLM decides Thought/Action
+├─ tool_node: Execute tool
+└─ answer_node: Return final answer
+
+Edges:
+llm_node → (conditional) →
+  ├─ tool_node → (loop back) → llm_node
+  └─ answer_node (if done)
+</code></pre>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q5: Explain three multi-agent patterns: supervisor, collaborative, and hierarchical. When do you use each?</h3>
+<div class="answer">
+
+<p><strong>Pattern 1: Supervisor Pattern</strong></p>
+<p>Concept: One "boss" agent routes work to specialists.</p>
+<pre><code>      ┌────────────────┐
+      │  Supervisor    │
+      │  (Router LLM)  │
+      └────────┬───────┘
+               │
+      ┌────────┼────────┬──────────┐
+      ↓        ↓        ↓          ↓
+  Researcher Analyst Coder  Finance
+  (Agent)    (Agent)  (Agent) (Agent)
+      │        │        │          │
+      └────────┬────────┴──────────┘
+               ↓
+        ┌────────────────┐
+        │ Final Answer   │
+        └────────────────┘
+</code></pre>
+<p>How it works:
+1. User asks supervisor a question
+2. Supervisor LLM decides → "This needs Researcher + Analyst"
+3. Supervisor calls those agents in parallel
+4. Agents return results
+5. Supervisor combines into final answer</p>
+<p><strong>When to use:</strong>
+- Different tasks need different expertise
+- Tasks are independent (can run in parallel)
+- Performance matters (not sequential)
+- Examples: "Analyze X and get news on Y"</p>
+<hr />
+<p><strong>Pattern 2: Collaborative Pattern</strong></p>
+<p>Concept: Agents pass work sequentially, each builds on previous.</p>
+<pre><code>User Query
+    ↓
+Researcher → Research Notes
+    ↓
+Analyst → Analysis + Insights
+    ↓
+Writer → Final Article
+</code></pre>
+<p>How it works:
+1. Researcher gathers info
+2. Analyst reviews, adds insights
+3. Writer formats final answer
+4. Each step depends on previous</p>
+<p><strong>When to use:</strong>
+- Tasks need refinement/iteration
+- Early steps inform later steps
+- Quality &gt; speed
+- Examples: "Research a topic, then write an article"</p>
+<hr />
+<p><strong>Pattern 3: Hierarchical Pattern</strong></p>
+<p>Concept: Multi-level supervision (agents manage sub-agents).</p>
+<pre><code>        ┌──────────────────┐
+        │  Top Supervisor  │
+        │  (Coordinates)   │
+        └────────┬─────────┘
+                 │
+    ┌────────────┼────────────┐
+    ↓            ↓            ↓
+Research    Deployment   Support
+Team Lead   Team Lead    Team Lead
+(Supervisor) (Supervisor) (Supervisor)
+    │            │            │
+    ├─Agent      ├─Agent      ├─Agent
+    └─Agent      └─Agent      └─Agent
+</code></pre>
+<p>How it works:
+1. Top supervisor assigns high-level tasks
+2. Department supervisors break into sub-tasks
+3. Individual agents execute
+4. Results bubble up</p>
+<p><strong>When to use:</strong>
+- Large organizations (many agents)
+- Strong hierarchy (departments)
+- Complex workflows
+- Scaling teams</p>
+<hr />
+<p><strong>Comparison Table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Flow</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Supervisor</td>
+<td>Parallel</td>
+<td>Independent expert tasks</td>
+</tr>
+<tr>
+<td>Collaborative</td>
+<td>Sequential</td>
+<td>Refinement pipeline</td>
+</tr>
+<tr>
+<td>Hierarchical</td>
+<td>Tree</td>
+<td>Large teams, clear departments</td>
+</tr>
+</tbody>
+</table>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q6: What are "memory" systems in agents? How do you design short-term vs long-term memory?</h3>
+<div class="answer">
+
+<p><strong>What Is Agent Memory?</strong></p>
+<p>Memory = How agents remember past interactions.</p>
+<p>Without memory:</p>
+<pre><code>User: &quot;My name is John&quot;
+Agent: &quot;Nice to meet&quot;
+User: &quot;What's my name?&quot;
+Agent: &quot;I don't know&quot;  ← No memory!
+</code></pre>
+<p>With memory:</p>
+<pre><code>User: &quot;My name is John&quot;
+Agent: Stores in memory
+User: &quot;What's my name?&quot;
+Agent: &quot;John&quot;  ← Remembers!
+</code></pre>
+<p><strong>Short-Term Memory (Conversation Context)</strong></p>
+<p>Purpose: Remember current conversation.</p>
+<p>How:</p>
+<pre><code>messages = [
+  (&quot;user&quot;, &quot;My name is John&quot;),
+  (&quot;assistant&quot;, &quot;Nice to meet&quot;),
+  (&quot;user&quot;, &quot;What's my name?&quot;),
+  (&quot;assistant&quot;, &quot;John&quot;)  ← Uses message history
+]
+</code></pre>
+<p>Design:</p>
+<pre><code>
+MAX_MESSAGES = 10
+if len(messages) &gt; MAX_MESSAGES:
+    messages = messages[-MAX_MESSAGES:]
+</code></pre>
+<p>Tradeoff:
+- ✅ Simple (just message history)
+- ✅ Works for most conversations
+- ❌ Loses long-ago context
+- ❌ Expensive (more tokens)</p>
+<p>Use: Regular conversations, customer support, chatbots.</p>
+<hr />
+<p><strong>Long-Term Memory (Persistent Storage)</strong></p>
+<p>Purpose: Remember facts across multiple conversations.</p>
+<p>How:</p>
+<pre><code>Store in database:
+user_id: &quot;john_123&quot;
+facts: [
+  &quot;Name: John&quot;,
+  &quot;Company: Acme Inc&quot;,
+  &quot;Role: Engineer&quot;,
+  &quot;Preference: Coffee&quot;
+]
+
+Next conversation:
+&quot;Retrieve facts for john_123&quot;
+→ Has all facts from before
+</code></pre>
+<p>Design:</p>
+<pre><code>
+def store_fact(user_id, fact):
+    db.insert({
+        &quot;user_id&quot;: user_id,
+        &quot;fact&quot;: fact,
+        &quot;timestamp&quot;: now()
+    })
+
+def retrieve_facts(user_id, last_days=30):
+    return db.query(user_id, created_after=now()-30d)
+</code></pre>
+<p>Tradeoff:
+- ✅ Remembers across conversations
+- ✅ Personalized (user-specific)
+- ❌ Complex (need database)
+- ❌ Storage costs
+- ❌ Privacy concerns (storing user data)</p>
+<p>Use: Personal assistants, recommendation systems, long-term relationships.</p>
+<hr />
+<p><strong>Practical Design:</strong></p>
+<p>Use both:</p>
+<pre><code>1. Short-term (messages): For current conversation
+2. Long-term (DB): For user facts
+
+Example interaction:
+├─ Load long-term facts about user
+├─ Use in current conversation
+├─ Extract new facts
+├─ Store new facts
+└─ Save updated message history (short-term)
+</code></pre>
+<hr />
+<h2>Category 3: Agent Failure Modes &amp; Recovery</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q7: What's the difference between a hallucinated tool call and a parameter error? How do you handle each?</h3>
+<div class="answer">
+
+<p><strong>Hallucinated Tool Call</strong></p>
+<p>Problem: LLM invents a tool that doesn't exist.</p>
+<pre><code>Available tools: [&quot;get_weather&quot;, &quot;search_web&quot;]
+
+LLM tries:
+Action: get_stock_price  ← DOESN'T EXIST
+Error: Tool not found!
+</code></pre>
+<p>Handling:</p>
+<pre><code>if tool_name not in available_tools:
+    # Tell LLM what happened
+    error = f&quot;Tool '{tool_name}' not found. Available: {tools}&quot;
+
+    # Give another chance to pick real tool
+    messages.append((&quot;assistant&quot;, action))
+    messages.append((&quot;user&quot;, error))
+    response = llm(messages)  # Retry
+</code></pre>
+<hr />
+<p><strong>Parameter Error</strong></p>
+<p>Problem: Tool exists, but parameters are wrong.</p>
+<pre><code>Tool: get_weather(city: string, days: int)
+
+LLM tries:
+get_weather(city=123, days=&quot;abc&quot;)
+
+Error: Type mismatch!
+</code></pre>
+<p>Handling:</p>
+<pre><code>try:
+    result = tool(city, days)
+except TypeError as e:
+    error = f&quot;Invalid parameters: {e}. 
+              Expected: city (string), days (1-14)&quot;
+
+    # Tell LLM, let it retry
+    messages.append((&quot;user&quot;, error))
+    response = llm(messages)
+</code></pre>
+<hr />
+<p><strong>Quick Comparison:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Cause</th>
+<th>Detection</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hallucinated</td>
+<td>Tool doesn't exist</td>
+<td>Not in available_tools</td>
+</tr>
+<tr>
+<td>Parameter</td>
+<td>Tool exists, params bad</td>
+<td>TypeError/ValueError</td>
+</tr>
+<tr>
+<td>Both</td>
+<td>Different problems</td>
+<td>Check tool_name first, then validate params</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Prevention:</strong>
+- Give clear tool list in prompt
+- Define parameter types (string, int, date)
+- Provide examples</p>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q8: How do you prevent and recover from infinite loops in agent loops?</h3>
+<div class="answer">
+
+<p><strong>Prevention (Before It Happens)</strong></p>
+<p>1️⃣ <strong>Max steps limit</strong> (ESSENTIAL)</p>
+<pre><code>MAX_STEPS = 10
+for step in range(MAX_STEPS):
+    # If we hit MAX_STEPS, stop
+    result = agent_step()
+</code></pre>
+<p>2️⃣ <strong>Detect repeated actions</strong></p>
+<pre><code>if current_action == last_action:
+    stop()  # Don't loop
+</code></pre>
+<p>3️⃣ <strong>Better tool descriptions</strong></p>
+<pre><code>Instead of: &quot;search: Find info&quot;
+Better: &quot;search: Find information. Returns different results per query.&quot;
+</code></pre>
+<hr />
+<p><strong>Recovery (If It Happens)</strong></p>
+<pre><code>step_count = 0
+while step_count &lt; MAX_STEPS:
+    try:
+        result = agent_step()
+        step_count += 1
+    except MaxStepsError:
+        # Graceful fallback
+        return &quot;Unable to complete, max iterations reached&quot;
+
+
+if steps == MAX_STEPS:
+    final_answer = llm.summarize()  # Best attempt so far
+    return final_answer
+</code></pre>
+<hr />
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q9: What are the 7 main ways agents fail and what's the simplest fix for each?</h3>
+<div class="answer">
+
+<p><strong>Summary Table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Cause</th>
+<th>Simple Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Infinite loops</td>
+<td>Same tool forever</td>
+<td>Set MAX_STEPS limit</td>
+</tr>
+<tr>
+<td>Hallucinated tools</td>
+<td>Tool doesn't exist</td>
+<td>Validate tool names</td>
+</tr>
+<tr>
+<td>Wrong tool</td>
+<td>Picked tool poorly</td>
+<td>Better descriptions</td>
+</tr>
+<tr>
+<td>Parameter error</td>
+<td>Invalid parameters</td>
+<td>Type validation</td>
+</tr>
+<tr>
+<td>Tool failure (real)</td>
+<td>API down, timeout</td>
+<td>Retry + timeout</td>
+</tr>
+<tr>
+<td>Lost context</td>
+<td>Forgot goal</td>
+<td>Remind goal in prompt</td>
+</tr>
+<tr>
+<td>Wrong answer</td>
+<td>Doesn't address query</td>
+<td>Validate relevance</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Checklist for Production:</strong></p>
+<pre><code>Before deploying agents:
+□ Set MAX_STEPS limit (5-10)
+□ Validate tool names before calling
+□ Define parameter types clearly
+□ Handle tool errors (don't crash)
+□ Track state (don't lose goal)
+□ Test with bad inputs
+□ Monitor for infinite loops
+□ Have fallback answer
+</code></pre>
+<hr />
+<h2>Integration Question: Design a Multi-Agent Research System</h2>
+
+</div>
+</div>
+<div class="qa-container">
+<h3>Q10: You're building a research assistant that answers complex questions across multiple domains. Design a multi-agent system that won't fail. Specify: agents, tool types, failure prevention, and how they coordinate.</h3>
+<div class="answer">
+
+<p><strong>Scenario:</strong>
+Users ask complex questions like: "What's the environmental impact of electric cars vs hybrids, considering current electricity sources?"</p>
+<p>This needs: Environmental data, Energy stats, Car performance, Economic analysis, Recent news.</p>
+<hr />
+<p><strong>Your System Design:</strong></p>
+<p><strong>Architecture:</strong></p>
+<pre><code>       ┌──────────────────────────┐
+       │  Research Coordinator    │
+       │  (Supervisor LLM)        │
+       └────────────┬─────────────┘
+                    │
+      ┌─────────────┼─────────────┬──────────────┐
+      ↓             ↓             ↓              ↓
+┌──────────┐  ┌──────────┐ ┌──────────┐  ┌──────────┐
+│Environmental│Science  │Economics  │News      │
+│Researcher  │Agent    │Agent      │Agent    │
+└──────────┘  └──────────┘ └─────────┘  └──────────┘
+      │             │             │              │
+      └─────────────┼─────────────┴──────────────┘
+                    ↓
+          ┌──────────────────────┐
+          │ Synthesis Agent      │
+          │ (Combines findings)  │
+          └──────────────────────┘
+</code></pre>
+<hr />
+<p><strong>Agents &amp; Tools:</strong></p>
+<p><strong>1. Environmental Researcher</strong>
+- Role: Find environmental data
+- Tools:
+  - <code>search_scientific_papers(query)</code> → Recent studies
+  - <code>get_carbon_footprint(vehicle_type)</code> → Emissions data
+  - <code>query_environmental_db()</code> → Lifecycle analysis
+- Max steps: 5</p>
+<p><strong>2. Science Agent</strong>
+- Role: Energy sources &amp; efficiency
+- Tools:
+  - <code>get_electricity_grid_composition(country)</code> → Coal/renewables %
+  - <code>get_vehicle_efficiency(model)</code> → MPG/kWh
+- Max steps: 4</p>
+<p><strong>3. Economics Agent</strong>
+- Role: Cost analysis
+- Tools:
+  - <code>get_vehicle_prices(type)</code> → Purchase cost
+  - <code>get_fuel_prices()</code> → Gas/electricity costs
+  - <code>calculate_total_cost_ownership(params)</code> → 10-year cost
+- Max steps: 4</p>
+<p><strong>4. News Agent</strong>
+- Role: Recent developments
+- Tools:
+  - <code>search_news(query)</code> → Latest articles
+  - <code>get_regulatory_changes()</code> → Policy updates
+- Max steps: 3</p>
+<p><strong>5. Synthesis Agent</strong>
+- Role: Combine all findings
+- Inputs: Results from all four agents
+- Output: Unified answer with citations</p>
+<hr />
+<p><strong>Failure Prevention Built In:</strong></p>
+<pre><code>For Infinite Loops:
+├─ Each agent: MAX_STEPS = {value}
+├─ Coordinator: MAX_STEPS = 15 (5+4+4+3, all agents + overhead)
+└─ Hard stop after limits
+
+For Hallucinated Tools:
+├─ Each agent only knows its tools
+├─ System validates tool names
+└─ If invalid → error message + retry
+
+For Parameter Errors:
+├─ Each tool has JSON schema
+├─ Validate before call
+└─ Type mismatch → error message + retry
+
+For Real Tool Failures:
+├─ Timeout: 10 seconds per tool call
+├─ Retry: 2 attempts with 2-second backoff
+├─ Fallback: Use cached data if available
+├─ Tell LLM: &quot;Tool failed: {reason}&quot;
+
+For Lost Context:
+├─ Coordinator remembers original question
+├─ Every agent reminded: &quot;Main question: XYZ&quot;
+└─ Synthesis agent checks: &quot;Does this answer the original question?&quot;
+
+Monitoring:
+├─ Log all steps
+├─ Alert if any agent hits MAX_STEPS
+├─ Track tool success rates
+└─ Monitor execution time (should be &lt;30 sec)
+</code></pre>
+<hr />
+<p><strong>Coordination:</strong></p>
+<pre><code>STEP 1: Parse user question
+└─ Coordinator: &quot;This needs environmental + economics + news data&quot;
+
+STEP 2: Call agents in parallel
+├─ Environmental Researcher ──────┐
+├─ Science Agent ────────────────┬┤
+├─ Economics Agent ──────────────┤├─ (All parallel, 
+└─ News Agent ───────────────────┘│  faster)
+                                   │
+STEP 3: Collect results
+├─ Environmental: &quot;EVs emit X, hybrids emit Y...&quot;
+├─ Science: &quot;Electricity is 60% renewable in region&quot;
+├─ Economics: &quot;EV costs $40k, hybrid $30k...&quot;
+└─ News: &quot;New EV subsidy announced Monday&quot;
+
+STEP 4: Synthesis agent combines
+&quot;Based on research:
+ • Environmental: EVs better if region uses renewables
+ • Economics: Higher upfront, lower operating costs
+ • News: New subsidies make EVs competitive now&quot;
+
+STEP 5: Return answer with sources
+</code></pre>
+<hr />
+<p><strong>Code Sketch:</strong></p>
+<pre><code class="language-python">coordinator = LLM(&quot;supervisor&quot;)
+agents = {
+    &quot;environment&quot;: Agent(tools=[search_papers, carbon_footprint]),
+    &quot;science&quot;: Agent(tools=[grid_composition, efficiency]),
+    &quot;economics&quot;: Agent(tools=[prices, cost_ownership]),
+    &quot;news&quot;: Agent(tools=[news_search, regulations])
+}
+
+def research(question):
+    # Step 1: Route
+    routing = coordinator.decide_agents(question)
+    # → {&quot;env&quot;: true, &quot;science&quot;: true, &quot;econ&quot;: true, &quot;news&quot;: true}
+
+    # Step 2: Execute in parallel
+    results = {}
+    for agent_name, use_it in routing.items():
+        if use_it:
+            results[agent_name] = agents[agent_name].run(
+                question,
+                max_steps=agent_limits[agent_name]
+            )
+
+    # Step 3: Synthesize
+    synthesis_llm = LLM(&quot;synthesis&quot;)
+    final_answer = synthesis_llm.combine(question, results)
+
+    return final_answer
+</code></pre>
+<hr />
+<p><strong>Why This Works:</strong></p>
+<p>✅ <strong>Specialization:</strong> Each agent expert in its domain
+✅ <strong>Parallel:</strong> Fast (all agents run at once)
+✅ <strong>Failure-safe:</strong> Max steps, timeouts, validation
+✅ <strong>Recoverable:</strong> Retries for transient failures
+✅ <strong>Debuggable:</strong> See each agent's thinking
+✅ <strong>Scalable:</strong> Easy to add more agents</p>
+<hr />
+<h2>Key Takeaways for Interviews</h2>
+<p><strong>ReAct Pattern:</strong>
+- Structured loop: Thought → Action → Observation → Answer
+- Better than blind tool calling for complex problems
+- Risk: Inefficiency and hallucinations (prevent with descriptions + validation)</p>
+<p><strong>Multi-Agent Patterns:</strong>
+- Supervisor: Parallel specialists (fast)
+- Collaborative: Sequential refinement (quality)
+- Hierarchical: Large teams (scalability)</p>
+<p><strong>Agent Failures:</strong>
+- Loops: Set MAX_STEPS limit (essential!)
+- Tools: Validate names, parameters, handle errors
+- Context: Track goal, remind LLM frequently
+- Always tell agent what went wrong (error messages)</p>
+<p><strong>Design Principles:</strong>
+- Limit iterations (max_steps)
+- Validate early (tool names, parameters)
+- Handle errors gracefully (retry, fallback)
+- Communicate failures to agent (for recovery)
+- Monitor in production (logs, metrics)</p>
+</div>
+</div>
+
+    </div>
+
+    <!-- Case Study Section -->
+    <div class="topic-section">
+        <h2>Case Study: RSA Sales QA Dashboard (Interview Perspective)</h2>
+        <p>In an interview setting, applying the concepts to a concrete example like the RSA Sales QA Dashboard is crucial. Here's how you might frame the integration of these 5 phases:</p>
+        
+        <div class="qa-container">
+            <h3>How would you architect the RSA QA system end-to-end?</h3>
+            <div class="answer">
+                <p><strong>1. Foundations & Search:</strong> We use specialized embeddings (like BGE) to encode call transcripts and policy documents, enabling semantic search to find compliance violations even if agents use different phrasing.</p>
+                <p><strong>2. RAG Pipeline:</strong> When auditing a call, we retrieve relevant policy clauses (chunked semantically) and inject them into the LLM's context, mitigating hallucinations about company policy.</p>
+                <p><strong>3. Structured Outputs:</strong> To populate the QA dashboard, we force the LLM to output a strict JSON schema containing `{ "compliance_score": 85, "violations": [...], "summary": "..." }`. We use NL-to-SQL to allow managers to query the dashboard naturally (e.g., "Show me agents failing the greeting policy").</p>
+                <p><strong>4. Fine-Tuning:</strong> If the generic LLM struggles to parse our proprietary insurance jargon (ACV, subrogation) consistently, we apply LoRA to adapt a smaller open-source model like Llama-3 specifically on our past manually-audited calls, improving accuracy while lowering inference costs.</p>
+                <p><strong>5. Agency:</strong> We wrap this in a ReAct loop. An auditor agent can decide to search the policy DB first, realize it needs more info, query the CRM for the customer's history, and only then render a final compliance decision.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+</html>

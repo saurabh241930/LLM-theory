@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Efficiency Indexing - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .cluster-viz {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            perspective: 1000px;
+        }
+
+        .cluster-node {
+            width: 80px;
+            height: 80px;
+            background: #eef2ff;
+            border: 2px solid var(--wp-accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            text-align: center;
+            transition: transform 0.5s;
+        }
+
+        .cluster-node:hover {
+            transform: scale(1.1) rotateY(10deg);
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .decision-token {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #202124;
+            color: #fcc419;
+            font-family: monospace;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>High-Efficiency Indexing</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Indexing & Reliability</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <rect x="5" y="10" width="10" height="20" fill="#36c" />
+                    <path d="M 15 20 L 35 20 M 55 20 L 75 20" stroke="#36c" stroke-width="1" />
+                    <rect x="35" y="10" width="20" height="20" fill="#eef2ff" stroke="#36c" />
+                    <rect x="75" y="10" width="20" height="20" fill="#36c" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Core Objective</div>
+                    <div class="infobox-value">Retrieval Optimization</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Role</div>
+                    <div class="infobox-value">Accuracy & Breadth</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Complexity</div>
+                    <div class="infobox-value">High (Self-Correction)</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>In advanced AI research, <strong>High-Efficiency Indexing</strong> refers to information retrieval
+                systems that go beyond simple vector matching. These systems use recursive summarization, corrective
+                web-search fallbacks, and internal self-reflection to ensure that the LLM always has the most relevant
+                and accurate context, regardless of query complexity or dataset noise.</p>
+
+            <h2>Corrective RAG (CRAG)</h2>
+            <p><strong>CRAG</strong> introduces a "Refiner" model that evaluates the quality of retrieved chunks. If the
+                chunks are found to be irrelevant, the system triggers a fallback mechanism—typically a web search
+                tool—to provide external, high-quality data. This prevents the LLM from hallucinating based on poor
+                local context.</p>
+
+            <div class="wiki-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Confidence</th>
+                            <th>Action</th>
+                            <th>Outcome</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>High</strong></td>
+                            <td>Process Chunks</td>
+                            <td>Fast, Local Answer</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Uncertain</strong></td>
+                            <td>Refine + Search</td>
+                            <td>Balanced Answer</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Low</strong></td>
+                            <td>Web Search Fallback</td>
+                            <td>Accurate External Answer</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>Recursive Hierarchical Indexing (RAPTOR)</h2>
+            <p>To solve "big picture" questions (e.g., "Summarize the entire 500-page report"), <strong>RAPTOR</strong>
+                clusters chunks bottom-up. It summarizes child clusters to create parent nodes, building a tree of
+                information. Retrieval can then target specific nodes or abstract summaries depending on the query
+                scope.</p>
+
+            <div class="cluster-viz animate-on-scroll">
+                <div class="cluster-node">Level 1:<br>Chunks</div>
+                <div class="cluster-node" style="width: 100px; height: 100px;">Level 2:<br>Local Themes</div>
+                <div class="cluster-node" style="width: 120px; height: 120px;">Level 3:<br>Global Summary</div>
+            </div>
+
+            <h2>Self-RAG (Self-Correction)</h2>
+            <p><strong>Self-RAG</strong> is a framework where the generator model outputs special critique tokens to
+                evaluate its own reasoning steps. It doesn't blindly trust the context; it questions it.</p>
+            <ul>
+                <li><span class="decision-token">[IS_RELEVANT]</span>: Does this chunk help at all?</li>
+                <li><span class="decision-token">[IS_SUPPORTED]</span>: Is my current sentence facts-based?</li>
+                <li><span class="decision-token">[USEFULNESS]</span>: Rank multiple candidates to pick the best.</li>
+            </ul>
+
+            <h2>Pseudo-logic: The Self-Correction Loop</h2>
+            <div class="code-block">
+                <span class="comment"># Pseudo-logic: Grading Retrieval</span><br>
+                retrieved_docs = search(query)<br>
+                score = evaluator.grade(query, retrieved_docs)<br>
+                <br>
+                <span class="keyword">if</span> score < 0.5:<br>
+                    &nbsp;&nbsp;new_query = rewrite(query)<br>
+                    &nbsp;&nbsp;final_docs = web_search(new_query)<br>
+                    <span class="keyword">else</span>:<br>
+                    &nbsp;&nbsp;final_docs = retrieved_docs<br>
+                    <br>
+                    answer = generate(query, final_docs)
+            </div>
+
+            <h2>Real-World Scenario: Medical Diagnosis Assistant</h2>
+            <p>A medical assistant needs to identify a rare disease. A <strong>CRAG fallback</strong> detects that the
+                local database is outdated and triggers a Google Search for the most recent clinical trials. Meanwhile,
+                a <strong>Self-RAG</strong> process generates the diagnosis but adds a critique token <span
+                    class="decision-token">[IS_SUPPORTED]</span> to verify that every medicinal claim is
+                cross-referenced with the retrieved research papers before showing it to the doctor.</p>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>The dashboard uses <strong>RAPTOR (Recursive Hierarchical Indexing)</strong> to manage long sales
+                training sessions. Instead of searching through 8 hours of video transcripts, a manager can ask about
+                "General Coaching Trends." The system retrieves a <strong>High-Level Summary Node</strong> (Level 3)
+                that synthesizes common advisor mistakes across the entire month. This allows the RSA team to identify
+                training materials for the entire branch.</p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Abstract Summary Retrieval (RAPTOR)</span>
+                query = <span class="string">"What are the top 3 compliance risks this month?"</span>
+                <span class="comment"># Search higher levels of the summary tree</span>
+                summary_nodes = vector_db.search(query, filter={<span class="string">"level"</span>: 3}, k=1)
+                <span class="keyword">print</span>(f<span class="string">"Global Trend: {summary_nodes[0].text}"</span>)
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ CRAG protects against irrelevant local data with fallbacks.<br>
+                ✅ RAPTOR enables global context awareness across huge datasets.<br>
+                ✅ Self-RAG moves quality control into the model's reflection layer.<br>
+                ✅ High-efficiency indexing minimizes noise while maximizing insight.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

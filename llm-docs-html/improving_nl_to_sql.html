@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Improving NL-to-SQL - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        /* Chapter-specific animations and styles */
+        .spec-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .spec-box {
+            padding: 15px;
+            border: 1px solid var(--wp-border);
+            font-family: monospace;
+            font-size: 0.85em;
+        }
+
+        .spec-bad {
+            background: #fff5f5;
+            border-left: 4px solid #f03e3e;
+        }
+
+        .spec-good {
+            background: #f8f9fa;
+            border-left: 4px solid #37b24d;
+        }
+
+        .wiki-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .wiki-table th,
+        .wiki-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .wiki-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .side-note {
+            background: #fff9db;
+            border-left: 4px solid #fab005;
+            padding: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .keyword {
+            color: #d73a49;
+        }
+
+        .string {
+            color: #032f62;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Improving NL-to-SQL</h1>
+        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Infobox -->
+        <aside class="infobox">
+            <div class="infobox-title">Improvement Stack</div>
+            <div class="infobox-image">
+                <svg width="100" height="40" viewBox="0 0 100 40">
+                    <rect x="10" y="5" width="80" height="10" fill="#eef2ff" stroke="#36c" />
+                    <rect x="10" y="20" width="80" height="10" fill="#eef2ff" stroke="#36c" />
+                    <rect x="10" y="35" width="80" height="2" fill="#36c" />
+                </svg>
+            </div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Objective</div>
+                    <div class="infobox-value">Precision and Safety</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Focus</div>
+                    <div class="infobox-value">Enterprise-grade RAG</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Methods</div>
+                    <div class="infobox-value">Validation & Spec-Linking</div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <p>While basic <strong>NL-to-SQL</strong> systems provide a baseline capability for simple questions, they
+                often fail when confronted with massive enterprise schemas (100+ tables), ambiguous terminology, or
+                multi-step reasoning. <strong>Improving NL-to-SQL</strong> requires a move toward a parametric-retrieval
+                hybrid, where the system intelligently selects schema context, validates generated code, and
+                incorporates human-in-the-loop clarification steps.</p>
+
+            <h2>Smart Schema Retrieval</h2>
+            <p>Sending a 500-table schema to an LLM will result in "Context Bloat" and performance degradation. Instead,
+                implement a retrieval layer:</p>
+            <ul>
+                <li><strong>Keyword Matching:</strong> Extracting nouns from the user query (e.g. "Revenue", "Region")
+                    and searching for matching tables/columns.</li>
+                <li><strong>Vector Retrieval:</strong> Using embeddings of table/column descriptions to find semantic
+                    matches for complex concepts (e.g., "Customer churn" might map to a
+                    <em>subscription_cancellation</em> table).
+                </li>
+            </ul>
+
+            <h2>Column Specification: Precision in Context</h2>
+            <p>A simple list of column names is often insufficient. High-performance prompts include "Semantic
+                Specifications."</p>
+
+            <div class="spec-comparison animate-on-scroll">
+                <div class="spec-box spec-bad">
+                    <strong>Bad Specification:</strong><br>
+                    TABLE: orders<br>
+                    Columns: id, cust_id, amt, ts
+                </div>
+                <div class="spec-box spec-good">
+                    <strong>Good Specification:</strong><br>
+                    TABLE: orders<br>
+                    - amt (DECIMAL): Order total in USD.<br>
+                    - ts (TIMESTAMP): YYY-MM-DD HH:MM.
+                </div>
+            </div>
+
+            <h2>The Validation-Retry Loop</h2>
+            <p>Generated SQL often contains minor syntax errors or incorrect table aliases. An automated retry loop can
+                fix these before the user ever sees an error.</p>
+
+            <div class="code-block">
+                <span class="keyword">try</span>:<br>
+                &nbsp;&nbsp;result = database.execute(generated_sql)<br>
+                <span class="keyword">except</span> <span class="string">SQLError</span> <span class="keyword">as</span>
+                e:<br>
+                &nbsp;&nbsp;<span class="comment"># Feed error message BACK to the LLM.</span><br>
+                &nbsp;&nbsp;fixed_sql = llm.fix_sql(error=str(e), original=sql)
+            </div>
+
+            <h2>Ambiguity Resolution</h2>
+            <p>When a user asks for "top customers," the system should not guess. It should identify the ambiguity and
+                provide a default or ask for clarification:</p>
+            <ul>
+                <li>Is "Top" by <strong>total revenue</strong>, <strong>order count</strong>, or <strong>profit
+                        margin</strong>?</li>
+                <li>Is "Customers" restricted to <strong>active accounts</strong> or <strong>historical data</strong>?
+                </li>
+            </ul>
+
+            <h2>Enterprise Benchmarking</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Standard RAG</th>
+                        <th>Advanced NL-to-SQL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Schema Handling</strong></td>
+                        <td>Hardcoded</td>
+                        <td>Dynamic Retrieval</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Syntax Check</strong></td>
+                        <td>None</td>
+                        <td>Pre-execution Validation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Security</strong></td>
+                        <td>Limited</td>
+                        <td>Strict DDL Filtering</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Explanation</strong></td>
+                        <td>None</td>
+                        <td>Natural Language Summary</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Case Study: RSA Sales QA Dashboard</h2>
+            <p>The <strong>RSA Sales QA Dashboard</strong> implements <strong>Smart Schema Retrieval</strong> to handle
+                its massive database of over 200 tables. When a user asks for "Top Performing Advisors," the system
+                doesn't just look at sales numbers. It uses <strong>Vector Search</strong> to link the query to both the
+                <code>Revenue</code> column in the <code>Sales</code> table and the <code>Compliance_Score</code> in the
+                <code>QA_Logs</code> table. If the query is ambiguous, the system asks: <em>"Do you mean top by total
+                    RSA revenue or top by compliance grade?"</em>, ensuring the generated SQL reflects the business's
+                actual intent.
+            </p>
+
+            <div class="code-block">
+                <span class="comment"># RSA Case Study: Vector-Based Schema Retrieval</span>
+                <span class="keyword">from</span> langchain.chains.sql_database.query <span
+                    class="keyword">import</span> create_sql_query_chain
+
+                <span class="comment"># Retrieve ONLY relevant tables for the RSA context</span>
+                relevant_tables = table_vector_db.similarity_search(<span class="string">"RSA sales and compliance
+                    scores"</span>, k=3)
+                context_schema = db.get_table_info(table_names=[t.name <span class="keyword">for</span> t <span
+                    class="keyword">in</span> relevant_tables])
+
+                chain = create_sql_query_chain(llm, db)
+                response = chain.invoke({<span class="string">"question"</span>: <span class="string">"Top advisors by
+                    RSA revenue"</span>, <span class="string">"table_info"</span>: context_schema})
+            </div>
+
+            <h2>Key Takeaways</h2>
+            <div class="side-note">
+                ✅ Dynamic Schema Retrieval is mandatory for large databases.<br>
+                ✅ Use Vector Search to map ambiguous queries to specific columns.<br>
+                ✅ Automated Retry Loops fix 80% of syntax errors.<br>
+                ✅ Always generate a plain-text "Explanation" for the user to verify.
+            </div>
+        </div>
+    </div>
+
+    <script src="animations.js"></script>
+
+<script src="sidebar.js?v=2"></script>
+</body>
+
+</html>
