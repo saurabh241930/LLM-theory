@@ -80,10 +80,88 @@
     </aside>
 
     <div class="content-wrapper">
+<h2 id="phase-0-fundamentals">Phase 0: LLM Fundamentals</h2>
+<div class="qa-container">
+<h3>Q1: What is the Transformer architecture and why did it replace RNNs?</h3>
+<div class="answer">
+<p><strong>A:</strong>
+The Transformer (introduced in "Attention Is All You Need") is a sequence-to-sequence architecture based entirely on <strong>Attention mechanisms</strong>, dispensing with recurrence (RNNs) and convolutions.</p>
+<p><strong>Why it replaced RNNs:</strong></p>
+<ul>
+    <li><strong>Parallelization:</strong> RNNs process word-by-word (sequential), which is slow. Transformers process the entire sequence at once.</li>
+    <li><strong>Long-range dependencies:</strong> RNNs suffer from "vanishing gradients," forgetting the start of a long sentence. Attention allows every word to "look" at every other word directly, regardless of distance.</li>
+    <li><strong>Scaling:</strong> Because they can be parallelized, they can be trained on massive datasets (Petabytes), leading to the emergence of LLMs.</li>
+</ul>
+<hr />
+</div>
+</div>
+
+<div class="qa-container">
+<h3>Q2: What is the core difference between LLMs and traditional Machine Learning (Random Forest, SVM)?</h3>
+<div class="answer">
+<p><strong>A:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Traditional ML</th>
+<th>Large Language Models (LLMs)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Feature Engineering</strong></td>
+<td>Manual (Humans define features)</td>
+<td>Automated (Model learns features)</td>
+</tr>
+<tr>
+<td><strong>Data Dependency</strong></td>
+<td>Small to Medium (Tabular)</td>
+<td>Massive (Unstructured Text/Code)</td>
+</tr>
+<tr>
+<td><strong>Generalization</strong></td>
+<td>Single-task specific</td>
+<td>Generalists (Zero-shot/Few-shot)</td>
+</tr>
+<tr>
+<td><strong>Training</strong></td>
+<td>Supervised (Labeled data)</td>
+<td>Self-Supervised (Predict next token)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The "Emergence" factor:</strong> LLMs show abilities at scale (reasoning, coding) that weren't explicitly programmed or present in smaller ML models.</p>
+<hr />
+</div>
+</div>
+
+<div class="qa-container">
+<h3>Q3: Explain the Multi-Head Self-Attention mechanism in simple terms.</h3>
+<div class="answer">
+<p><strong>A:</strong>
+Attention is the math behind how an LLM decides which words in a sentence are most relevant to the current word being processed.</p>
+<p><strong>The Query, Key, Value (QKV) Analogy:</strong></p>
+<ul>
+    <li><strong>Query (Q):</strong> What I am looking for (e.g., the word "bank").</li>
+    <li><strong>Key (K):</strong> What other words offer (e.g., "river" vs "money").</li>
+    <li><strong>Value (V):</strong> The information I actually take from them.</li>
+</ul>
+<p><strong>The Process:</strong></p>
+<ol>
+    <li>We calculate a compatibility score between Q and K (Dot product).</li>
+    <li>We normalize these scores (Softmax) to get "Attention Weights."</li>
+    <li>We multiply these weights by the Values (V).</li>
+</ol>
+<p><strong>"Multi-Head"</strong> means the model does this multiple times in parallel, allowing it to focus on different aspects simultaneously (e.g., one head for grammar, another for semantic meaning).</p>
+<hr />
+</div>
+</div>
+
 <h2 id="phase-1-foundations">Phase 1: Foundations</h2>
 <h2>Category 1: Embeddings &amp; Vector Search</h2>
 <div class="qa-container">
-<h3>Q1: Explain embeddings and why we need them. What's the difference from traditional text search?</h3>
+<h3>Q4: Explain embeddings and why we need them. What's the difference from traditional text search?</h3>
 <div class="answer">
 
 <p><strong>A:</strong>
@@ -106,7 +184,7 @@ Doc 3: &quot;pizza&quot; → [0.1, 0.1, 0.9] ❌ different (cosine = 0.3)
 </div>
 </div>
 <div class="qa-container">
-<h3>Q2: How does cosine similarity work? Why not use Euclidean distance?</h3>
+<h3>Q5: How does cosine similarity work? Why not use Euclidean distance?</h3>
 <div class="answer">
 
 <p><strong>A:</strong>
@@ -129,7 +207,7 @@ Cosine: similarity = 1.0 (identical direction!)  ✅ right answer
 </div>
 </div>
 <div class="qa-container">
-<h3>Q3: A database has 1 million documents. How do vector databases make similarity search fast?</h3>
+<h3>Q6: A database has 1 million documents. How do vector databases make similarity search fast?</h3>
 <div class="answer">
 
 <p><strong>A:</strong>
@@ -157,7 +235,7 @@ Result: O(log n) instead of O(n) ✅
 </div>
 </div>
 <div class="qa-container">
-<h3>Q4: You're building a RAG system. Should you use OpenAI's embedding API or a open-source model like BGE?</h3>
+<h3>Q7: You're building a RAG system. Should you use OpenAI's embedding API or a open-source model like BGE?</h3>
 <div class="answer">
 
 <p><strong>A:</strong>
@@ -213,7 +291,7 @@ Need simplicity? → OpenAI (no infrastructure)
 </div>
 </div>
 <div class="qa-container">
-<h3>Q5: You have a 10-page document (4000 tokens). Your model's context window is 2000 tokens. What do you do?</h3>
+<h3>Q8: You have a 10-page document (4000 tokens). Your model's context window is 2000 tokens. What do you do?</h3>
 <div class="answer">
 
 <p><strong>A:</strong>
@@ -239,7 +317,7 @@ You <strong>cannot</strong> fit it directly. Options:</p>
 </div>
 </div>
 <div class="qa-container">
-<h3>Q6: Same model, same document. User asks: "Compare findings from page 3 and page 8."</h3>
+<h3>Q9: Same model, same document. User asks: "Compare findings from page 3 and page 8."</h3>
 <div class="answer">
 
 <p><strong>A:</strong>
@@ -265,7 +343,7 @@ Chunking alone won't work — you need <strong>both</strong> pieces of info.</p>
 </div>
 </div>
 <div class="qa-container">
-<h3>Q7: How many tokens does "The quick brown fox" have in GPT-4?</h3>
+<h3>Q10: How many tokens does "The quick brown fox" have in GPT-4?</h3>
 <div class="answer">
 
 <p><strong>A:</strong>
@@ -290,7 +368,7 @@ print(len(tokens))  # Likely 5-6 tokens
 </div>
 </div>
 <div class="qa-container">
-<h3>Q8: You ask an LLM a complex reasoning task and it fails. What are 3 prompting techniques to fix this?</h3>
+<h3>Q11: You ask an LLM a complex reasoning task and it fails. What are 3 prompting techniques to fix this?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -327,7 +405,7 @@ Now translate: 'hello' → ?&quot;
 </div>
 </div>
 <div class="qa-container">
-<h3>Q9: What's the difference between zero-shot and few-shot prompting? When use each?</h3>
+<h3>Q12: What's the difference between zero-shot and few-shot prompting? When use each?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -386,7 +464,7 @@ Few-shot: Show 2 examples, then convert
 </div>
 </div>
 <div class="qa-container">
-<h3>Q10: You need to extract structured data from user input. Describe your prompt design.</h3>
+<h3>Q13: You need to extract structured data from user input. Describe your prompt design.</h3>
 <div class="answer">
 
 <p><strong>A:</strong>
@@ -424,12 +502,27 @@ OPTIONAL: Provide 1-2 examples
 
 </code></pre>
 <hr />
+
+<div class="qa-container">
+<h3>Q14: What is the Self-Consistency technique in prompting?</h3>
+<div class="answer">
+<p><strong>A:</strong>
+Self-Consistency (Wang et al.) is an evolution of Chain-of-Thought (CoT) prompting.</p>
+<ol>
+    <li>Instead of asking the model for <strong>one</strong> step-by-step reasoning path...</li>
+    <li>You ask it to generate <strong>multiple</strong> different reasoning paths for the same question.</li>
+    <li>You take the <strong>majority vote</strong> of the final answers.</li>
+</ol>
+<p><strong>Why it works:</strong> Complex problems often have multiple ways to reach the same correct answer, but many ways to fail. If 4 out of 5 reasoning paths reach "Apple", it's likely the correct answer even if one path hallucinated.</p>
+<hr />
+</div>
+</div>
 <h2>Category 4: Integration (Cross-Topic)</h2>
 
 </div>
 </div>
 <div class="qa-container">
-<h3>Q11: You're building a legal document QA system. Design the full Phase 1 pipeline (embeddings + chunking + prompting).</h3>
+<h3>Q15: You're building a legal document QA system. Design the full Phase 1 pipeline (embeddings + chunking + prompting).</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -490,9 +583,54 @@ Why this design:
 </div>
 </div>
 <h2 id="phase-2-rag">Phase 2: RAG</h2>
+<div class="qa-container">
+<h3>Q16: When should you choose RAG vs. Fine-Tuning? Why is RAG often preferred for enterprise?</h3>
+<div class="answer">
+<p><strong>A:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Criteria</th>
+<th>RAG</th>
+<th>Fine-Tuning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Knowledge</strong></td>
+<td>Dynamic (updates in seconds)</td>
+<td>Static (frozen at training time)</td>
+</tr>
+<tr>
+<td><strong>Citations</strong></td>
+<td>Yes (Cite source documents)</td>
+<td>No (Black box)</td>
+</tr>
+<tr>
+<td><strong>Hallucination</strong></td>
+<td>Low (Grounded in facts)</td>
+<td>High (Likely to make up facts)</td>
+</tr>
+<tr>
+<td><strong>Cost</strong></td>
+<td>Inference cost + Vector DB</td>
+<td>High Training cost</td>
+</tr>
+<tr>
+<td><strong>Specialization</strong></td>
+<td>General reasoning on new data</td>
+<td>Deep style/format alignment</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why RAG is preferred:</strong> For company policies or medical data, "accuracy" is more important than "style." RAG allows you to update the database without retraining the model, and it provides auditability (citations).</p>
+<hr />
+</div>
+</div>
+
 <h2>Category 1: Chunking Strategies</h2>
 <div class="qa-container">
-<h3>Q1: You have documents of varying sizes (100 tokens to 5000 tokens). How should you chunk them?</h3>
+<h3>Q17: You have documents of varying sizes (100 tokens to 5000 tokens). How should you chunk them?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -521,7 +659,7 @@ Use <strong>document-aware chunking</strong> — split by section headers.</p>
 </div>
 </div>
 <div class="qa-container">
-<h3>Q2: Should you use fixed-size or semantic chunking? What are the trade-offs?</h3>
+<h3>Q18: Should you use fixed-size or semantic chunking? What are the trade-offs?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -572,7 +710,7 @@ Documents structured (headers)?
 </div>
 </div>
 <div class="qa-container">
-<h3>Q3: What chunk size should you target (in tokens)?</h3>
+<h3>Q19: What chunk size should you target (in tokens)?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -610,7 +748,7 @@ If chunk = 100 tokens: Creates 100+ chunks (expensive) ✗
 </div>
 </div>
 <div class="qa-container">
-<h3>Q4: You built a naive RAG system but queries with multiple parts fail. Why and how to fix?</h3>
+<h3>Q20: You built a naive RAG system but queries with multiple parts fail. Why and how to fix?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -668,7 +806,7 @@ Impact: Medium (helps some cases)
 </div>
 </div>
 <div class="qa-container">
-<h3>Q5: What's the difference between Naive RAG and Advanced RAG?</h3>
+<h3>Q21: What's the difference between Naive RAG and Advanced RAG?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -732,7 +870,7 @@ Impact: Medium (helps some cases)
 </div>
 </div>
 <div class="qa-container">
-<h3>Q6: You're building a medical RAG system. Should you use reranking? Why?</h3>
+<h3>Q22: You're building a medical RAG system. Should you use reranking? Why?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -787,7 +925,7 @@ top_k = sorted(zip(chunks, scores), key=lambda x: x[1], reverse=True)[:5]
 </div>
 </div>
 <div class="qa-container">
-<h3>Q7: When should you NOT use reranking?</h3>
+<h3>Q23: When should you NOT use reranking?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -828,7 +966,7 @@ Your use case:
 </div>
 </div>
 <div class="qa-container">
-<h3>Q8: You evaluated your RAG with RAGAS and got: F=0.92, AR=0.88, CR=0.7, CP=0.6. What's wrong?</h3>
+<h3>Q24: You evaluated your RAG with RAGAS and got: F=0.92, AR=0.88, CR=0.7, CP=0.6. What's wrong?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -892,7 +1030,7 @@ Simple to implement, effective for keyword-heavy queries
 </div>
 </div>
 <div class="qa-container">
-<h3>Q9: How many test cases do you need for RAGAS evaluation?</h3>
+<h3>Q25: How many test cases do you need for RAGAS evaluation?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -963,7 +1101,7 @@ Week 3: Expand to 100 test cases
 </div>
 </div>
 <div class="qa-container">
-<h3>Q10: Design a complete RAG system for a startup's internal knowledge base (5000 documents, 50 employees).</h3>
+<h3>Q26: Design a complete RAG system for a startup's internal knowledge base (5000 documents, 50 employees).</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1061,7 +1199,7 @@ RISKS &amp; MITIGATIONS:
 <h2 id="phase-3-structured-outputs">Phase 3: Structured Outputs & NL-to-SQL</h2>
 <h2>Category 1: Function Calling / Tool Use</h2>
 <div class="qa-container">
-<h3>Q1: Explain function calling. Why is it important for agents?</h3>
+<h3>Q27: Explain function calling. Why is it important for agents?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1091,7 +1229,7 @@ Agents need to <strong>take actions</strong>, not just talk:
 </div>
 </div>
 <div class="qa-container">
-<h3>Q2: You're building a tool-use system. What are the key design principles for schemas?</h3>
+<h3>Q28: You're building a tool-use system. What are the key design principles for schemas?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1143,7 +1281,7 @@ PRINCIPLE 5: Consistent Naming
 </div>
 </div>
 <div class="qa-container">
-<h3>Q3: You notice the LLM keeps calling the wrong function for a task. How do you fix it?</h3>
+<h3>Q29: You notice the LLM keeps calling the wrong function for a task. How do you fix it?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1190,7 +1328,7 @@ SOLUTION 5: Use Constraints (Advanced)
 </div>
 </div>
 <div class="qa-container">
-<h3>Q4: You're building NL-to-SQL for a large database (200 tables). How do you handle schema size?</h3>
+<h3>Q30: You're building NL-to-SQL for a large database (200 tables). How do you handle schema size?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1248,7 +1386,7 @@ Use vector search instead of keyword matching.</p>
 </div>
 </div>
 <div class="qa-container">
-<h3>Q5: The LLM generates SQL with the wrong column names. How do you fix it?</h3>
+<h3>Q31: The LLM generates SQL with the wrong column names. How do you fix it?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1299,7 +1437,7 @@ SOLUTION 4: Column Aliases (If you control docs)
 </div>
 </div>
 <div class="qa-container">
-<h3>Q6: User asks an ambiguous question like "Show me the top customers". How do you handle it?</h3>
+<h3>Q32: User asks an ambiguous question like "Show me the top customers". How do you handle it?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1352,7 +1490,7 @@ Use <strong>Solution 2 (ask for clarification)</strong> when ambiguity detected,
 </div>
 </div>
 <div class="qa-container">
-<h3>Q7: Your NL-to-SQL system has 70% accuracy. What's the fastest way to improve it?</h3>
+<h3>Q33: Your NL-to-SQL system has 70% accuracy. What's the fastest way to improve it?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1407,7 +1545,7 @@ Expected improvement: 95% → 98%
 </div>
 </div>
 <div class="qa-container">
-<h3>Q8: You need to support complex multi-step queries like "Top 3 regions by revenue, excluding Q1". Design the approach.</h3>
+<h3>Q34: You need to support complex multi-step queries like "Top 3 regions by revenue, excluding Q34". Design the approach.</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1503,7 +1641,7 @@ def handle_complex_query(question):
 </div>
 </div>
 <div class="qa-container">
-<h3>Q9: Design a production NL-to-SQL system for a fintech company with strict accuracy requirements.</h3>
+<h3>Q35: Design a production NL-to-SQL system for a fintech company with strict accuracy requirements.</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1615,9 +1753,35 @@ SUCCESS METRICS:
 </div>
 </div>
 <h2 id="phase-4-fine-tuning">Phase 4: Fine-Tuning</h2>
+<div class="qa-container">
+<h3>Q36: What is LoRA (Low-Rank Adaptation) and QLoRA?</h3>
+<div class="answer">
+<p><strong>A:</strong>
+Standard fine-tuning updates all billions of parameters, which is incredibly slow and expensive.</p>
+<ul>
+    <li><strong>LoRA:</strong> We freeze the original weights of the LLM and add tiny, trainable "adapter" matrices to each layer. This reduces the number of trainable parameters by 10,000x, but achieves similar accuracy.</li>
+    <li><strong>QLoRA:</strong> Is a more advanced version that <strong>quantizes</strong> the base model to 4-bit (NF4) before adding the adapters. This allows you to fine-tune massive models (like Llama-3 70B) on a single consumer GPU.</li>
+</ul>
+<hr />
+</div>
+</div>
+
+<div class="qa-container">
+<h3>Q37: What is the difference between Fine-Tuning and Prompt Engineering?</h3>
+<div class="answer">
+<p><strong>A:</strong></p>
+<ul>
+    <li><strong>Prompt Engineering:</strong> Changes the <strong>Context</strong>. It is "in-context learning." No weights are changed. Limited by the context window.</li>
+    <li><strong>Fine-Tuning:</strong> Changes the <strong>Weights</strong>. The model "learns" the pattern inherently. Can handle thousands of examples that would never fit in a prompt.</li>
+</ul>
+<p><strong>Mnemonic:</strong> Prompting is like an <em>Open book exam</em> (referencing the prompt). Fine-tuning is like <em>Studying for weeks</em> before the exam (changing the brain's knowledge).</p>
+<hr />
+</div>
+</div>
+
 <h2>Category 1: When to Fine-Tune</h2>
 <div class="qa-container">
-<h3>Q1: A colleague suggests fine-tuning your RAG system to improve accuracy. Should you do it?</h3>
+<h3>Q38: A colleague suggests fine-tuning your RAG system to improve accuracy. Should you do it?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1667,7 +1831,7 @@ Step 3: Only if still not good, fine-tune
 </div>
 </div>
 <div class="qa-container">
-<h3>Q2: When is fine-tuning worth it? Give specific scenarios.</h3>
+<h3>Q39: When is fine-tuning worth it? Give specific scenarios.</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1727,7 +1891,7 @@ SCENARIO 5: Legal Clause Extraction
 </div>
 </div>
 <div class="qa-container">
-<h3>Q3: You have $2000 budget and RTX 4090. Which fine-tuning approach?</h3>
+<h3>Q40: You have $2000 budget and RTX 4090. Which fine-tuning approach?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1773,7 +1937,7 @@ RECOMMENDATION: Go with APPROACH 1 (LoRA)
 </div>
 </div>
 <div class="qa-container">
-<h3>Q4: Explain LoRA. Why is rank=16 a good default?</h3>
+<h3>Q41: Explain LoRA. Why is rank=16 a good default?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1846,7 +2010,7 @@ Practical: Start with 16, adjust if needed
 </div>
 </div>
 <div class="qa-container">
-<h3>Q5: You tried LoRA but got worse accuracy (from 85% to 82%). What went wrong?</h3>
+<h3>Q42: You tried LoRA but got worse accuracy (from 85% to 82%). What went wrong?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1913,7 +2077,7 @@ RECOMMENDED DEBUG PROCESS:
 </div>
 </div>
 <div class="qa-container">
-<h3>Q6: Explain RLHF. Why is DPO becoming popular?</h3>
+<h3>Q43: Explain RLHF. Why is DPO becoming popular?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -1994,7 +2158,7 @@ Why DPO is practical:
 </div>
 </div>
 <div class="qa-container">
-<h3>Q7: You have preference data for 1000 examples. Which alignment method?</h3>
+<h3>Q44: You have preference data for 1000 examples. Which alignment method?</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -2032,12 +2196,27 @@ Total cost: &lt;$5K
 Result: Production-ready aligned model
 </code></pre>
 <hr />
+
+<div class="qa-container">
+<h3>Q45: What is the Self-Consistency technique in prompting?</h3>
+<div class="answer">
+<p><strong>A:</strong>
+Self-Consistency (Wang et al.) is an evolution of Chain-of-Thought (CoT) prompting.</p>
+<ol>
+    <li>Instead of asking the model for <strong>one</strong> step-by-step reasoning path...</li>
+    <li>You ask it to generate <strong>multiple</strong> different reasoning paths for the same question.</li>
+    <li>You take the <strong>majority vote</strong> of the final answers.</li>
+</ol>
+<p><strong>Why it works:</strong> Complex problems often have multiple ways to reach the same correct answer, but many ways to fail. If 4 out of 5 reasoning paths reach "Apple", it's likely the correct answer even if one path hallucinated.</p>
+<hr />
+</div>
+</div>
 <h2>Category 4: Integration</h2>
 
 </div>
 </div>
 <div class="qa-container">
-<h3>Q8: Design a complete fine-tuning system for classifying customer feedback (50K reviews/year).</h3>
+<h3>Q46: Design a complete fine-tuning system for classifying customer feedback (50K reviews/year).</h3>
 <div class="answer">
 
 <p><strong>A:</strong></p>
@@ -2152,7 +2331,7 @@ SUCCESS METRICS:
 <h2 id="phase-5-agents">Phase 5: Agents & Agentic Systems</h2>
 <h2>Category 1: ReAct Pattern &amp; Loops</h2>
 <div class="qa-container">
-<h3>Q1: Define the ReAct pattern and explain what happens in each step.</h3>
+<h3>Q47: Define the ReAct pattern and explain what happens in each step.</h3>
 <div class="answer">
 
 <p><strong>Define:</strong>
@@ -2192,7 +2371,7 @@ Does LLM know answer?
 </div>
 </div>
 <div class="qa-container">
-<h3>Q2: When should you use ReAct vs blind tool calling? What are the differences?</h3>
+<h3>Q48: When should you use ReAct vs blind tool calling? What are the differences?</h3>
 <div class="answer">
 
 <p><strong>Blind Tool Calling:</strong>
@@ -2269,7 +2448,7 @@ USE ReAct WHEN:
 </div>
 </div>
 <div class="qa-container">
-<h3>Q3: What causes infinite loops in ReAct? How do you prevent them?</h3>
+<h3>Q49: What causes infinite loops in ReAct? How do you prevent them?</h3>
 <div class="answer">
 
 <p><strong>What Causes Them:</strong>
@@ -2321,7 +2500,7 @@ Use: <code>"get_weather: Returns current temperature and conditions.
 </div>
 </div>
 <div class="qa-container">
-<h3>Q4: What is LangGraph and how does it differ from LangChain?</h3>
+<h3>Q50: What is LangGraph and how does it differ from LangChain?</h3>
 <div class="answer">
 
 <p><strong>Quick Definition:</strong></p>
@@ -2428,7 +2607,7 @@ llm_node → (conditional) →
 </div>
 </div>
 <div class="qa-container">
-<h3>Q5: Explain three multi-agent patterns: supervisor, collaborative, and hierarchical. When do you use each?</h3>
+<h3>Q51: Explain three multi-agent patterns: supervisor, collaborative, and hierarchical. When do you use each?</h3>
 <div class="answer">
 
 <p><strong>Pattern 1: Supervisor Pattern</strong></p>
@@ -2541,7 +2720,7 @@ Team Lead   Team Lead    Team Lead
 </div>
 </div>
 <div class="qa-container">
-<h3>Q6: What are "memory" systems in agents? How do you design short-term vs long-term memory?</h3>
+<h3>Q52: What are "memory" systems in agents? How do you design short-term vs long-term memory?</h3>
 <div class="answer">
 
 <p><strong>What Is Agent Memory?</strong></p>
@@ -2635,7 +2814,7 @@ Example interaction:
 </div>
 </div>
 <div class="qa-container">
-<h3>Q7: What's the difference between a hallucinated tool call and a parameter error? How do you handle each?</h3>
+<h3>Q53: What's the difference between a hallucinated tool call and a parameter error? How do you handle each?</h3>
 <div class="answer">
 
 <p><strong>Hallucinated Tool Call</strong></p>
@@ -2714,7 +2893,7 @@ except TypeError as e:
 </div>
 </div>
 <div class="qa-container">
-<h3>Q8: How do you prevent and recover from infinite loops in agent loops?</h3>
+<h3>Q54: How do you prevent and recover from infinite loops in agent loops?</h3>
 <div class="answer">
 
 <p><strong>Prevention (Before It Happens)</strong></p>
@@ -2753,7 +2932,7 @@ if steps == MAX_STEPS:
 </div>
 </div>
 <div class="qa-container">
-<h3>Q9: What are the 7 main ways agents fail and what's the simplest fix for each?</h3>
+<h3>Q55: What are the 7 main ways agents fail and what's the simplest fix for each?</h3>
 <div class="answer">
 
 <p><strong>Summary Table:</strong></p>
@@ -2820,7 +2999,7 @@ if steps == MAX_STEPS:
 </div>
 </div>
 <div class="qa-container">
-<h3>Q10: You're building a research assistant that answers complex questions across multiple domains. Design a multi-agent system that won't fail. Specify: agents, tool types, failure prevention, and how they coordinate.</h3>
+<h3>Q56: You're building a research assistant that answers complex questions across multiple domains. Design a multi-agent system that won't fail. Specify: agents, tool types, failure prevention, and how they coordinate.</h3>
 <div class="answer">
 
 <p><strong>Scenario:</strong>
