@@ -19,14 +19,14 @@ def fix_index():
     for i in range(1, len(blocks), 2):
         items.append(blocks[i] + blocks[i+1])
 
-    new_memory_item = """<li class="chapter-item">
-                <span class="chapter-number">4</span>
-                <a href="genai_memory.html" class="chapter-link">Memory in Gen AI</a>
-                <span class="chapter-desc">Statelessness, Buffer, Sliding Windows, and Vector Memory.</span>
+    new_frameworks_item = """<li class="chapter-item">
+                <span class="chapter-number">5</span>
+                <a href="genai_frameworks.html" class="chapter-link">Gen AI Frameworks & Libraries</a>
+                <span class="chapter-desc">LangChain, LangGraph, LlamaIndex, and DSPy.</span>
             </li>\n            """
             
-    # Insert it at index 3 (which will be the 4th item)
-    items.insert(3, new_memory_item)
+    # Insert it at index 4 (which will be the 5th item)
+    items.insert(4, new_frameworks_item)
     
     # Renumber all items sequentially up to the end
     new_items = []
@@ -43,7 +43,7 @@ def fix_index():
     
     with open('index.html', 'w', encoding='utf-8') as f:
         f.write(new_content)
-    print("Inserted Memory at #4 and resequenced index.html successfully!")
+    print("Inserted Gen AI Frameworks at #5 and resequenced index.html successfully!")
 
 if __name__ == '__main__':
     fix_index()

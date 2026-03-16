@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gen AI Frameworks & Libraries</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <script src="sidebar.js" defer></script>
+</head>
+
+<body>
+    <div class="content-container">
+        <h1>Gen AI Frameworks & Libraries</h1>
+        <div class="subtitle">Understanding the ecosystem: LangChain, LangGraph, LlamaIndex, and DSPy</div>
+
+        <p>Before diving deeply into advanced Retrieval-Augmented Generation (RAG) architectures, it is critical to
+            understand the tooling ecosystem. Why do we need frameworks at all? LLMs are fundamentally just text-in,
+            text-out API endpoints. To build production systems, you need "glue" code to bind LLMs to vector databases,
+            parse their output into JSON, give them access to APIs (tools), and manage conversation memory.</p>
+
+        <p>This chapter contrasts the four foundational libraries that dominate the Generative AI engineering space.</p>
+
+        <hr>
+
+        <h2>1. LangChain: The Orchestration "Glue"</h2>
+        <p><strong>Purpose:</strong> General-purpose LLM application development.</p>
+        <p>LangChain was the first major framework to abstract away the complexity of switching between LLM providers
+            (OpenAI, Anthropic, Gemini). It provides standardized interfaces for building linear "Chains" (e.g., User
+            Input -> Prompt Template -> LLM -> Output Parser).</p>
+
+        <h3>Core Concepts:</h3>
+        <ul>
+            <li><strong>Runnables & LCEL (LangChain Expression Language):</strong> A declarative way to pipe components
+                together seamlessly using the <code>|</code> operator.</li>
+            <li><strong>Tool Binding:</strong> Easily equipping an LLM with external tools (like a Calculator or
+                Wikipedia scraper) via Function Calling paradigms.</li>
+            <li><strong>Memory Abstractions:</strong> Pre-built classes for managing sliding windows and conversation
+                buffers.</li>
+        </ul>
+        <p><em>Drawback:</em> Because it tries to do everything, its abstractions can sometimes feel overly complex or
+            "magical" for simple tasks, making deep debugging difficult.</p>
+
+        <hr>
+
+        <h2>2. LangGraph: Stateful, Cyclical Agents</h2>
+        <p><strong>Purpose:</strong> Building robust, multi-actor, and stateful AI Agents.</p>
+        <p>Linear chains (LangChain) fail when a task requires iterations, decision loops, or self-correction. LangGraph
+            is an extension of LangChain designed explicitly to model application logic as graphs (nodes and edges).</p>
+
+        <h3>Why it exists:</h3>
+        <ul>
+            <li><strong>Cyclical Workflows:</strong> Unlike a standard Directed Acyclic Graph (DAG), LangGraph allows
+                cycles. An Agent can review its own output, realize it made a mistake, and loop back to fetch different
+                data.</li>
+            <li><strong>State Management:</strong> Every execution step updates a global "State" object (like a Redux
+                store). If the server crashes, the exact state of the Agent is preserved, allowing for pause-and-resume
+                capabilities (Human-in-the-loop approval).</li>
+            <li><strong>Multi-Agent Systems:</strong> It Excels at coordinating teams of specialized agents (e.g., a
+                "Coder" agent talking to a "Reviewer" agent).</li>
+        </ul>
+
+        <hr>
+
+        <h2>3. LlamaIndex: The RAG Powerhouse</h2>
+        <p><strong>Purpose:</strong> Data ingestion, indexing, and advanced retrieval.</p>
+        <p>While LangChain is a "jack of all trades", LlamaIndex focuses obsessively on solving the RAG data problem. If
+            your application centers around extracting exact facts from thousands of PDFs, Notion databases, or SQL
+            servers, LlamaIndex is the superior choice.</p>
+
+        <h3>Key Advantages over LangChain:</h3>
+        <ul>
+            <li><strong>Data Connectors:</strong> Hundreds of pre-built readers via LlamaHub to ingest obscure data
+                formats.</li>
+            <li><strong>Advanced Indexing:</strong> It natively supports complex indexing structures like Tree Indexes,
+                Knowledge Graphs, and Relational SQL mapping without writing boilerplate code.</li>
+            <li><strong>Retrieval Customization:</strong> Out-of-the-box support for advanced retrieval topologies like
+                Sentence-Window retrieval and Auto-Merging retrieval.</li>
+        </ul>
+
+        <hr>
+
+        <h2>4. DSPy: Programming > Prompting</h2>
+        <p><strong>Purpose:</strong> Programmatic, algorithmic prompt optimization.</p>
+        <p>Historically, developers spent hours manually tweaking prompt templates (e.g., "Think step by step" or "Be
+            very careful"). DSPy argues that prompts should be treated like neural network weights.</p>
+
+        <h3>The Paradigm Shift:</h3>
+        <p>Instead of hardcoding a string prompt, you write a Python class defining the <em>Signature</em> (Input:
+            Question -> Output: Answer). You then provide DSPy with a few examples of "good" outputs and a reward
+            metric. DSPy's <strong>Teleprompter (Optimizer)</strong> will algorithmically experiment with hundreds of
+            prompt variations under the hood, compiling the mathematically optimal prompt for your specific LLM.</p>
+
+        <hr>
+
+        <h2>Summary Matrix: When to Use What</h2>
+
+        <table class="comparison-table"
+            style="width: 100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
+            <thead>
+                <tr style="background-color: var(--wp-code-bg); text-align: left;">
+                    <th style="padding: 12px; border: 1px solid var(--wp-border);">Framework</th>
+                    <th style="padding: 12px; border: 1px solid var(--wp-border);">Primary Strength</th>
+                    <th style="padding: 12px; border: 1px solid var(--wp-border);">Use Case Scenario</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border); font-weight: bold;">LlamaIndex</td>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border);">Connecting unstructured data to LLMs.
+                    </td>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border);">Building an Enterprise Search engine
+                        over 10,000 PDFs.</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border); font-weight: bold;">LangChain</td>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border);">Building linear LLM sequences and
+                        tool binding.</td>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border);">Creating a simple chatbot that can
+                        query Wikipedia and a weather API.</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border); font-weight: bold;">LangGraph</td>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border);">Stateful, cyclical routing and
+                        multi-agent coordination.</td>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border);">Building an autonomous coding
+                        assistant that writes, tests, and refactors in a loop.</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border); font-weight: bold;">DSPy</td>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border);">Automating Prompt Engineering via ML
+                        compilation.</td>
+                    <td style="padding: 12px; border: 1px solid var(--wp-border);">Squeezing maximum accuracy out of a
+                        smaller model (like Llama 3 8B) for classification.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h2>Architectural Stacking</h2>
+        <p>These frameworks are not mutually exclusive. A modern, enterprise-grade AI architecture frequently stacks
+            them together to leverage their individual strengths.</p>
+
+        <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+            flowchart TD
+            User[User Query] --> LG_Router(LangGraph Orchestrator Node)
+
+            LG_Router -- "Needs Document Data" --> Llama[LlamaIndex Retrieval Engine]
+            Llama --> VectorDB[(Vector DB)]
+            VectorDB --> Llama
+            Llama -- "Context Chunks" --> LG_Router
+
+            LG_Router -- "Needs API Execution" --> Tools[LangChain Tool Node]
+            Tools --> ExtAPI[External CRM API]
+            ExtAPI --> Tools
+            Tools -- "JSON Result" --> LG_Router
+
+            LG_Router -- "Compile Final Answer" --> EvalNode(LangGraph Eval Node)
+            EvalNode -- "Optimized by DSPy" --> LLM[Synthesizer LLM]
+            LLM --> User
+
+            style LG_Router fill:#fff2cc,stroke:#d6b656,stroke-width:2px
+            style Llama fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+            style Tools fill:#d5e8d4,stroke:#82b366,stroke-width:2px
+        </div>
+
+    </div>
+</body>
+
+</html>
