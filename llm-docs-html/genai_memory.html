@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory in Gen AI</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+</head>
+
+<body>
+    <header>
+        <h1>Memory in Gen AI</h1>
+        <div class="subtitle">How Large Language Models Remember Context Across Conversations</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="abstract">
+            By default, Large Language Models are completely <strong>stateless</strong>. An LLM has no memory of the
+            question you asked it five minutes ago. To create the illusion of a continuous conversation (like ChatGPT),
+            developers must architect memory systems outside the model, explicitly passing historical context back into
+            the LLM with every new request.
+        </div>
+
+        <h2>The Stateless Nature of LLMs</h2>
+        <p>A bare LLM API endpoint operates mathematically as a pure function: <code>f(input_text) = output_text</code>.
+            If you send "My name is Alice", it replies. If you send a separate request "What is my name?" one second
+            later, it will hallucinate or apologize, because it did not retain state from the previous HTTP request.</p>
+
+        <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+            sequenceDiagram
+            participant User
+            participant Backend
+            participant LLM API
+
+            User->>Backend: "Hi, I am Alice"
+            Backend->>LLM API: Prompt: "Hi, I am Alice"
+            LLM API-->>Backend: "Hello Alice!"
+            Backend-->>User: "Hello Alice!"
+            Note over LLM API: Conversation Context Destroyed
+
+            User->>Backend: "What is my name?"
+            Backend->>LLM API: Prompt: "What is my name?"
+            LLM API-->>Backend: "I don't know who you are."
+            Backend-->>User: "I don't know who you are."
+        </div>
+
+        <h2>Implementing Memory: Core Architectures</h2>
+
+        <h3>1. Full Conversation Buffer (Buffer Memory)</h3>
+        <p>The simplest approach. The backend application stores every message exchanged in a database or session store.
+            When the user sends a new message, the backend retrieves the entire history, concatenates it, and sends the
+            massive payload to the LLM.</p>
+        <ul>
+            <li><strong>Pros:</strong> Perfect recall of the current session.</li>
+            <li><strong>Cons:</strong> Quickly hits the token limit (Context Window). Costs scale linearly with the
+                length of the conversation since you are paying for the history on every API call.</li>
+        </ul>
+
+        <h3>2. Sliding Window Memory</h3>
+        <p>Instead of sending the entire history, the backend only sends the <strong>last K interactions</strong> (e.g.,
+            the last 4 user-AI message pairs). Older messages are truncated and forgotten.</p>
+
+        <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+            flowchart LR
+            subgraph History [Conversation History in DB]
+            direction LR
+            Msg1["User: Msg 1"]
+            Msg2["AI: Msg 2"]
+            Msg3["User: Msg 3"]
+            end
+
+            subgraph Window [Window K=2]
+            direction LR
+            Msg4["User: Msg 4"]
+            Msg5["AI: Msg 5"]
+            end
+
+            History -.-> Window
+            Window --> LLM["LLM Input Prompt"]
+
+            style Window fill:#e6f3ff,stroke:#36c,stroke-width:2px,stroke-dasharray: 5 5
+        </div>
+
+        <h3>3. Summary Memory</h3>
+        <p>To preserve essential long-term context without blowing the token budget, the system recursively summarizes
+            the conversation. When the history exceeds a token threshold, a background LLM call takes the oldest
+            messages and condenses them into a dense summary string.</p>
+        <p><strong>Input payload:</strong>
+            <code>[System Prompt] + [Rolling Summary of turns 1-10] + [Raw text of turns 11-12] + [Current User Message]</code>.
+        </p>
+
+        <h3>4. Entity Memory / Knowledge Graphs</h3>
+        <p>Advanced systems extract structured facts from the conversation over time. If a user says, "I am allergic to
+            peanuts," the backend runs an extraction chain: <code>{"user_allergy": "peanuts"}</code> and stores it in a
+            SQL/NoSQL table or a Graph Database.</p>
+        <p>Whenever the user interacts in the future, the backend dynamically fetches their "Entity Profile" and injects
+            it into the system prompt, regardless of whether they discussed peanuts 6 months ago.</p>
+
+        <h3>5. Vector Database Memory (Semantic Memory)</h3>
+        <p>All past messages (or summarized chunks of conversations) are embedded and stored in a Vector DB. When the
+            user asks a new question, the system performs a semantic search against their past history, retrieving only
+            the mathematically relevant historical turns.</p>
+        <ul>
+            <li><strong>Example:</strong> A user asks, "Can you remind me of that Python function we wrote last week?"
+                The Vector DB retrieves the precise code block from 7 days ago and injects it into the current context
+                window.</li>
+        </ul>
+
+        <div class="trap">
+            <strong>Production Trap - Multi-Tenant Memory Leaks</strong>
+            <p>If you implement Semantic Memory using a Vector Database, you <strong>must</strong> apply strict
+                hard-filtering tags (e.g., <code>metadata: { "user_id": "U-123" }</code>) on the queries. Without
+                explicit isolation, an AI prompt could accidentally retrieve semantic matches from User B's private chat
+                history and output it to User A.</p>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Search System Design</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .depth {
+            margin-top: 15px;
+            padding: 10px;
+            background: #eef2ff;
+            border-left: 3px solid #36c;
+            font-size: 0.9em;
+        }
+
+        .trap {
+            margin-top: 15px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 3px solid #ffecb5;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>System Design: Enterprise AI Search (like Glean)</h1>
+        <div class="subtitle">Multi-Tenant Semantic Search with Strict Access Control</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>Q85: Design an LLM-powered Enterprise Search System (like Glean)</h3>
+            <div class="answer">
+                <div class="one-liner">A dual-pipeline architecture (Ingestion vs. Retrieval) featuring hybrid search
+                    (BM25 + Dense Vectors), where <strong>strict multi-tenant data isolation</strong> is enforced via
+                    metadata filtering <em>before</em> the LLM ever sees context.</div>
+
+                <p>Enterprise search is vastly more complicated than a simple PDF Q&A app. The defining challenge is
+                    <strong>Access Control Lists (ACLs)</strong>. If the CEO asks about "Project Alpha," they should see
+                    private financial docs. If an intern asks, they must <em>not</em> see those docs, even if the
+                    semantic similarity is huge.</p>
+
+                <h4>1. The Async Ingestion Flow</h4>
+                <p>Data is continuously pulled from various highly secure internal sources (Slack, Confluence, Google
+                    Drive).</p>
+
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+                    flowchart TD
+                    Sources["Slack / Jira / Confluence"] -- "OAuth / API Pull" --> Crawler["Distributed Crawlers
+                    (Temporal/Celery)"]
+                    Crawler -- "Raw Docs + ACL Metadata" --> Processor["Document Processor"]
+
+                    Processor -- "1. Chunking" --> Chunks["Text Chunks"]
+                    Chunks -- "2. Embedding Model API" --> DenseVectors["Dense Embeddings (768d)"]
+                    Chunks -- "3. Sparse Encoding" --> SparseVectors["Sparse Vectors (BM25)"]
+
+                    DenseVectors --> DB[("Vector Database (Pinecone/Milvus)")]
+                    SparseVectors --> DB
+
+                    note1["CRITICAL: Embed ACL metadata\n(e.g., allowed_roles: [Eng, Exec]\nallowed_users: [u123])"]
+                    -.-> DB
+                    style note1 fill:#ffc,stroke:#333,stroke-width:2px
+                </div>
+
+                <h4>2. The Retrieval & Generation Flow (User Query)</h4>
+                <p>When a user searches, the system must <em>first</em> identify who they are, filter the search space
+                    dynamically, retrieve the best documents across different modalities (keyword vs semantic), and only
+                    then invoke the LLM.</p>
+
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+                    sequenceDiagram
+                    participant User as "User (u123)"
+                    participant API as API Gateway
+                    participant Auth as Auth & ACL Service
+                    participant RAG as Retrieval Engine
+                    participant DB as Hybrid Vector DB
+                    participant LLM as LLM Inference
+
+                    User->>API: "What's the status of Project Alpha?"
+                    API->>Auth: Validate JWT & fetch permissions
+                    Auth-->>API: roles: [Intern], groups: [Marketing]
+                    API->>RAG: Query + User ACLs
+
+                    RAG->>RAG: Embed User Query to Dense Vector
+                    Note right of RAG: Hybrid Search + Pre-filtering
+
+                    RAG->>DB: Search where (roles ∈ [Intern] OR public=true)
+                    DB-->>RAG: Top 20 Chunks (Filtered)
+
+                    RAG->>RAG: Re-rank using Cross-Encoder (RRF)
+                    RAG-->>RAG: Top 5 Chunks
+
+                    RAG->>LLM: Prompt = [Top 5 Chunks] + "Answer the query..."
+                    LLM-->>User: Streamed Answer with Citations
+                </div>
+
+                <h4>3. Key Design Decisions & Reasoning</h4>
+
+                <h5>A. Multi-Tenant Data Privacy (Pre-Filtering vs Post-Filtering)</h5>
+                <ul>
+                    <li><strong>Post-filtering is a trap:</strong> If you fetch the top 10 most relevant chunks and
+                        <em>then</em> check permissions, all 10 might be forbidden (e.g., restricted HR docs). Your
+                        system returns 0 results, even if the 11th chunk was a valid public summary.</li>
+                    <li><strong>Pre-filtering (The Solution):</strong> Modern Vector DBs support metadata filtering. You
+                        inject the user's ACLs directly into the vector search query: `similarity_search(query_vector,
+                        filter={role: {$in: user_roles}})`</li>
+                </ul>
+
+                <h5>B. Hybrid Search (BM25 + Dense Vectors)</h5>
+                <ul>
+                    <li>Dense embeddings (semantic search) are great for meaning ("how do I fix a bug"), but
+                        <em>terrible</em> at specific keyword matching (e.g., searching for a specific Jira ticket
+                        number like "ENG-8912" or an employee's exact surname).</li>
+                    <li><strong>Solution:</strong> Both systems are run. BM25 catches the exact keywords, and semantic
+                        embeddings catch the intent. The lists are merged using <strong>Reciprocal Rank Fusion
+                            (RRF)</strong> before being sent to the LLM.</li>
+                </ul>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal) - Near Real-Time Indexing:</strong>
+                    <p>Unlike web crawlers, Enterprise Search must reflect updates instantly. If a user gets fired, they
+                        must lose access to Confluence search immediately. If a new PR is merged, it should be
+                        searchable within seconds.
+                        You achieve this by having both a <strong>Batch Pipeline</strong> (nightly deep crawls to
+                        rebuild damaged indexes) and a <strong>Streaming Pipeline</strong> (Kafka/Webhook listeners for
+                        immediate `INSERT`/`DELETE` vector operations).</p>
+                </div>
+
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Interviewers will press you on Hallucinations pointing to wrong
+                    source documents. Ensure you include a mechanism for <strong>Provenance / Citations</strong>. The
+                    prompt must instruct the LLM: <em>"You must answer using ONLY the provided context. After every
+                        sentence, append a citation [DocID]."</em> The UI then maps [DocID] to a clickable hyperlink.
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

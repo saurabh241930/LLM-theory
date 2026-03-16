@@ -159,7 +159,8 @@
                         context spans multiple pages (e.g., patient history leading to diagnosis), we use
                         <strong>Parent-Child (Small-to-Big) RAG</strong>. We retrieve smaller, highly precise chunks
                         (sentences), but inject the adjoining broader parent chunk (the whole paragraph/page) into the
-                        LLM.</li>
+                        LLM.
+                    </li>
                 </ul>
             </div>
         </div>
@@ -199,7 +200,8 @@
                     <li><strong>Generation:</strong> Retrieve the native chunks, inject them into the LLM, and prompt:
                         <em>"Using the provided context, answer the question in the language the query was asked
                             in."</em> LLMs (like GPT-4) are excellent at cross-lingual synthesis. Note: For Keyword
-                        search (BM25), you <em>must</em> translate the query to the document's language first.</li>
+                        search (BM25), you <em>must</em> translate the query to the document's language first.
+                    </li>
                 </ul>
             </div>
         </div>
@@ -217,7 +219,8 @@
                     <li><strong>Merging via RRF:</strong> Given that vector scores (cosine) and BM25 scores (TF-IDF
                         variants) are on completely different mathematical scales, we cannot simply add them. We use
                         <strong>Reciprocal Rank Fusion (RRF)</strong>. This ranks documents based on their positional
-                        rank in both lists: `Score = 1 / (k + rank)`.</li>
+                        rank in both lists: `Score = 1 / (k + rank)`.
+                    </li>
                     <li><strong>Reranking:</strong> We take the top merged 15 results and pass them through a
                         Cross-Encoder (e.g., `bge-reranker-large`). The Cross-Encoder evaluates the <em>exact
                             relationship</em> between the query and each chunk simultaneously, yielding the absolute
@@ -261,7 +264,8 @@
                     balance?" should never be cached globally; caching must respect `tenant_id` or `user_id`. 2)
                     <strong>Staleness:</strong> If the underlying RAG document changes, the cache serving the old policy
                     will persist unless explicitly invalidated via event-driven mechanisms. 3)
-                    <strong>Security:</strong> PII injection into shared caching pools.</p>
+                    <strong>Security:</strong> PII injection into shared caching pools.
+                </p>
             </div>
         </div>
 
@@ -623,7 +627,8 @@
                         complete) which the frontend polls.</li>
                     <li>If a chunk embedding fails due to a network error, BullMQ automatically retries the
                         <em>specific</em> child job using an Exponential Backoff policy (e.g., 5 retry maximums),
-                        ensuring one bad PDF doesn't break the entire 1000 document batch.</li>
+                        ensuring one bad PDF doesn't break the entire 1000 document batch.
+                    </li>
                 </ol>
             </div>
         </div>
@@ -791,6 +796,61 @@
                     bounds causing a massive backup in the BullMQ waiting queues. Moving to dedicated API infrastructure
                     (Microsoft Azure Provisioned Throughput Units - PTUs) and Sharding the Vector Database horizontally
                     across clusters would be the immediate resolution roadmaps.</p>
+            </div>
+        </div>
+        <!-- Memory in Gen AI -->
+        <h2 id="genai-memory">Memory in Gen AI</h2>
+
+        <div class="qa-container">
+            <h3>Why do LLMs forget the beginning of a long conversation, and how do you systematically fix it?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> LLMs are inherently stateless. "Memory" only exists if you explicitly pass
+                    the conversation history in the context window. They forget the beginning because of <strong>Context
+                        Limits</strong> and the <strong>Sliding Window</strong> mitigation strategy.</p>
+                <p>When a conversation exceeds the model's token limit (e.g., 8K tokens), developers are forced to drop
+                    the oldest messages (Sliding Window). To fix this systematically, we use <strong>Summary
+                        Memory</strong>. A parallel background LLM call takes the oldest messages dropping out of the
+                    window and condenses them into a dense paragraph. The system prompt is then dynamically updated:
+                    <code>[System Prompt] + [Rolling Summary of Turns 1-50] + [Raw Text of Turns 51-55]</code>,
+                    preserving the historical narrative without blowing the token budget.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Design a conversational memory system for a therapy AI that needs to remember patient context from 6
+                months ago.</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> A simple buffer or sliding window fails here. We need <strong>Persistent
+                        Semantic Memory paired with Entity Extraction</strong>.</p>
+                <ol>
+                    <li><strong>Semantic Memory (Vector DB):</strong> After every session, we chunk and embed the
+                        transcript. When the patient returns 6 months later and says, "My brother is acting up again,"
+                        we embed that query and hit the Vector DB. It retrieves the context from Month 1 explaining the
+                        brother's specific behavioral issues and injects it into the LLM.</li>
+                    <li><strong>Entity Memory (Knowledge Graph):</strong> Real-time Vector search can miss explicit
+                        facts (like names). During the chat, we run an asynchronous extraction pipeline to populate a
+                        NoSQL user profile:
+                        <code>{"allergies": ["peanuts"], "siblings": [{"name": "John", "relation": "brother"}]}</code>.
+                        This structured JSON is injected into the System Prompt on <em>every</em> single turn, ensuring
+                        foundational facts are never "forgotten" or buried by search algorithms.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>What are the critical security risks of Semantic Memory in a multi-tenant Chatbot, and how do you
+                mitigate them?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> The critical risk is <strong>Cross-Tenant Data Leakage</strong>. If you
+                    embed all user conversations into a single Vector Database collection for conversational memory, an
+                    ambiguous query from User A (e.g., "What is the secret API key we discussed?") might have a high
+                    cosine similarity to a chunk from User B's private chat history.</p>
+                <p>The LLM will ingest User B's retrieved chunk and expose it to User A. <strong>Mitigation:</strong>
+                    You must enforce <strong>Hard Metadata Filtering</strong> at the database level. Every embedded
+                    memory chunk <em>must</em> contain a <code>user_id</code> or <code>tenant_id</code> tag. The
+                    Backend/API Gateway strictly enforces <code>$eq: { user_id: "User-A-UUID" }</code> on every vector
+                    search, guaranteeing mathematical isolation before the ANN search even begins. You cannot rely on
+                    prompt-level instructions to maintain privacy.</p>
             </div>
         </div>
 

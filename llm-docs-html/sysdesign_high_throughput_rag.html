@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Throughput RAG System Design</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .depth {
+            margin-top: 15px;
+            padding: 10px;
+            background: #eef2ff;
+            border-left: 3px solid #36c;
+            font-size: 0.9em;
+        }
+
+        .trap {
+            margin-top: 15px;
+            padding: 10px;
+            background: #fff3cd;
+            border-left: 3px solid #ffecb5;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>System Design: High-Throughput RAG</h1>
+        <div class="subtitle">Scaling Retrieval Augmented Generation for Extreme Traffic</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>Q86: Design a High-Throughput, Low-Latency RAG System for a Public B2C App</h3>
+            <div class="answer">
+                <div class="one-liner">A massively horizontally scaled pipeline utilizing Semantic Caching to bypass
+                    LLMs entirely, read-replicas for Vector Databases, and graceful degradation strategies when
+                    third-party APIs hit rate limits.</div>
+
+                <p>Scaling a public B2C LLM app (like an AI shopping assistant processing 5,000 requests/second)
+                    introduces severe latency, cost, and rate-limiting bottlenecks. Standard RAG architectures will
+                    break under the sheer load of vector lookups and LLM generation time.</p>
+
+                <h4>1. Architecture for Extreme Scale</h4>
+
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+                    flowchart TD
+                    User["100k Concurrent Users"] --> CDN["CDN / WAF (Cloudflare)"]
+                    CDN --> LB["API Load Balancer"]
+
+                    LB --> Cache{"Semantic Cache (Redis)"}
+
+                    Cache -- "Semantic Cache HIT 🎯<br />(< 5ms)" --> User
+
+                        Cache -- "Semantic Cache MISS" --> Auth["Rate Limiter & Gateway"]
+
+                        Auth --> Router["Orchestration Layer / Langchain"]
+
+                        subgraph "CPU Fleet (Autoscaling)"
+                        Router --> Embed1["Embedding Model (CPU Server)"]
+                        Router --> EmbedN["Embedding Model (CPU Server)"]
+                        end
+
+                        Embed1 -- "Query Vector" --> VectorLB["Vector DB Load Balancer"]
+
+                        subgraph "Vector Database Cluster"
+                        VectorLB --> Primary[("Primary Vector DB (Writes)")]
+                        Primary -. "Async Sync" .-> ReadRep1[("Read Replica 1")]
+                        Primary -. "Async Sync" .-> ReadRep2[("Read Replica 2")]
+                        VectorLB --> ReadRep1
+                        VectorLB --> ReadRep2
+                        end
+
+                        ReadRep1 -- "Top K Context" --> Router
+
+                        subgraph "LLM Fleet"
+                        Router --> Gateway{"LLM Fallback Gateway"}
+                        Gateway -- "Primary" --> PrimaryLLM["GPT-4o / Claude 3.5"]
+                        Gateway -- "Rate Limit Exceeded" --> FallbackLLM["Llama 3 (Self-Hosted)"]
+                        end
+
+                        PrimaryLLM -.->|Streamed Answer| Router
+                        Router -.->|Save to Cache| Cache
+                        Router -.->|Streamed Answer| User
+                </div>
+
+                <h4>2. Key Scaling Mechanisms</h4>
+
+                <h5>A. Semantic Caching (The Cost & Latency Saver)</h5>
+                <p>Traditional caches (Memcached, standard Redis) require an <em>exact</em> string match. If User A asks
+                    "How do I reset my password?" and User B asks "Where is the password reset button?", a standard
+                    cache misses.
+                    <strong>Semantic Caching</strong> (e.g., RedisVL) solves this. It embeds the query and checks if it
+                    is semantically close (e.g., > 0.95 cosine similarity) to previously answered questions. If so, it
+                    returns the cached LLM answer instantly, saving both the Vector DB lookup and the expensive $0.01
+                    LLM generation cost.
+                </p>
+
+                <h5>B. Scaling the Vector Database</h5>
+                <p>Vector databases are incredibly RAM heavy (HNSW graphs must reside in memory for fast traversal).</p>
+                <ul>
+                    <li><strong>Read Replicas:</strong> Since public RAG systems are 99% reads and 1% writes, scaling
+                        vertically is insufficient. Deploy the Vector DB with a primary writer node and multiple read
+                        replicas behind a load balancer.</li>
+                    <li><strong>Sharding (Partitioning):</strong> If the dataset exceeds RAM limits (millions of
+                        documents), shard the database by category (e.g., Shard 1 holds "Electronics", Shard 2 holds
+                        "Clothing"). The orchestrator routes the query based on intent.</li>
+                </ul>
+
+                <h5>C. Embedding Model Fleets (CPU instead of GPU)</h5>
+                <p>While LLM generation requires heavy GPUs, <em>Embedding models</em> (like `bge-m3` or
+                    `text-embedding-ada-002`) are relatively small (100MB-1GB) and can often be run efficiently on cheap
+                    CPU servers. Horizontally scale hundreds of CPU containers behind an internal load balancer to
+                    process the incoming queries without paying GPU premiums.</p>
+
+                <h4>3. Resilience & Graceful Degradation</h4>
+                <p>What happens when OpenAI rate-limits you, or your cloud provider goes down?</p>
+                <ul>
+                    <li><strong>LLM Fallback Gateways:</strong> Use a tool like <em>LiteLLM</em>. If the primary API
+                        returns a `429 Too Many Requests` or times out after 3 seconds, instantly reroute the request to
+                        a secondary provider (e.g., Anthropic) or a self-hosted Llama-3 cluster.</li>
+                    <li><strong>Degradation:</strong> Under extreme load, dynamically reduce the `Top_K` retrieval
+                        parameter from 10 chunks down to 3 chunks. This vastly reduces the input token payload, saving
+                        both LLM processing time and money, at the slight expense of answer depth.</li>
+                </ul>
+
+                <div class="depth">
+                    <strong>Depth (Senior Signal) - Connection Pooling:</strong>
+                    <p>Microservices often overwhelm databases with connection limits. Establishing a new connection for
+                        every Vector search takes 20-50ms (SSL handshakes, auth). Implement connection pooling (like
+                        PgBouncer for Postgres) or leverage HTTP keep-alive for HTTP-based Vector DB APIs to reuse
+                        existing connections, massively reducing P99 latency.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>
