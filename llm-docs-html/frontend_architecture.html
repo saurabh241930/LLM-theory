@@ -348,19 +348,14 @@ flowchart LR
         </div>
 
         <div class="qa-container" id="q50">
-            <h3>Q50: Explain RxJS operators you use most and why</h3>
+            <h3>Q50: Explain RxJS operators you use most and why (and when to avoid them in React)</h3>
             <div class="answer">
-                <div class="one-liner">switchMap for latest-only (search), mergeMap for parallel, concatMap for ordered,
-                    forkJoin for parallel completion, debounceTime for input throttling.</div>
+                <div class="one-liner">switchMap for latest-only, mergeMap for parallel, concatMap for ordered; but in modern React, TanStack Query is preferred for most server-state needs.</div>
                 <h4>Core Points</h4>
                 <ul>
-                    <li> switchMap: cancels previous inner Observable on new emission — perfect for search-as-you-type
-                    </li>
-                    <li>(discard stale results)</li>
-                    <li> debounceTime: waits for pause in emissions before continuing — prevents flooding API on
-                        keystroke</li>
-                    <li> forkJoin: waits for all Observables to complete — use for parallel API calls that all must
-                        succeed</li>
+                    <li>  switchMap: cancels previous inner Observable on new emission — perfect for search-as-you-type</li>
+                    <li>  debounceTime: waits for pause in emissions — prevents flooding API on keystroke</li>
+                    <li>  <strong>React Strategy:</strong> While standard in Angular, standard React apps now use <em>TanStack Query</em> for data fetching and <em>Zustand</em> for simple state. Use RxJS only for complex event-streams (e.g., real-time dashboards, drag-and-drop).</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
 flowchart LR
@@ -368,21 +363,6 @@ flowchart LR
   Map --> Debounce["debounceTime(300ms)"]
   Debounce --> SwitchMap["switchMap(API Call)"]
   SwitchMap --> Result["Subscribe (Update UI)"]
-                </div>
-
-                <div class="depth">
-                    <strong>Depth (Senior Signal):</strong>
-                    <ul>
-                        <li>takeUntilDestroyed (Angular 16+) or takeUntil(destroy$): auto-unsubscribe on component
-                            destroy to</li>
-                        <li>prevent memory leaks</li>
-                        <li>catchError inside switchMap: handle individual request errors without killing the outer
-                            Observable</li>
-                    </ul>
-                </div>
-                <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Subscribing inside subscribe (nested subscriptions) is an
-                    anti-pattern — always flatten with switchMap/mergeMap/concatMap
                 </div>
             </div>
         </div>
@@ -427,17 +407,18 @@ flowchart TD
         </div>
 
         <div class="qa-container" id="q52">
+        <div class="qa-container" id="q52">
             <h3>Q52: What are common React performance pitfalls and how do you fix them?</h3>
             <div class="answer">
                 <div class="one-liner">Unnecessary re-renders, expensive computations in render, and large list
                     rendering are the top three — each has a specific fix.</div>
                 <h4>Core Points</h4>
                 <ul>
-                    <li> Unnecessary re-renders: use React DevTools Profiler to identify — fix with React.memo and
+                    <li>  Unnecessary re-renders: use React DevTools Profiler to identify — fix with React.memo and
                         stable</li>
                     <li>prop references</li>
-                    <li> Expensive computations in render: wrap with useMemo — recalculate only when inputs change</li>
-                    <li> Large lists: virtualize with react-window or react-virtual — render only visible rows</li>
+                    <li>  Expensive computations in render: wrap with useMemo — recalculate only when inputs change</li>
+                    <li>  Large lists: virtualize with react-window or react-virtual — render only visible rows</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
 flowchart TD
@@ -459,6 +440,95 @@ flowchart TD
                 <div class="trap">
                     <strong>Trap / Watch Out:</strong> Premature optimization is real — profile first, optimize second.
                     Most React apps are fast enough without any manual optimization.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q53">
+            <h3>Q53: React Server Components (RSC) vs Client Components — when to use which?</h3>
+            <div class="answer">
+                <div class="one-liner">RSCs fetch data on the server and send 0 JS to the client; Client Components are for interactivity and hooks.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li><strong>Server Components:</strong> Default in Next.js App Router. Best for fetching data, accessing DBs directly, and reducing JS bundle size.</li>
+                    <li><strong>Client Components:</strong> Marked with <code>'use client'</code>. Necessary for <code>useState</code>, <code>useEffect</code>, and DOM listeners.</li>
+                    <li><strong>Composition:</strong> Keep interactivity at the leaves of the tree; fetch data high up in Server Components.</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+flowchart TD
+  Page["Page (Server Component)"] --> Nav["Navbar (Server Component)"]
+  Page --> Detail["ProductDetail (Server Component)"]
+  Detail --> Gallery["Gallery (Client Component - 'use client')"]
+  Gallery --> Button["AddToCart (Client Component)"]
+                </div>
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Server Components cannot be imported into Client Components directly — they must be passed as <code>children</code> to preserve the server-only execution.</li>
+                        <li>Payload: RSCs don't send HTML alone; they send a specialized stream that React uses to reconcile the UI on the client without losing state.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q54">
+            <h3>Q54: How does Next.js Streaming and Suspense improve perceived performance?</h3>
+            <div class="answer">
+                <div class="one-liner">Streaming breaks HTML into chunks, allowing the browser to render parts of the page before the whole request finishes.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li><strong>Progressive Hydration:</strong> Non-interactive content displays immediately; interactive parts hydrate as JS loads.</li>
+                    <li><strong>Suspense Boundaries:</strong> Wrap slow components in <code>&lt;Suspense fallback={&lt;Loading /&gt;}&gt;</code> to show instant feedback.</li>
+                    <li><strong>App Router:</strong> Automatically enables streaming for layouts and pages, preventing slow API calls from blocking the entire UI.</li>
+                </ul>
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+sequenceDiagram
+    participant User
+    participant Server
+    participant DB
+    User->>Server: Request Page
+    Server-->>User: Send Layout + Skeleton (HTTP Stream)
+    User->>User: Displays Instant UI
+    Server->>DB: Slow Data Fetch...
+    DB-->>Server: Data Returned
+    Server-->>User: Send Data + Component (Stream Finish)
+    User->>User: Suspense swaps Skeleton for Content
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q55">
+            <h3>Q55: Why is TanStack Query preferred over Redux for server state?</h3>
+            <div class="answer">
+                <div class="one-liner">TanStack Query handles caching, revalidation, and background updates out-of-the-box; Redux requires manual logic for these.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li><strong>Automatic Refetching:</strong> Refetches on window focus, network reconnect, or interval.</li>
+                    <li><strong>State Management:</strong> Distinguishes Client State (theme, toggle) from Server State (users, posts).</li>
+                    <li><strong>Optimistic Updates:</strong> Update UI instantly before server confirmation, rolling back on error automatically.</li>
+                </ul>
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong>
+                    <ul>
+                        <li>Redux is a synchronization tool; TanStack Query is a state-manager wrapper for asynchronous data.</li>
+                        <li>Stale-While-Revalidate: Component gets cached data (fast) while query is updated in background (then UI updates).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q56">
+            <h3>Q56: What causes Hydration Errors in Next.js and how do you solve them?</h3>
+            <div class="answer">
+                <div class="one-liner">Mismatches between the server-rendered HTML and the first client-side render (e.g., using <code>window</code> or <code>new Date()</code>).</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li><strong>The Cause:</strong> React expects the UI to be identical during the first pass on both server and client. Differences cause a full re-render or layout shifts.</li>
+                    <li><strong>Common Culprits:</strong> Browser-only globals (<code>localStorage</code>), non-deterministic math (<code>Math.random()</code>), or varying timezones/dates.</li>
+                    <li><strong>Fix:</strong> Use <code>useEffect</code> to run client-only logic after hydration, or wrap in a "HasMounted" component.</li>
+                </ul>
+                <div class="trap">
+                    <strong>Trap / Watch Out:</strong> Suppressing the error with <code>suppressHydrationWarning</code> is often a band-aid; it doesn't fix potential SEO or accessibility bugs caused by the mismatch.
                 </div>
             </div>
         </div>

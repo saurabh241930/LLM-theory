@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,54 +14,80 @@
             border-left: 4px solid var(--wp-accent);
             border-radius: 4px;
         }
+
         .qa-container h3 {
             margin-top: 0;
             color: var(--wp-title-text);
         }
+
         .qa-container .answer {
             margin-top: 10px;
         }
-        .one-liner { font-weight: bold; margin-bottom: 10px; }
-        .trap { background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin-top: 10px; }
-        .depth { background-color: #e2e3e5; padding: 10px; border-left: 4px solid #6c757d; margin-top: 10px; }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .trap {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-left: 4px solid #ffc107;
+            margin-top: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
     </style>
 </head>
+
 <body>
     <header>
         <div class="subtitle">Concurrency & Load Balancing</div>
     </header>
 
     <div class="content-wrapper">
-<div class="qa-container" id="q68">
+        <div class="qa-container" id="q68">
             <h3>Q68: Explain the CAP theorem with practical examples</h3>
             <div class="answer">
-                <div class="one-liner">Distributed systems can guarantee only 2 of 3: Consistency, Availability, Partition Tolerance — since partitions happen, you choose CP or AP.</div>
+                <div class="one-liner">Distributed systems can guarantee only 2 of 3: Consistency, Availability,
+                    Partition Tolerance — since partitions happen, you choose CP or AP.</div>
                 <h4>Core Points</h4>
                 <ul>
-                    <li> CP (Consistency + Partition Tolerance): returns error if can't guarantee consistency — e.g., HBase,</li>
+                    <li> CP (Consistency + Partition Tolerance): returns error if can't guarantee consistency — e.g.,
+                        HBase,</li>
                     <li>Zookeeper</li>
-                    <li> AP (Availability + Partition Tolerance): returns best-available (possibly stale) answer — e.g.,</li>
+                    <li> AP (Availability + Partition Tolerance): returns best-available (possibly stale) answer —
+                        e.g.,</li>
                     <li>Cassandra, DynamoDB</li>
-                    <li> CA (no partition tolerance) is not realistic in distributed systems — network partitions always happen</li>
+                    <li> CA (no partition tolerance) is not realistic in distributed systems — network partitions
+                        always happen</li>
                     <li>eventually</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  Network["Network Partition (P) occurs"] --> Choice{"System must choose"}
-  Choice -- "Consistency (CP)" --> CP["Reject writes/reads (e.g. Zookeeper)"]
-  Choice -- "Availability (AP)" --> AP["Accept writes/reads risk staleness (e.g. DynamoDB)"]
+                    flowchart TD
+                    Network["Network Partition (P) occurs"] --> Choice{"System must choose"}
+                    Choice -- "Consistency (CP)" --> CP["Reject writes/reads (e.g. Zookeeper)"]
+                    Choice -- "Availability (AP)" --> AP["Accept writes/reads risk staleness (e.g. DynamoDB)"]
                 </div>
 
                 <div class="depth">
                     <strong>Depth (Senior Signal):</strong>
                     <ul>
-                        <li>PACELC extends CAP: even without partition, tradeoff exists between Latency and Consistency</li>
-                        <li>DynamoDB: configurable consistency — strongly consistent read (CP) or eventually consistent read</li>
+                        <li>PACELC extends CAP: even without partition, tradeoff exists between Latency and Consistency
+                        </li>
+                        <li>DynamoDB: configurable consistency — strongly consistent read (CP) or eventually consistent
+                            read</li>
                         <li>(AP) per request</li>
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> CAP is often misapplied — most systems are tunable between CP and AP per operation, not permanently one or the other
+                    <strong>Trap / Watch Out:</strong> CAP is often misapplied — most systems are tunable between CP and
+                    AP per operation, not permanently one or the other
                 </div>
             </div>
         </div>
@@ -68,35 +95,39 @@ flowchart TD
         <div class="qa-container" id="q69">
             <h3>Q69: How do you implement database connection pooling?</h3>
             <div class="answer">
-                <div class="one-liner">Maintain a pool of pre-established DB connections; reuse rather than open new connection per request — critical for throughput.</div>
+                <div class="one-liner">Maintain a pool of pre-established DB connections; reuse rather than open new
+                    connection per request — critical for throughput.</div>
                 <h4>Core Points</h4>
                 <ul>
                     <li> DB connection setup takes 5-50ms — reusing pooled connection saves that overhead on every</li>
                     <li>request</li>
                     <li> PgBouncer (Postgres): connection pooler with transaction mode — allows thousands of app</li>
                     <li>connections to few DB connections</li>
-                    <li> Pool sizing: (core_count * 2) + disk_spindles is a common starting heuristic; tune based on query</li>
+                    <li> Pool sizing: (core_count * 2) + disk_spindles is a common starting heuristic; tune based on
+                        query</li>
                     <li>duration</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  App1["App Thread 1"] --> Pool["Connection Pooler (PgBouncer)"]
-  App2["App Thread 2"] --> Pool
-  AppN["App Thread N"] --> Pool
-  Pool -- "Multiplexes 10k connections onto 100 DB connections" --> DB[("PostgreSQL")]
+                    flowchart TD
+                    App1["App Thread 1"] --> Pool["Connection Pooler (PgBouncer)"]
+                    App2["App Thread 2"] --> Pool
+                    AppN["App Thread N"] --> Pool
+                    Pool -- "Multiplexes 10k connections onto 100 DB connections" --> DB[("PostgreSQL")]
                 </div>
 
                 <div class="depth">
                     <strong>Depth (Senior Signal):</strong>
                     <ul>
-                        <li>Connection pool exhaustion: all connections in use — new requests queue or fail; monitor with pool</li>
+                        <li>Connection pool exhaustion: all connections in use — new requests queue or fail; monitor
+                            with pool</li>
                         <li>metrics</li>
                         <li>SQLAlchemy pool settings: pool_size, max_overflow, pool_timeout — tune per service's</li>
                         <li>concurrency profile</li>
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Serverless functions (Lambda) create a new connection per invocation — use RDS Proxy or PgBouncer to avoid connection exhaustion
+                    <strong>Trap / Watch Out:</strong> Serverless functions (Lambda) create a new connection per
+                    invocation — use RDS Proxy or PgBouncer to avoid connection exhaustion
                 </div>
             </div>
         </div>
@@ -104,7 +135,8 @@ flowchart TD
         <div class="qa-container" id="q70">
             <h3>Q70: How do you design for time-series data storage?</h3>
             <div class="answer">
-                <div class="one-liner">Use a time-series DB (TimescaleDB, InfluxDB) or partition by time in Postgres — optimize for append-heavy, time-range queries.</div>
+                <div class="one-liner">Use a time-series DB (TimescaleDB, InfluxDB) or partition by time in Postgres —
+                    optimize for append-heavy, time-range queries.</div>
                 <h4>Core Points</h4>
                 <ul>
                     <li> Time-series data: high-volume append-only writes, queries always filter by time range</li>
@@ -113,24 +145,27 @@ flowchart TD
                     <li> Retention policies: auto-drop data older than N days — don't store raw tick data forever</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart LR
-  Sensor["IoT Sensor Gen"] --> TSDB["Time-Series DB (Influx/Timescale)"]
-  TSDB -- "1. Append-only fast writes" --> Chunk["Time-partitioned Chunks"]
-  Chunk -- "2. Columnar Compression" --> Storage[("Compressed Storage")]
-  TSDB -- "3. Continuous Aggregates" --> Dash["Grafana Dashboard"]
+                    flowchart LR
+                    Sensor["IoT Sensor Gen"] --> TSDB["Time-Series DB (Influx/Timescale)"]
+                    TSDB -- "1. Append-only fast writes" --> Chunk["Time-partitioned Chunks"]
+                    Chunk -- "2. Columnar Compression" --> Storage[("Compressed Storage")]
+                    TSDB -- "3. Continuous Aggregates" --> Dash["Grafana Dashboard"]
                 </div>
 
                 <div class="depth">
                     <strong>Depth (Senior Signal):</strong>
                     <ul>
-                        <li>Downsampling: aggregate raw data into lower resolution over time — keep 1-minute aggregates,</li>
+                        <li>Downsampling: aggregate raw data into lower resolution over time — keep 1-minute aggregates,
+                        </li>
                         <li>drop raw after 30 days</li>
-                        <li>Write amplification: batch inserts instead of row-by-row — time-series DBs are optimized for batch</li>
+                        <li>Write amplification: batch inserts instead of row-by-row — time-series DBs are optimized for
+                            batch</li>
                         <li>writes</li>
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Using a standard relational table for time-series data without partitioning causes full-table scans on every time-range query
+                    <strong>Trap / Watch Out:</strong> Using a standard relational table for time-series data without
+                    partitioning causes full-table scans on every time-range query
                 </div>
             </div>
         </div>
@@ -138,7 +173,8 @@ flowchart LR
         <div class="qa-container" id="q71">
             <h3>Q71: What is the N+1 query problem and how do you fix it?</h3>
             <div class="answer">
-                <div class="one-liner">N+1: fetching a list of N items then making N individual queries for related data — fix with JOIN, eager loading, or DataLoader batching.</div>
+                <div class="one-liner">N+1: fetching a list of N items then making N individual queries for related data
+                    — fix with JOIN, eager loading, or DataLoader batching.</div>
                 <h4>Core Points</h4>
                 <ul>
                     <li> Example: fetch 100 orders, then loop and query each order's user separately = 101 queries</li>
@@ -146,11 +182,11 @@ flowchart LR
                     <li> DataLoader (GraphQL): batches all IDs from one render cycle, fetches in one query</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  N1["N+1 Query Issue"] --> Q1["SELECT * FROM users (1 query)"]
-  Q1 --> Loop["For loops through N users"]
-  Loop --> QN["SELECT * FROM posts WHERE user_id=? (N queries)"]
-  Fix["Fix: Eager Loading"] --> FixedQ["SELECT * FROM posts WHERE user_id IN (1,2...N) (1 query)"]
+                    flowchart TD
+                    N1["N+1 Query Issue"] --> Q1["SELECT * FROM users (1 query)"]
+                    Q1 --> Loop["For loops through N users"]
+                    Loop --> QN["SELECT * FROM posts WHERE user_id=? (N queries)"]
+                    Fix["Fix: Eager Loading"] --> FixedQ["SELECT * FROM posts WHERE user_id IN (1,2...N) (1 query)"]
                 </div>
 
                 <div class="depth">
@@ -161,7 +197,8 @@ flowchart TD
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> ORMs hide N+1 queries behind clean API — always log SQL in dev to catch them; they're invisible until production load reveals them
+                    <strong>Trap / Watch Out:</strong> ORMs hide N+1 queries behind clean API — always log SQL in dev to
+                    catch them; they're invisible until production load reveals them
                 </div>
             </div>
         </div>
@@ -169,38 +206,128 @@ flowchart TD
         <div class="qa-container" id="q72">
             <h3>Q72: How do you implement database sharding?</h3>
             <div class="answer">
-                <div class="one-liner">Partition data horizontally across multiple DB instances by a shard key — each shard holds a subset of rows.</div>
+                <div class="one-liner">Partition data horizontally across multiple DB instances by a shard key — each
+                    shard holds a subset of rows.</div>
                 <h4>Core Points</h4>
                 <ul>
-                    <li> Shard key choice is critical — choose high-cardinality key that distributes evenly (user_id, tenant_id)</li>
-                    <li> Hash sharding: hash(shard_key) % num_shards — even distribution but resharding is expensive</li>
-                    <li> Range sharding: shard by date or ID range — easier resharding but hotspot risk (all recent writes on</li>
+                    <li> Shard key choice is critical — choose high-cardinality key that distributes evenly (user_id,
+                        tenant_id)</li>
+                    <li> Hash sharding: hash(shard_key) % num_shards — even distribution but resharding is expensive
+                    </li>
+                    <li> Range sharding: shard by date or ID range — easier resharding but hotspot risk (all recent
+                        writes on</li>
                     <li>one shard)</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  App["Application"] --> Router["Sharding Router / Proxy"]
-  Router -- "Hash(user_id) % 3 == 0" --> ShardA[("DB Shard 1")]
-  Router -- "Hash(user_id) % 3 == 1" --> ShardB[("DB Shard 2")]
-  Router -- "Hash(user_id) % 3 == 2" --> ShardC[("DB Shard 3")]
+                    flowchart TD
+                    App["Application"] --> Router["Sharding Router / Proxy"]
+                    Router -- "Hash(user_id) % 3 == 0" --> ShardA[("DB Shard 1")]
+                    Router -- "Hash(user_id) % 3 == 1" --> ShardB[("DB Shard 2")]
+                    Router -- "Hash(user_id) % 3 == 2" --> ShardC[("DB Shard 3")]
                 </div>
 
                 <div class="depth">
                     <strong>Depth (Senior Signal):</strong>
                     <ul>
-                        <li>Consistent hashing: adding/removing shards only remaps a fraction of keys — better than modulo</li>
+                        <li>Consistent hashing: adding/removing shards only remaps a fraction of keys — better than
+                            modulo</li>
                         <li>for dynamic resharding</li>
-                        <li>Cross-shard queries: aggregations across shards require scatter-gather — expensive; design</li>
+                        <li>Cross-shard queries: aggregations across shards require scatter-gather — expensive; design
+                        </li>
                         <li>queries to stay within one shard</li>
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Sharding before you need it adds massive complexity — exhaust vertical scaling, read replicas, and partitioning first
+                    <strong>Trap / Watch Out:</strong> Sharding before you need it adds massive complexity — exhaust
+                    vertical scaling, read replicas, and partitioning first
                 </div>
+            </div>
+        </div>
+        <div class="qa-container" id="q76">
+            <h3>Q76: Distributed Task Queues: Celery vs. BullMQ vs. SQS</h3>
+            <div class="answer">
+                <div class="one-liner">Choose based on ecosystem and latency: Celery (Python/mature), BullMQ
+                    (Node/high-perf Redis), SQS (Managed/AWS-native).</div>
+                <h4>Tradeoffs</h4>
+                <ul>
+                    <li><strong>Celery:</strong> Feature-rich, supports Retries, ETA, and multiple brokers
+                        (Redis/RabbitMQ). Overhead is higher.</li>
+                    <li><strong>BullMQ:</strong> Uses Redis Lua scripts for extreme performance in Node environments. No
+                        built-in task result storage like Celery.</li>
+                    <li><strong>SNS/SQS:</strong> Infinite scale, zero maintenance, but "At least once" delivery means
+                        your tasks <strong>must be idempotent</strong>.</li>
+                </ul>
+                <div class="depth">
+                    <strong>Depth (Senior Signal):</strong> The "Pre-fetch Multiplier" in Celery can cause worker
+                    starvation if long-running tasks are mixed with short ones. Always separate queues by task duration.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q77">
+            <h3>Q77: gRPC vs. REST vs. GraphQL: Architecture Choice</h3>
+            <div class="answer">
+                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
+                    graph LR
+                    A[MobileApp] -- REST/JSON --> B(API Gateway)
+                    B -- gRPC/Protobuf --> C[Auth Service]
+                    B -- gRPC/Protobuf --> D[Payment Service]
+                </div>
+                <table>
+                    <tr>
+                        <th>Protocol</th>
+                        <th>Format</th>
+                        <th>Strength</th>
+                    </tr>
+                    <tr>
+                        <td><strong>REST</strong></td>
+                        <td>JSON/Text</td>
+                        <td>Ubiquity, Browser-friendly, Human readable.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>gRPC</strong></td>
+                        <td>Protobuf (Binary)</td>
+                        <td>Performance, Strict typing, Bidirectional streaming.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>HTTP/2</strong></td>
+                        <td>Binary Frame</td>
+                        <td>Multiplexing (no Head-of-Line blocking), Header compression.</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q78">
+            <h3>Q78: Why do you need PgBouncer for Postgres at Scale?</h3>
+            <div class="answer">
+                <div class="one-liner">Postgres creates a process per connection (expensive); PgBouncer multiplexes many
+                    app connections onto few database processes.</div>
+                <div class="trap">
+                    <strong>Trap:</strong> Using <code>Session mode</code> in PgBouncer breaks if you have many idle
+                    clients. <code>Transaction mode</code> is standard for high-throughput APIs but doesn't support
+                    Prepared Statements or Advisory Locks.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q79">
+            <h3>Q79: Strategic Fixes for the N+1 Problem in ORMs</h3>
+            <div class="answer">
+                <p>Beyond simple <code>JoinedLoad</code>, senior engineers use:</p>
+                <ul>
+                    <li><strong>Batch Loading (Dataloader):</strong> Collecting IDs across threads/frames and firing one
+                        <code>WHERE IN (...)</code> query.</li>
+                    <li><strong>Window Functions:</strong> To fetch the "Latest 3 comments for 50 posts" in one query
+                        (impossible with standard <code>JOIN</code>).</li>
+                    <li><strong>Strict Contexts:</strong> Disabling "Lazy Loading" in production to force explicit
+                        fetches, preventing accidental regressions.</li>
+                </ul>
             </div>
         </div>
     </div>
     <script src="animations.js"></script>
     <script src="sidebar.js?v=2"></script>
 </body>
+
 </html>

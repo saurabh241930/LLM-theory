@@ -65,16 +65,36 @@
 
         <section id="xgboost">
             <h2>3. XGBoost: The Kaggle King</h2>
-            <p><strong>eXtreme Gradient Boosting</strong> is the most popular algorithm for tabular data. It includes
-                built-in regularization, handles missing values, and is highly optimized for performance.</p>
+            <p><strong>eXtreme Gradient Boosting</strong> is the most popular algorithm for tabular data. It differs
+                from standard GBM by using a more rigorous mathematical framework for tree growth.</p>
 
             <div class="comparison-card" style="background: #eef2ff; border-left-color: #3366cc; padding: 15px;">
-                <h4>Why iterate on XGBoost?</h4>
+                <h3>XGBoost Internals (The "Extreme" Part)</h3>
+                <p>XGBoost minimizes a regularized objective function using a <strong>second-order Taylor
+                        expansion</strong> of the loss function.</p>
+                <div class="math-block">
+                    Obj = Σ L(y_i, ŷ_i^{(t-1)} + f_t(x_i)) + Ω(f_t)
+                </div>
                 <ul>
-                    <li><strong>Parallel Processing:</strong> Unlike standard GBM, it builds trees in parallel across
-                        CPU cores.</li>
-                    <li><strong>Tree Pruning:</strong> Uses a "depth-first" approach for more efficient growth.</li>
-                    <li><strong>Regularization:</strong> L1 (Lasso) and L2 (Ridge) penalties prevent overfitting.</li>
+                    <li><strong>Second-Order Approximation:</strong> Unlike basic GBM which uses only gradients, XGBoost
+                        uses both <strong>Gradients (g)</strong> and <strong>Hessians (h)</strong> (second derivatives),
+                        leading to faster convergence.</li>
+                    <li><strong>Regularization (Ω):</strong> Penalizes tree complexity (number of leaves and leaf
+                        weights) to prevent overfitting.</li>
+                    <li><strong>Optimal Split:</strong> XGBoost calculates a "Gain" score for every potential split
+                        based on gradients and hessians, choosing the one that maximizes improvement.</li>
+                </ul>
+            </div>
+
+            <div class="comparison-card">
+                <h4>Key performance features:</h4>
+                <ul>
+                    <li><strong>Parallel Processing:</strong> Unlike standard GBM, it builds tree structures in parallel
+                        by sorting data beforehand.</li>
+                    <li><strong>Built-in Cross-Validation:</strong> Allows pruning and stopping at the exact moment
+                        overfitting begins.</li>
+                    <li><strong>Sparsity Awareness:</strong> Handles missing values by learning a "default direction"
+                        for them during training.</li>
                 </ul>
             </div>
         </section>

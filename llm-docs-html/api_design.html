@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,18 +14,37 @@
             border-left: 4px solid var(--wp-accent);
             border-radius: 4px;
         }
+
         .qa-container h3 {
             margin-top: 0;
             color: var(--wp-title-text);
         }
+
         .qa-container .answer {
             margin-top: 10px;
         }
-        .one-liner { font-weight: bold; margin-bottom: 10px; }
-        .trap { background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin-top: 10px; }
-        .depth { background-color: #e2e3e5; padding: 10px; border-left: 4px solid #6c757d; margin-top: 10px; }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .trap {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-left: 4px solid #ffc107;
+            margin-top: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
     </style>
 </head>
+
 <body>
     <header>
         <div class="subtitle">REST, GraphQL & Webhooks</div>
@@ -35,32 +55,39 @@
         <div class="qa-container" id="q27">
             <h3>Q27: How do you handle API versioning and backward compatibility?</h3>
             <div class="answer">
-                <div class="one-liner">URI versioning (/v1/, /v2/) for major breaking changes; header versioning for fine-grained control; additive changes are non-breaking.</div>
+                <div class="one-liner">URI versioning (/v1/, /v2/) for major breaking changes; header versioning for
+                    fine-grained control; additive changes are non-breaking.</div>
                 <h4>Core Points</h4>
                 <ul>
-                    <li> URI versioning: /api/v1/users — explicit, easy to route, cache-friendly; most common approach</li>
-                    <li> Non-breaking changes: adding new fields, new endpoints, new optional query params — these don't</li>
+                    <li> URI versioning: /api/v1/users — explicit, easy to route, cache-friendly; most common approach
+                    </li>
+                    <li> Non-breaking changes: adding new fields, new endpoints, new optional query params — these
+                        don't</li>
                     <li>need version bump</li>
-                    <li> Breaking changes: removing fields, changing field types, changing URL structure — always version</li>
+                    <li> Breaking changes: removing fields, changing field types, changing URL structure — always
+                        version</li>
                     <li>bump</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  Client --> Router["API Router"]
-  Router -- "/v1/users" --> Handler1["V1 Handler (Legacy)"]
-  Router -- "/v2/users" --> Handler2["V2 Handler (Modern)"]
+                    flowchart TD
+                    Client --> Router["API Router"]
+                    Router -- "/v1/users" --> Handler1["V1 Handler (Legacy)"]
+                    Router -- "/v2/users" --> Handler2["V2 Handler (Modern)"]
                 </div>
 
                 <div class="depth">
                     <strong>Depth (Senior Signal):</strong>
                     <ul>
-                        <li>Sunset header: tell clients when old version is being deprecated — give minimum 6 months notice</li>
-                        <li>API changelog + semantic versioning in documentation — consumers need to know what changed</li>
+                        <li>Sunset header: tell clients when old version is being deprecated — give minimum 6 months
+                            notice</li>
+                        <li>API changelog + semantic versioning in documentation — consumers need to know what changed
+                        </li>
                         <li>and why</li>
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Don't version every minor change — only version when you break existing consumers. Over-versioning creates maintenance hell.
+                    <strong>Trap / Watch Out:</strong> Don't version every minor change — only version when you break
+                    existing consumers. Over-versioning creates maintenance hell.
                 </div>
             </div>
         </div>
@@ -68,32 +95,39 @@ flowchart TD
         <div class="qa-container" id="q28">
             <h3>Q28: JWT vs OAuth2 vs API Keys — when to use which?</h3>
             <div class="answer">
-                <div class="one-liner">API Keys for service-to-service, JWT for stateless user sessions, OAuth2 for delegated third-party access.</div>
+                <div class="one-liner">API Keys for service-to-service, JWT for stateless user sessions, OAuth2 for
+                    delegated third-party access.</div>
                 <h4>Core Points</h4>
                 <ul>
-                    <li> API Key: simple, long-lived, no expiry by default — good for server-to-server where key is stored</li>
+                    <li> API Key: simple, long-lived, no expiry by default — good for server-to-server where key is
+                        stored</li>
                     <li>securely</li>
-                    <li> JWT: self-contained token with claims, expiry, and signature — no DB lookup on every request</li>
+                    <li> JWT: self-contained token with claims, expiry, and signature — no DB lookup on every request
+                    </li>
                     <li>(stateless)</li>
-                    <li> OAuth2: authorization framework for third-party delegation — 'Login with Google' is OAuth2 + OIDC</li>
+                    <li> OAuth2: authorization framework for third-party delegation — 'Login with Google' is OAuth2 +
+                        OIDC</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart LR
-  JWT["JWT: Stateless, self-contained"]
-  OAuth["OAuth2: Scoped authorization delegation"]
-  APIKeys["API Keys: Server-to-server auth"]
-  JWT --- APIKeys
+                    flowchart LR
+                    JWT["JWT: Stateless, self-contained"]
+                    OAuth["OAuth2: Scoped authorization delegation"]
+                    APIKeys["API Keys: Server-to-server auth"]
+                    JWT --- APIKeys
                 </div>
 
                 <div class="depth">
                     <strong>Depth (Senior Signal):</strong>
                     <ul>
-                        <li>JWT weakness: can't invalidate before expiry — use short TTL (15min) + refresh token pattern</li>
-                        <li>PKCE (OAuth2 extension): for public clients (mobile/SPA) where client secret can't be stored safely</li>
+                        <li>JWT weakness: can't invalidate before expiry — use short TTL (15min) + refresh token pattern
+                        </li>
+                        <li>PKCE (OAuth2 extension): for public clients (mobile/SPA) where client secret can't be stored
+                            safely</li>
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> JWT is not encryption — the payload is base64 encoded, not encrypted. Don't put sensitive data in JWT claims.
+                    <strong>Trap / Watch Out:</strong> JWT is not encryption — the payload is base64 encoded, not
+                    encrypted. Don't put sensitive data in JWT claims.
                 </div>
             </div>
         </div>
@@ -101,19 +135,21 @@ flowchart LR
         <div class="qa-container" id="q29">
             <h3>Q29: How do you design a RESTful resource hierarchy?</h3>
             <div class="answer">
-                <div class="one-liner">Model resources as nouns, use HTTP verbs for actions, keep hierarchy max 2-3 levels deep.</div>
+                <div class="one-liner">Model resources as nouns, use HTTP verbs for actions, keep hierarchy max 2-3
+                    levels deep.</div>
                 <h4>Core Points</h4>
                 <ul>
                     <li> Nouns not verbs: /orders not /getOrders; /orders/{id}/cancel not /cancelOrder</li>
                     <li> Hierarchy: /projects/{id}/tasks/{id} — nested when child can't exist without parent</li>
-                    <li> Flat when possible: /tasks?project_id=X is often better than deep nesting — easier to cache and</li>
+                    <li> Flat when possible: /tasks?project_id=X is often better than deep nesting — easier to cache
+                        and</li>
                     <li>document</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart LR
-  Root["/users"] --> UserID["/users/{id}"]
-  UserID --> Orders["/users/{id}/orders"]
-  Orders --> OrderID["/users/{id}/orders/{order_id}"]
+                    flowchart LR
+                    Root["/users"] --> UserID["/users/{id}"]
+                    UserID --> Orders["/users/{id}/orders"]
+                    Orders --> OrderID["/users/{id}/orders/{order_id}"]
                 </div>
 
                 <div class="depth">
@@ -125,7 +161,8 @@ flowchart LR
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Avoid going deeper than 3 levels: /companies/{id}/departments/{id}/employees/{id}/tasks — becomes unwieldy to maintain
+                    <strong>Trap / Watch Out:</strong> Avoid going deeper than 3 levels:
+                    /companies/{id}/departments/{id}/employees/{id}/tasks — becomes unwieldy to maintain
                 </div>
             </div>
         </div>
@@ -133,20 +170,23 @@ flowchart LR
         <div class="qa-container" id="q30">
             <h3>Q30: How do you implement pagination in REST APIs?</h3>
             <div class="answer">
-                <div class="one-liner">Cursor-based pagination for large/real-time datasets; offset-based for simple use cases with known total counts.</div>
+                <div class="one-liner">Cursor-based pagination for large/real-time datasets; offset-based for simple use
+                    cases with known total counts.</div>
                 <h4>Core Points</h4>
                 <ul>
-                    <li> Offset pagination: ?page=2&limit=20 — simple but slow on high offsets (DB scans all skipped rows)</li>
-                    <li> Cursor pagination: ?after=cursor_token — cursor encodes last seen ID/timestamp; O(1) regardless</li>
+                    <li> Offset pagination: ?page=2&limit=20 — simple but slow on high offsets (DB scans all skipped
+                        rows)</li>
+                    <li> Cursor pagination: ?after=cursor_token — cursor encodes last seen ID/timestamp; O(1)
+                        regardless</li>
                     <li>of page depth</li>
                     <li> Return next_cursor, has_more, and total_count in response envelope</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart LR
-  Client -- "GET /items?limit=50&offset=100" --> API
-  API -- "Select ... Offset 100 Limit 50" --> DB
-  DB --> API
-  API -- "Items + Metadata (Next/Prev links)" --> Client
+                    flowchart LR
+                    Client -- "GET /items?limit=50&offset=100" --> API
+                    API -- "Select ... Offset 100 Limit 50" --> DB
+                    DB --> API
+                    API -- "Items + Metadata (Next/Prev links)" --> Client
                 </div>
 
                 <div class="depth">
@@ -157,7 +197,8 @@ flowchart LR
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Offset pagination breaks on real-time feeds — new items shift offsets, causing duplicates or skips. Use cursor there.
+                    <strong>Trap / Watch Out:</strong> Offset pagination breaks on real-time feeds — new items shift
+                    offsets, causing duplicates or skips. Use cursor there.
                 </div>
             </div>
         </div>
@@ -165,33 +206,38 @@ flowchart LR
         <div class="qa-container" id="q31">
             <h3>Q31: How do you handle API error responses consistently?</h3>
             <div class="answer">
-                <div class="one-liner">Standardized error envelope with HTTP status code, machine-readable error code, human message, and request trace ID.</div>
+                <div class="one-liner">Standardized error envelope with HTTP status code, machine-readable error code,
+                    human message, and request trace ID.</div>
                 <h4>Core Points</h4>
                 <ul>
-                    <li> Error envelope: { error: { code: 'VALIDATION_FAILED', message: '...', details: [...], trace_id: '...' } }</li>
-                    <li> HTTP status codes: 400 (bad input), 401 (unauthenticated), 403 (unauthorized), 404 (not found), 429</li>
+                    <li> Error envelope: { error: { code: 'VALIDATION_FAILED', message: '...', details: [...],
+                        trace_id: '...' } }</li>
+                    <li> HTTP status codes: 400 (bad input), 401 (unauthenticated), 403 (unauthorized), 404 (not
+                        found), 429</li>
                     <li>(rate limited), 500 (server error)</li>
                     <li> Machine-readable codes (INSUFFICIENT_FUNDS, USER_NOT_FOUND) allow clients to handle</li>
                     <li>programmatically</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  Error["Exception Thrown"] --> Middleware["Global Error Handler"]
-  Middleware --> Log["Log to DataDog/Sentry"]
-  Middleware --> Format["Format RFC 7807 Standard Error"]
-  Format --> Client["4xx / 5xx Standard JSON Schema"]
+                    flowchart TD
+                    Error["Exception Thrown"] --> Middleware["Global Error Handler"]
+                    Middleware --> Log["Log to DataDog/Sentry"]
+                    Middleware --> Format["Format RFC 7807 Standard Error"]
+                    Format --> Client["4xx / 5xx Standard JSON Schema"]
                 </div>
 
                 <div class="depth">
                     <strong>Depth (Senior Signal):</strong>
                     <ul>
-                        <li>RFC 7807 (Problem Details) is a standardized format for HTTP error responses — worth adopting</li>
+                        <li>RFC 7807 (Problem Details) is a standardized format for HTTP error responses — worth
+                            adopting</li>
                         <li>Include docs URL in error response: 'documentation':</li>
                         <li>'https://api.example.com/errors/VALIDATION_FAILED'</li>
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Never return 200 OK with an error in the body — it breaks HTTP semantics and makes monitoring impossible
+                    <strong>Trap / Watch Out:</strong> Never return 200 OK with an error in the body — it breaks HTTP
+                    semantics and makes monitoring impossible
                 </div>
             </div>
         </div>
@@ -199,7 +245,8 @@ flowchart TD
         <div class="qa-container" id="q32">
             <h3>Q32: Explain content negotiation in REST APIs</h3>
             <div class="answer">
-                <div class="one-liner">Client declares preferred response format via Accept header; server responds with matched Content-Type or 406.</div>
+                <div class="one-liner">Client declares preferred response format via Accept header; server responds with
+                    matched Content-Type or 406.</div>
                 <h4>Core Points</h4>
                 <ul>
                     <li> Accept: application/json → server returns JSON; Accept: application/xml → XML</li>
@@ -207,24 +254,26 @@ flowchart TD
                     <li> 406 Not Acceptable if server can't satisfy client's Accept header</li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  Client -- "Accept: application/xml" --> API
-  API -- "Parses Header" --> Logic["Business Logic"]
-  Logic --> Formatter{"Content Negotiator"}
-  Formatter -- "application/xml" --> XML["XML Payload"]
-  Formatter -- "application/json" --> JSON["JSON Payload"]
+                    flowchart TD
+                    Client -- "Accept: application/xml" --> API
+                    API -- "Parses Header" --> Logic["Business Logic"]
+                    Logic --> Formatter{"Content Negotiator"}
+                    Formatter -- "application/xml" --> XML["XML Payload"]
+                    Formatter -- "application/json" --> JSON["JSON Payload"]
                 </div>
 
                 <div class="depth">
                     <strong>Depth (Senior Signal):</strong>
                     <ul>
-                        <li>API versioning via Accept header: Accept: application/vnd.myapi.v2+json — cleaner URL but harder</li>
+                        <li>API versioning via Accept header: Accept: application/vnd.myapi.v2+json — cleaner URL but
+                            harder</li>
                         <li>to test in browser</li>
                         <li>Compression: Accept-Encoding: gzip — server compresses response, saves bandwidth</li>
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Don't ignore the Accept header and always return JSON — some clients (B2B integrations) legitimately need XML
+                    <strong>Trap / Watch Out:</strong> Don't ignore the Accept header and always return JSON — some
+                    clients (B2B integrations) legitimately need XML
                 </div>
             </div>
         </div>
@@ -232,38 +281,93 @@ flowchart TD
         <div class="qa-container" id="q33">
             <h3>Q33: How do you secure REST APIs against common attacks?</h3>
             <div class="answer">
-                <div class="one-liner">Defense in depth: input validation, rate limiting, auth on every endpoint, HTTPS, and OWASP API Security Top 10 awareness.</div>
+                <div class="one-liner">Defense in depth: input validation, rate limiting, auth on every endpoint, HTTPS,
+                    and OWASP API Security Top 10 awareness.</div>
                 <h4>Core Points</h4>
                 <ul>
-                    <li> Always validate and sanitize input — SQL injection, XSS, and injection attacks all come from</li>
+                    <li> Always validate and sanitize input — SQL injection, XSS, and injection attacks all come from
+                    </li>
                     <li>untrusted input</li>
                     <li> Rate limiting per client IP and API key — prevents brute force and DDoS</li>
-                    <li> Auth on every endpoint — no security through obscurity; even 'internal' endpoints need auth</li>
+                    <li> Auth on every endpoint — no security through obscurity; even 'internal' endpoints need auth
+                    </li>
                 </ul>
                 <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  Web["Internet"] --> WAF["WAF (AWS WAF / Cloudflare)"]
-  WAF --> RL["Rate Limiter (Redis)"]
-  RL --> Auth["AuthZ & AuthN Gateway"]
-  Auth --> API["Internal Microservice API"]
+                    flowchart TD
+                    Web["Internet"] --> WAF["WAF (AWS WAF / Cloudflare)"]
+                    WAF --> RL["Rate Limiter (Redis)"]
+                    RL --> Auth["AuthZ & AuthN Gateway"]
+                    Auth --> API["Internal Microservice API"]
                 </div>
 
                 <div class="depth">
                     <strong>Depth (Senior Signal):</strong>
                     <ul>
-                        <li>OWASP API Security Top 10: Broken Object Level Authorization (BOLA) is #1 — always verify</li>
+                        <li>OWASP API Security Top 10: Broken Object Level Authorization (BOLA) is #1 — always verify
+                        </li>
                         <li>ownership of resource</li>
-                        <li>JWT algorithm confusion attack: explicitly specify alg: RS256 in verification, never accept alg: none</li>
+                        <li>JWT algorithm confusion attack: explicitly specify alg: RS256 in verification, never accept
+                            alg: none</li>
                     </ul>
                 </div>
                 <div class="trap">
-                    <strong>Trap / Watch Out:</strong> BOLA (returning other users' data by manipulating IDs) is the most common API vulnerability — always check ownership, not just authentication
+                    <strong>Trap / Watch Out:</strong> BOLA (returning other users' data by manipulating IDs) is the
+                    most common API vulnerability — always check ownership, not just authentication
                 </div>
             </div>
         </div>
 
+        <div class="qa-container" id="q83">
+            <h3>Q83: How do you implement Idempotency Keys in Payment APIs?</h3>
+            <div class="answer">
+                <div class="one-liner">The client sends a unique <code>Idempotency-Key</code> header; the server stores
+                    the first response in Redis with that key and returns it for subsequent duplicate requests.</div>
+                <div class="depth">
+                    <strong>Senior Tip:</strong> Always use a distributed lock (like Redlock) during the first
+                    processing attempt to prevent "Double Spend" if two identical requests hit the server at the exact
+                    same millisecond.
+                </div>
             </div>
-    <script src="animations.js"></script>
+        </div>
+
+        <div class="qa-container" id="q84">
+            <h3>Q84: API Versioning: Header-based vs. URL-based</h3>
+            <div class="answer">
+                <table class="matrix-table">
+                    <tr>
+                        <th>Strategy</th>
+                        <th>Example</th>
+                        <th>Pros/Cons</th>
+                    </tr>
+                    <tr>
+                        <td><strong>URL</strong></td>
+                        <td><code>/v1/users</code></td>
+                        <td>Easy routing, cache-friendly. Can clutter URLs.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Header</strong></td>
+                        <td><code>Accept: vnd.v2+json</code></td>
+                        <td>URL stay clean. Harder to test in browsers/debugging tools.</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="qa-container" id="q85">
+            <h3>Q85: Deep Dive into CORS (Cross-Origin Resource Sharing)</h3>
+            <div class="answer">
+                <div class="trap">
+                    <strong>Trap:</strong> Setting <code>Access-Control-Allow-Origin: *</code> in production is a
+                    massive security risk. It allows <em>any</em> site to make requests to your API while carrying user
+                    cookies.
+                </div>
+                <p><strong>Senior Approach:</strong> Explicitly whitelist Origins in an environment variable. For
+                    <strong>Preflight</strong> requests (OPTIONS), ensure your server returns
+                    <code>204 No Content</code> without executing expensive auth logic.</p>
+            </div>
+        </div>
+    </div>
     <script src="sidebar.js?v=2"></script>
 </body>
+
 </html>

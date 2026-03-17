@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'advanced_rag.html', title: '10. Advanced RAG' },
                 { id: 'reranking.html', title: '11. Re-ranking' },
                 { id: 'query_rewriting.html', title: '12. Query Rewriting' },
-                { id: 'rag_evaluation.html', title: '13. Evaluation (RAGAS)' },
+                { id: 'rag_evaluation.html', title: '13. Evaluation Hub' },
                 { id: 'function_calling.html', title: '14. Function Calling' },
                 { id: 'nl_to_sql.html', title: '15. Text-to-SQL' },
                 { id: 'improving_nl_to_sql.html', title: '16. Schema Retrieval' },
@@ -36,19 +36,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'fine_tuning_intro.html', title: '19. Fine-Tuning Intro' },
                 { id: 'lora_peft.html', title: '20. LoRA & PEFT' },
                 { id: 'alignment_rlhf_dpo.html', title: '21. Model Alignment' },
-                { id: 'react_pattern.html', title: '22. ReAct Pattern' },
-                { id: 'multi_agent_systems.html', title: '23. Multi-Agent Systems' },
-                { id: 'agent_failure_recovery.html', title: '24. Failure Recovery' },
-                { id: 'scaling_rag_millions.html', title: '25. Scaling RAG' },
-                { id: 'high_efficiency_indexing.html', title: '26. CRAG / Self-RAG' },
-                { id: '20_interview_questions.html', title: '27. Interview Recap' },
-                { id: '21_real_world_questions.html', title: '28. Real World Production' }
+                { id: 'inference_optimization.html', title: '22. Inference Optimization' },
+                { id: 'react_pattern.html', title: '23. ReAct Pattern' },
+                { id: 'multi_agent_systems.html', title: '24. Multi-Agent Systems' },
+                { id: 'agent_failure_recovery.html', title: '25. Failure Recovery' },
+                { id: 'scaling_rag_millions.html', title: '26. Scaling RAG' },
+                { id: 'high_efficiency_indexing.html', title: '27. CRAG / Self-RAG' },
+                { id: 'evaluation_ragas_langsmith.html', title: '28. Evaluation Hub' },
+                { id: '20_interview_questions.html', title: '29. Interview Recap' },
+                { id: '21_real_world_questions.html', title: '30. Real World Production' },
+                { id: 'llm_serving.html', title: '31. LLM Serving' },
+                { id: 'mcp_protocol.html', title: '32. MCP Protocol' }
             ]
         },
         {
             category: 'Backend',
             links: [
                 { id: 'backend_core.html', title: 'Backend Core' },
+                { id: 'backend_fastapi.html', title: 'FastAPI Mastery' },
+                { id: 'backend_nodejs.html', title: 'Node.js Mastery' },
                 { id: 'backend_scaling.html', title: 'Backend Scaling' }
             ]
         },
@@ -57,6 +63,18 @@ document.addEventListener('DOMContentLoaded', () => {
             links: [
                 { id: 'frontend_architecture.html', title: 'Frontend Architecture' },
                 { id: 'frontend_performance.html', title: 'Frontend Performance' }
+            ]
+        },
+        {
+            category: 'JS/TS MASTERY',
+            links: [
+                { id: 'js_mastery.html', title: 'Senior JS/TS Mastery' }
+            ]
+        },
+        {
+            category: 'PYTHON MASTERY',
+            links: [
+                { id: 'python_mastery.html', title: 'Senior Python Mastery' }
             ]
         },
         {

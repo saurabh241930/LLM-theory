@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Mastery</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .code-block {
+            background-color: #202122;
+            color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>FastAPI Mastery</h1>
+        <div class="subtitle">Architecture, Asyncio & Dependency Injection</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="architecture">
+            <h2>1. Architecture: The Starlette & Pydantic Stack</h2>
+            <p>FastAPI is based on two core libraries: <strong>Starlette</strong> for web routing/async and
+                <strong>Pydantic</strong> for data validation.</p>
+            <div class="mermaid">
+                graph TD
+                A[User Request] --> B[FastAPI Wrapper]
+                B --> C[Starlette Routing]
+                C --> D[Pydantic Validation]
+                D --> E[User Function]
+            </div>
+        </section>
+
+        <section id="event-loop">
+            <h2>2. The Python Event Loop in FastAPI</h2>
+            <div class="qa-container">
+                <h3>Q: How does the Event Loop handle 10k concurrent requests?</h3>
+                <div class="answer">
+                    <div class="one-liner">By never blocking. When a request hits an `await` (e.g., DB query), the loop
+                        suspends that function and picks up the next one immediately.</div>
+                    <div class="depth"><strong>Senior Signal:</strong> If you use a blocking library (e.g., legacy
+                        `requests`) inside an `async def` function, you freeze the entire event loop for all users.
+                        Performance drops to 1 QPS per process.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="dependency-injection">
+            <h2>3. Advanced Dependency Injection</h2>
+            <div class="qa-container">
+                <h3>Q: Why is FastAPI's DI system better than manual instantiation?</h3>
+                <div class="answer">
+                    <div class="one-liner">It handles the lifecycle and caching of dependencies (like DB sessions or
+                        Auth users) automatically for each request.</div>
+                    <div class="code-block">
+                        <span style="color: #6a9955;"># Advanced DI with sub-dependencies</span><br>
+                        async def get_db_session(): ...<br><br>
+                        async def get_current_user(db: Annotated[Session, Depends(get_db_session)]): ...<br><br>
+                        @app.get("/")<br>
+                        async def read_root(user: Annotated[User, Depends(get_current_user)]): ...
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="interview-questions">
+            <h2>4. Senior FastAPI Interview Q&A</h2>
+            <div class="qa-container">
+                <h3>Q: What is the difference between `async def` and `def` routes in FastAPI?</h3>
+                <div class="answer">
+                    <p>FastAPI runs <code>async def</code> functions directly on the event loop. It runs regular
+                        <code>def</code> functions in an external <strong>ThreadPool</strong>. Use <code>def</code> for
+                        legacy blocking code and <code>async def</code> for modern non-blocking libraries.</p>
+                </div>
+            </div>
+            <div class="qa-container">
+                <h3>Q: How do you handle middleware performance bottlenecks?</h3>
+                <div class="answer">
+                    <div class="one-liner">Middleware runs on every request. Keep logic light (auth, headers). For heavy
+                        lifting, use Dependencies or Background Tasks.</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Mastery for AI Engineers</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .trap {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-left: 4px solid #ffc107;
+            margin-top: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Python Mastery for AI Engineers</h1>
+        <div class="subtitle">Internals, Concurrency, Meta-programming, and Production Patterns</div>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="qa-container" id="p1">
+            <h3>Q1: Explain the difference between Generators and Iterators.</h3>
+            <div class="answer">
+                <div class="one-liner">All generators are iterators, but not all iterators are generators. Generators
+                    use `yield` and maintain state automatically.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li><strong>Iterator:</strong> Any object implementing `__iter__()` and `__next__()`.</li>
+                    <li><strong>Generator:</strong> A function that uses `yield` to return a stream of values lazily.
+                    </li>
+                    <li><strong>Benefit:</strong> Memory efficiency (O(1) memory for large datasets) and readability.
+                    </li>
+                </ul>
+                <div class="depth">
+                    <strong>Senior Signal:</strong> Generators are "pausable functions." When `yield` is hit, the local
+                    state (variables, instruction pointer) is saved, not destroyed. This is the foundation for `asyncio`
+                    (before the native `async` keyword).
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p2">
+            <h3>Q2: How does Python's AsyncIO (Event Loop) differ from Multi-threading?</h3>
+            <div class="answer">
+                <div class="one-liner">Multi-threading is for I/O-bound tasks using OS-level context switching; AsyncIO
+                    is cooperative multitasking on a single thread.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li><strong>Threads:</strong> Preemptive multitasking. OS switches between threads. High memory
+                        overhead. Risk of race conditions.</li>
+                    <li><strong>AsyncIO:</strong> Cooperative multitasking. Functions "yield" control back to the event
+                        loop. Low overhead. Ideal for 10k+ concurrent connections (e.g., FastAPI).</li>
+                </ul>
+                <div class="trap">
+                    <strong>Trap:</strong> `asyncio` does <strong>not</strong> make CPU-bound tasks faster. Blocking a
+                    coroutine with `time.sleep()` blocks the <em>entire</em> event loop. Use `run_in_executor` for
+                    blocking calls.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p3">
+            <h3>Q3: What is the Global Interpreter Lock (GIL) and why does it exist?</h3>
+            <div class="answer">
+                <div class="one-liner">A mutex that allows only one thread to execute Python bytecode at a time,
+                    ensuring thread-safety for CPython's memory management.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li><strong>Why:</strong> Protects reference counting from race conditions.</li>
+                    <li><strong>Impact:</strong> Makes multi-threading useless for CPU-heavy tasks in Python.</li>
+                    <li><strong>Workaround:</strong> Use `multiprocessing` to bypass the GIL or use libraries like
+                        NumPy/PyTorch which release the GIL during heavy C-level computation.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p4">
+            <h3>Q4: Explain Decorators and how to preserve function metadata.</h3>
+            <div class="answer">
+                <div class="one-liner">Decorators wrap functions to add behavior. Use `functools.wraps` to preserve the
+                    original function's name and docstrings.</div>
+                <div class="code-block">
+                    <span class="keyword">from</span> functools <span class="keyword">import</span> wraps
+
+                    <span class="keyword">def</span> <span class="function">logger</span>(func):
+                    <span class="keyword">@wraps</span>(func)
+                    <span class="keyword">def</span> <span class="function">wrapper</span>(*args, **kwargs):
+                    print(<span class="string">f"Calling {func.__name__}"</span>)
+                    <span class="keyword">return</span> func(*args, **kwargs)
+                    <span class="keyword">return</span> wrapper
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p5">
+            <h3>Q5: Why use Pydantic for AI applications?</h3>
+            <div class="answer">
+                <div class="one-liner">Strong type validation and serialization at runtime, essential for parsing LLM
+                    JSON outputs and API contracts.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li><strong>Validation:</strong> Automatically converts and validates types (e.g., string to int).
+                    </li>
+                    <li><strong>Schema:</strong> Generates JSON maps for Function Calling automatically.</li>
+                    <li><strong>Performance:</strong> Highly optimized (V2 is written in Rust).</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p6">
+            <h3>Q6: Explain `__getattr__` vs `__getattribute__`.</h3>
+            <div class="answer">
+                <div class="one-liner">`__getattribute__` is called for every attribute access; `__getattr__` is only
+                    called if the attribute is not found.</div>
+                <div class="depth">
+                    <strong>Senior Signal:</strong> Use `__getattr__` for lazy loading or proxy patterns. Be extremely
+                    careful with `__getattribute__` as it can easily cause infinite recursion (always use
+                    `super().__getattribute__`).
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p7">
+            <h3>Q7: How do Metaclasses work?</h3>
+            <div class="answer">
+                <div class="one-liner">A metaclass is a "class of a class." It defines how a class is constructed.</div>
+                <p>Classes are instances of `type`. By inheriting from `type`, you can intercept class creation (e.g.,
+                    to enforce naming conventions or auto-register plugins).</p>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p8">
+            <h3>Q8: List vs Tuple vs Set performance.</h3>
+            <div class="answer">
+                <ul>
+                    <li><strong>List:</strong> O(1) append, O(n) search. Over-allocates memory for growth.</li>
+                    <li><strong>Tuple:</strong> O(1) access. Immutable. Slightly faster/smaller than list due to fixed
+                        size.</li>
+                    <li><strong>Set:</strong> O(1) average case search (Hash table). Great for deduplication.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p9">
+            <h3>Q9: Explain Python's Memory Management (Reference Counting & GC).</h3>
+            <div class="answer">
+                <div class="one-liner">Python uses reference counting primary; a generational Garbage Collector (GC)
+                    handles cyclic references.</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li><strong>Ref Counting:</strong> Object is deleted as soon as its count hits zero.</li>
+                    <li><strong>Generational GC:</strong> Scans objects in three generations (0, 1, 2) to find and break
+                        loops like `a.x = b; b.x = a`.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p10">
+            <h3>Q10: What are Context Managers (`with` statement)?</h3>
+            <div class="answer">
+                <div class="one-liner">Objects that define setup and teardown logic via `__enter__` and `__exit__`.
+                </div>
+                <p>Use `@contextlib.contextmanager` for a generator-based approach. Essential for resource management
+                    (files, DB connections, locks).</p>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p11">
+            <h3>Q11: `typing.Protocol` vs Abstract Base Classes (ABC).</h3>
+            <div class="answer">
+                <div class="one-liner">ABC is nominal subtyping (must inherit); Protocol is structural subtyping
+                    (duck-typing for static analysis).</div>
+                <div class="depth">
+                    <strong>Senior Signal:</strong> Use `Protocol` when you want to define a type based on "what it can
+                    do" rather than "who its parents are." It's Python's version of Go interfaces.
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p12">
+            <h3>Q12: How to profile a Python script?</h3>
+            <div class="answer">
+                <div class="one-liner">Use `cProfile` for function call stats, `line_profiler` for line-by-line time,
+                    and `memray` or `tracemalloc` for memory.</div>
+                <div class="code-block">python -m cProfile -s time my_script.py</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p13">
+            <h3>Q13: Difference between `__str__` and `__repr__`.</h3>
+            <div class="answer">
+                <div class="one-liner">`__str__` is for users (pretty); `__repr__` is for developers (unambiguous,
+                    ideally should reproduce the object).</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p14">
+            <h3>Q14: Shallow vs Deep Copy.</h3>
+            <div class="answer">
+                <div class="one-liner">Shallow copy creates a new container but references the same nested objects; Deep
+                    copy recursively copies everything.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p15">
+            <h3>Q15: What is the `__slots__` attribute?</h3>
+            <div class="answer">
+                <div class="one-liner">Prevents the creation of `__dict__` for each instance, saving significant memory
+                    for objects with many instances.</div>
+                <div class="trap"><strong>Trap:</strong> `__slots__` also prevents adding new attributes dynamically at
+                    runtime.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p16">
+            <h3>Q16: How do you handle circular imports?</h3>
+            <div class="answer">
+                <div class="one-liner">Move imports inside functions, use string-based type hints, or refactor shared
+                    logic into a third module.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p17">
+            <h3>Q17: Explain `collections.defaultdict` vs `dict.get()`.</h3>
+            <div class="answer">
+                <div class="one-liner">`defaultdict` auto-creates keys on access; `dict.get()` returns a value or
+                    default without modifying the dict.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p18">
+            <h3>Q18: What is a Closure?</h3>
+            <div class="answer">
+                <div class="one-liner">A nested function that remembers the environment in which it was created, even
+                    after the outer function has finished.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p19">
+            <h3>Q19: `is` vs `==`.</h3>
+            <div class="answer">
+                <div class="one-liner">`is` checks identity (memory address); `==` checks equality (values).</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p20">
+            <h3>Q20: What are "Dunder" (Double-Under) methods?</h3>
+            <div class="answer">
+                <div class="one-liner">Special methods like `__init__`, `__call__`, `__len__` that allow objects to hook
+                    into Python's built-in syntax (operators, casting, etc.).</div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+
+        <div class="qa-container" id="p21">
+            <h3>Q21: `multiprocessing` vs `threading` — which one for AI?</h3>
+            <div class="answer">
+                <div class="one-liner">`multiprocessing` for CPU-bound tasks (Parallelism); `threading` for I/O-bound tasks (Concurrency).</div>
+                <h4>Core Points</h4>
+                <ul>
+                    <li><strong>Multiprocessing:</strong> Creates separate memory spaces. Bypasses GIL. Use for heavy data processing / tokenization.</li>
+                    <li><strong>Threading:</strong> Shared memory space. Limited by GIL. Use for network requests or DB queries.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p22">
+            <h3>Q22: Explain `typing.Generic` and `typing.TypeVar`.</h3>
+            <div class="answer">
+                <div class="one-liner">Used to create components that work with a variety of types while maintaining type safety.</div>
+                <div class="code-block">
+<span class="keyword">from</span> typing <span class="keyword">import</span> TypeVar, Generic
+
+T = TypeVar(<span class="string">'T'</span>)
+
+<span class="keyword">class</span> <span class="class-name">Box</span>(Generic[T]):
+    <span class="keyword">def</span> <span class="function">__init__</span>(self, content: T):
+        self.content = content
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p23">
+            <h3>Q23: Difference between `Any` and `object` types.</h3>
+            <div class="answer">
+                <div class="one-liner">`object` is the root of all types (strictly checked); `Any` tells the type checker to "trust me" and disable checking.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p24">
+            <h3>Q24: What does the `__call__` method do?</h3>
+            <div class="answer">
+                <div class="one-liner">Allows an instance of a class to be called like a function.</div>
+                <p>Commonly used for stateful decorators or defining "Functors."</p>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p25">
+            <h3>Q25: Explain `itertools.islice` and why it's useful.</h3>
+            <div class="answer">
+                <div class="one-liner">Allows slicing an iterator without converting it to a list, preserving memory.</div>
+                <div class="code-block">
+<span class="keyword">from</span> itertools <span class="keyword">import</span> islice
+<span class="comment"># Get first 10 items from a massive generator</span>
+for item in islice(massive_gen, 10):
+    print(item)
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p26">
+            <h3>Q26: What is `functools.lru_cache`?</h3>
+            <div class="answer">
+                <div class="one-liner">A decorator that wraps a function with a Least Recently Used (LRU) cache, memoizing results for seen inputs.</div>
+                <div class="depth"><strong>Senior Signal:</strong> Essential for recursive algorithms or expensive idempotent API calls. In Python 3.9+, use `@cache` for an infinite LRU cache.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p27">
+            <h3>Q27: Pydantic `field_validator` vs `model_validator`.</h3>
+            <div class="answer">
+                <div class="one-liner">`field_validator` checks individual fields; `model_validator` checks multiple fields together (cross-field validation).</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p28">
+            <h3>Q28: How to use `subprocess.run` securely?</h3>
+            <div class="answer">
+                <div class="one-liner">Always pass arguments as a list, never a single string with `shell=True`, to prevent shell injection.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p29">
+            <h3>Q29: Explain `typing.Annotated` and its use in FastAPI.</h3>
+            <div class="answer">
+                <div class="one-liner">Adds metadata to types without changing the type itself.</div>
+                <p>FastAPI uses it to combine types with dependency injection: `db: Annotated[Session, Depends(get_db)]`.</p>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p30">
+            <h3>Q30: What are "Soft Keywords" in Python (e.g., `_` in match)?</h3>
+            <div class="answer">
+                <div class="one-liner">Keywords that only act as keywords in specific contexts (like `match` and `case` in Python 3.10), preserving backward compatibility for identifiers.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p31">
+            <h3>Q31: Difference between `dataclasses` and `NamedTuple`.</h3>
+            <div class="answer">
+                <div class="one-liner">`dataclasses` are mutable by default and support default factory values; `NamedTuple` is immutable and has lower memory overhead.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p32">
+            <h3>Q32: What is "Monkey Patching"?</h3>
+            <div class="answer">
+                <div class="one-liner">Modifying objects or modules at runtime. Useful for testing (mocking) but dangerous in production.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p33">
+            <h3>Q33: How does `super()` work in Multiple Inheritance?</h3>
+            <div class="answer">
+                <div class="one-liner">It follows the Method Resolution Order (MRO), calculated using the C3 Linearization algorithm.</div>
+                <div class="depth"><strong>Senior Signal:</strong> Use `ClassName.mro()` to inspect the order. `super()` does NOT necessarily call the parent; it calls the <em>next</em> class in the MRO.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p34">
+            <h3>Q34: Explain the `nonlocal` keyword.</h3>
+            <div class="answer">
+                <div class="one-liner">Allows a nested function to modify a variable in the nearest enclosing (non-global) scope.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p35">
+            <h3>Q35: What is `__init_subclass__` used for?</h3>
+            <div class="answer">
+                <div class="one-liner">A simpler alternative to metaclasses for customizing class creation of subclasses.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p36">
+            <h3>Q36: `pytest` vs `unittest` — why one over the other?</h3>
+            <div class="answer">
+                <div class="one-liner">`pytest` is the industry standard for its concise syntax, powerful fixtures, and huge plugin ecosystem; `unittest` is built-in but verbose.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p37">
+            <h3>Q37: Explain the Walrus Operator (`:=`).</h3>
+            <div class="answer">
+                <div class="one-liner">Allows assignment of a value within an expression.</div>
+                <div class="code-block">
+<span class="keyword">if</span> (n := len(data)) > <span class="number">10</span>:
+    print(<span class="string">f"Too long: {n} items"</span>)
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p38">
+            <h3>Q38: Pattern Matching (`match` / `case`) in Python 3.10+.</h3>
+            <div class="answer">
+                <div class="one-liner">A powerful way to destructure data and execute code paths based on its shape.</div>
+                <div class="code-block">
+<span class="keyword">match</span> command.split():
+    <span class="keyword">case</span> [<span class="string">"quit"</span>]: exit()
+    <span class="keyword">case</span> [<span class="string">"load"</span>, filename]: load(filename)
+    <span class="keyword">case</span> _: <span class="keyword">raise</span> ValueError(<span class="string">"Unknown"</span>)
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p39">
+            <h3>Q39: What are Exception Groups (`ExceptionGroup`)?</h3>
+            <div class="answer">
+                <div class="one-liner">Introduced in Python 3.11 to handle multiple concurrent errors, especially in `asyncio`.</div>
+                <p>Use `except*` to catch specific exceptions within a group.</p>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p40">
+            <h3>Q40: Explain `contextlib.ExitStack`.</h3>
+            <div class="answer">
+                <div class="one-liner">Allows managing a dynamic number of context managers in a single `with` block.</div>
+                <div class="depth"><strong>Senior Signal:</strong> Essential for opening a variable list of files or cleaning up many mocks in testing.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p41">
+            <h3>Q41: Difference between `asyncio.gather` and `TaskGroup`.</h3>
+            <div class="answer">
+                <div class="one-liner">`TaskGroup` (Python 3.11+) is the modern, safer way to manage concurrent tasks; it ensures if one fails, all are cancelled.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p42">
+            <h3>Q42: What is a "Weak Reference" (`weakref`)?</h3>
+            <div class="answer">
+                <div class="one-liner">A reference that doesn't prevent an object from being garbage collected. Useful for caching and observer patterns.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p43">
+            <h3>Q43: How does the `yield from` syntax work?</h3>
+            <div class="answer">
+                <div class="one-liner">Delegates part of a generator's operations to another generator, flattening the structure.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p44">
+            <h3>Q44: `pip` vs `poetry` vs `uv`.</h3>
+            <div class="answer">
+                <ul>
+                    <li><strong>pip:</strong> Basic installer. No built-in lockfiles.</li>
+                    <li><strong>Poetry:</strong> High-level tool for dependency resolution and packaging. Reliable lockfiles.</li>
+                    <li><strong>uv:</strong> An extremely fast pip replacement written in Rust. Currently the performant choice for CI/CD.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p45">
+            <h3>Q45: Explain Python's Integer Caching (-5 to 256).</h3>
+            <div class="answer">
+                <div class="one-liner">Small integers are pre-allocated in memory. `a = 5; b = 5; a is b` is True, but for 257 it is False.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p46">
+            <h3>Q46: What is a "Static Method" vs "Class Method"?</h3>
+            <div class="answer">
+                <div class="one-liner">`@classmethod` receives the class (`cls`) as the first argument; `@staticmethod` receives nothing and is just a namespace organizer.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p47">
+            <h3>Q47: How to handle Byte strings vs Unicode in Python?</h3>
+            <div class="answer">
+                <div class="one-liner">Always `decode()` bytes into strings on input and `encode()` strings into bytes on output (the "Unicode Sandwich").</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p48">
+            <h3>Q48: What is `sys.path`?</h3>
+            <div class="answer">
+                <div class="one-liner">A list of strings that specifies the search path for modules. Empty string at index 0 refers to the current directory.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p49">
+            <h3>Q49: Explain Type Hinting `Protocol` with `runtime_checkable`.</h3>
+            <div class="answer">
+                <div class="one-liner">Allows checking if an object implements a `Protocol` at runtime using `isinstance()`.</div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="p50">
+            <h3>Q50: Why is Pydantic so popular in Gen-AI pipelines?</h3>
+            <div class="answer">
+                <div class="one-liner">It makes "Structured Output" from LLMs predictable. By feeding a Pydantic model's JSON schema to an LLM, we can enforce specific output formats with 99%+ reliability.</div>
+                <div class="depth"><strong>Senior Signal:</strong> Libraries like Instructor or LangChain's OutputParsers wrap Pydantic to handle retries and validation errors automatically when an LLM hallucinates a bad field.</div>
+            </div>
+        
+        <h2 style="margin-top: 40px; border-bottom: 2px solid var(--wp-accent); padding-bottom: 5px;">Pythonic Coding & Logic</h2>
+        
+        <div class="qa-container" id="dsa1">
+            <h3>Q51: Explain List Comprehensions vs `map()`.</h3>
+            <div class="answer">
+                <div class="one-liner">List comprehensions are generally more readable and faster in Python; `map()` is primarily useful when applying an existing function to an iterable.</div>
+                <div class="code-block">
+<span class="comment"># List Comp (Preferred)</span>
+squares = [x**2 <span class="keyword">for</span> x <span class="keyword">in</span> range(<span class="number">10</span>) <span class="keyword">if</span> x % <span class="number">2</span> == <span class="number">0</span>]
+
+<span class="comment"># Map (Verbose)</span>
+squares = list(map(<span class="keyword">lambda</span> x: x**2, filter(<span class="keyword">lambda</span> x: x % <span class="number">2</span> == <span class="number">0</span>, range(<span class="number">10</span>))))
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="dsa2">
+            <h3>Q52: Advanced Dictionary Manipulation — Merging and Filtering.</h3>
+            <div class="answer">
+                <div class="one-liner">In Python 3.9+, use the `|` operator for merging. Use dict comprehensions for filtering.</div>
+                <div class="code-block">
+dict_a = {<span class="string">"a"</span>: <span class="number">1</span>, <span class="string">"b"</span>: <span class="number">2</span>}
+dict_b = {<span class="string">"b"</span>: <span class="number">3</span>, <span class="string">"c"</span>: <span class="number">4</span>}
+
+<span class="comment"># Merge (dict_b wins on conflict)</span>
+merged = dict_a | dict_b
+
+<span class="comment"># Filtering (only values > 2)</span>
+filtered = {k: v <span class="keyword">for</span> k, v <span class="keyword">in</span> merged.items() <span class="keyword">if</span> v > <span class="number">2</span>}
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="dsa3">
+            <h3>Q53: How to flatten a Nested List efficiently?</h3>
+            <div class="answer">
+                <div class="one-liner">Nested list comprehensions or `itertools.chain`.</div>
+                <div class="code-block">
+nested = [[<span class="number">1</span>, <span class="number">2</span>], [<span class="number">3</span>, <span class="number">4</span>], [<span class="number">5</span>]]
+flattened = [item <span class="keyword">for</span> sublist <span class="keyword">in</span> nested <span class="keyword">for</span> item <span class="keyword">in</span> sublist]
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="dsa4">
+            <h3>Q54: Dictionary Sorting — by Key and by Value.</h3>
+            <div class="answer">
+                <div class="one-liner">Use the `sorted()` function with a `lambda` key.</div>
+                <div class="code-block">
+scores = {<span class="string">"Alice"</span>: <span class="number">90</span>, <span class="string">"Bob"</span>: <span class="number">80</span>, <span class="string">"Charlie"</span>: <span class="number">95</span>}
+
+<span class="comment"># Sort by value (Descending)</span>
+sorted_scores = dict(sorted(scores.items(), key=<span class="keyword">lambda</span> item: item[1], reverse=<span class="keyword">True</span>))
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container" id="dsa5">
+            <h3>Q55: Common Trap: Mutable Default Arguments.</h3>
+            <div class="answer">
+                <div class="one-liner">Using a list or dict as a default argument will lead to shared state across function calls.</div>
+                <div class="code-block">
+<span class="keyword">def</span> <span class="function">add_item</span>(item, list_=[]): <span class="comment"># WRONG: list_ is shared</span>
+    list_.append(item)
+    <span class="keyword">return</span> list_
+
+<span class="keyword">def</span> <span class="function">add_item_correct</span>(item, list_=None): <span class="comment"># CORRECT</span>
+    <span class="keyword">if</span> list_ <span class="keyword">is</span> <span class="keyword">None</span>:
+        list_ = []
+    list_.append(item)
+    <span class="keyword">return</span> list_
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="sidebar.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Context Protocol (MCP)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .code-block {
+            background-color: #202122;
+            color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+
+        .diagram-box {
+            background: #fff;
+            border: 1px solid #a2a9b1;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Model Context Protocol (MCP)</h1>
+        <div class="subtitle">The Open Standard for Universal AI Integrations</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="why-mcp">
+            <h2>1. Why MCP? The N*M Integration Problem</h2>
+            <p>Before MCP, every AI Host (Claude, IDEs, Custom Apps) had to write custom integrations for every Data
+                Source (GitHub, Slack, Databases). This created a fragmented ecosystem.</p>
+            <div class="diagram-box">
+                <div class="mermaid">
+                    graph LR
+                    subgraph Traditional
+                    H1[Host A] --> I1[Custom Git]
+                    H1 --> I2[Custom Slack]
+                    H2[Host B] --> I3[Custom Git]
+                    end
+                    subgraph MCP_Standard
+                    HA[Host A] -- MCP --> S1(MCP Server: Git)
+                    HB[Host B] -- MCP --> S1
+                    HC[Host C] -- MCP --> S2(MCP Server: SQL)
+                    end
+                </div>
+            </div>
+            <p><strong>MCP solves this</strong> by providing a universal interface. Write a server once, and any
+                MCP-compliant host can use it.</p>
+        </section>
+
+        <section id="architecture">
+            <h2>2. Core Architecture</h2>
+            <p>MCP consists of three main components:</p>
+            <ul>
+                <li><strong>Host:</strong> The AI application (e.g., Claude Desktop, Cursor, local agent) that initiates
+                    the connection.</li>
+                <li><strong>Client:</strong> The part of the host that maintains the protocol connection to a server.
+                </li>
+                <li><strong>Server:</strong> A lightweight process that exposes data and tools to the host.</li>
+            </ul>
+            <div class="qa-container">
+                <h3>Q: How do Host and Server communicate?</h3>
+                <div class="answer">
+                    <p>They use <strong>JSON-RPC 2.0</strong>. Communication can happen over two main transports:</p>
+                    <ul>
+                        <li><strong>Stdio:</strong> The host spawns the server as a child process (best for local
+                            tools).</li>
+                        <li><strong>HTTP/SSE:</strong> Communication over the network (best for remote services).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="primitives">
+            <h2>3. The Three Primitives: Resources, Prompts, Tools</h2>
+            <table>
+                <tr>
+                    <th>Primitive</th>
+                    <th>Analogy</th>
+                    <th>Definition</th>
+                </tr>
+                <tr>
+                    <td><strong>Resources</strong></td>
+                    <td>Reading a file</td>
+                    <td>Read-only data the model can inspect (Files, DB schemas, API logs).</td>
+                </tr>
+                <tr>
+                    <td><strong>Prompts</strong></td>
+                    <td>Templates</td>
+                    <td>Re-usable instruction sets that guide the model (e.g., "Analyze this code").</td>
+                </tr>
+                <tr>
+                    <td><strong>Tools</strong></td>
+                    <td>Executing code</td>
+                    <td>Functions the model can call to perform actions (Write file, Execute query).</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="implementation">
+            <h2>4. Building an MCP Server</h2>
+            <p>You can build MCP servers using the official TypeScript or Python SDKs.</p>
+            <div class="code-block">
+                <span style="color: #6a9955;">// TypeScript MCP Server Example</span><br>
+                import { Server } from "@modelcontextprotocol/sdk/server/index.js";<br>
+                import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";<br><br>
+                const server = new Server({ name: "my-tool", version: "1.0.0" }, { capabilities: { tools: {} }
+                });<br><br>
+                server.setRequestHandler(ListToolsRequestSchema, async () => ({<br>
+                &nbsp;&nbsp;tools: [{ name: "get_weather", description: "Get weather info", inputSchema: {...} }]<br>
+                }));<br><br>
+                const transport = new StdioServerTransport();<br>
+                await server.connect(transport);
+            </div>
+        </section>
+
+        <section id="interviews">
+            <h2>5. MCP Senior Interview Questions</h2>
+            <div class="qa-container">
+                <h3>Q: How does MCP improve RAG architectures?</h3>
+                <div class="answer">
+                    <p>Instead of manual ETL pipelines where data is pre-chunked into a vector DB, MCP allows
+                        <strong>Just-In-Time retrieval</strong>. The model can browse a live file system or query a live
+                        database via MCP Tools/Resources, ensuring it uses the most current context without syncing
+                        issues.</p>
+                </div>
+            </div>
+            <div class="qa-container">
+                <h3>Q: What are the security implications of MCP?</h3>
+                <div class="answer">
+                    <p>Since MCP servers can execute local commands or access sensitive files,
+                        <strong>sandboxing</strong> is critical. Most hosts allow users to approve specific "MCP Tools"
+                        before execution, and servers should ideally follow the principle of least privilege.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

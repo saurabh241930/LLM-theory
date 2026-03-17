@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backend</title>
+    <title>Backend Core & Concurrency</title>
     <link rel="stylesheet" href="wikipedia.css?v=2">
     <style>
         .qa-container {
@@ -13,203 +14,122 @@
             border-left: 4px solid var(--wp-accent);
             border-radius: 4px;
         }
+
         .qa-container h3 {
             margin-top: 0;
             color: var(--wp-title-text);
         }
+
         .qa-container .answer {
             margin-top: 10px;
         }
-        .one-liner { font-weight: bold; margin-bottom: 10px; }
-        .trap { background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin-top: 10px; }
-        .depth { background-color: #e2e3e5; padding: 10px; border-left: 4px solid #6c757d; margin-top: 10px; }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .trap {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-left: 4px solid #ffc107;
+            margin-top: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
     </style>
 </head>
+
 <body>
     <header>
-        <div class="subtitle">Microservices & Async Processing</div>
+        <h1>Backend Core</h1>
+        <div class="subtitle">Distributed Systems, Concurrency & Performance</div>
     </header>
 
     <div class="content-wrapper">
 
-        <div class="qa-container" id="q63">
-            <h3>Q63: How do you design database indexes for high-performance queries?</h3>
+        <div class="qa-container" id="event-loop">
+            <h3>Q73: Conceptually, how does an Event Loop work?</h3>
             <div class="answer">
-                <div class="one-liner">Index columns used in WHERE, JOIN, and ORDER BY clauses; avoid over-indexing which slows writes.</div>
-                <h4>Core Points</h4>
-                <ul>
-                    <li> B-tree index: default in Postgres/MySQL — excellent for equality and range queries</li>
-                    <li> Composite index: column order matters — put equality columns before range columns for optimal</li>
-                    <li>use</li>
-                    <li> Covering index: includes all columns the query needs — query served entirely from index, no table</li>
-                    <li>lookup</li>
-                </ul>
-                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  Query["SELECT * FROM users WHERE id=123"] --> BTree["B-Tree Root Node"]
-  BTree --> Branch["Branch Node (100-200)"]
-  Branch --> Leaf["Leaf Node (123)"]
-  Leaf -- "Stores Pointer/Row Data" --> Disk[("Disk Block")]
-                </div>
-
-                <div class="depth">
-                    <strong>Depth (Senior Signal):</strong>
-                    <ul>
-                        <li>Partial index: index only a subset of rows — CREATE INDEX ON orders(user_id) WHERE status =</li>
-                        <li>'pending'</li>
-                        <li>Index bloat: UPDATEs and DELETEs leave dead tuples; REINDEX periodically or use pg_repack</li>
-                        <li>online</li>
-                    </ul>
-                </div>
-                <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Indexes speed reads but slow writes — every write must update all indexes. Don't add an index for every column.
+                <div class="one-liner">A single-threaded loop that offloads blocked I/O operations to the system kernel and continues processing other events.</div>
+                <p>When the kernel signals an I/O operation is complete, the loop picks up the callback and resumes processing.</p>
+                <div class="mermaid">
+                    graph TD
+                    A[Start Loop] --> B[Check Timers]
+                    B --> C[Poll I/O]
+                    C --> D[Execute Callbacks]
+                    D --> A
                 </div>
             </div>
         </div>
 
-        <div class="qa-container" id="q64">
-            <h3>Q64: Explain the difference between SQL INNER JOIN, LEFT JOIN, and FULL</h3>
+        <div class="qa-container" id="concurrency-models">
+            <h3>Q74: Multi-threading vs Multi-processing for Backend Scaling.</h3>
             <div class="answer">
-                <div class="one-liner">INNER: only matching rows; LEFT: all left rows + matched right; FULL OUTER: all rows from both sides.</div>
-                <h4>Core Points</h4>
-                <ul>
-                    <li> INNER JOIN: returns rows where join condition is true in both tables — excludes non-matches</li>
-                    <li> LEFT JOIN: returns all rows from left table, NULL for right where no match — use for optional</li>
-                    <li>relationships</li>
-                    <li> FULL OUTER JOIN: returns all rows from both tables, NULL where no match — use for</li>
-                    <li>reconciliation queries</li>
-                </ul>
-                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart LR
-  subgraph INNER JOIN
-    A1((A)) --- B1((B))
-  end
-  subgraph LEFT JOIN
-    A2((A)) --> B2((B))
-  end
-  subgraph FULL OUTER JOIN
-    A3((( A + B ))) 
-  end
-                </div>
-
-                <div class="depth">
-                    <strong>Depth (Senior Signal):</strong>
-                    <ul>
-                        <li>CROSS JOIN: Cartesian product — every row in A joined with every row in B; rarely intentional</li>
-                        <li>Self JOIN: join a table to itself — useful for hierarchical data (employee-manager relationships)</li>
-                    </ul>
-                </div>
-                <div class="trap">
-                    <strong>Trap / Watch Out:</strong> OUTER JOIN LEFT JOIN with a WHERE clause on the right table converts it to an INNER JOIN — move the filter to the ON clause instead
-                </div>
+                <div class="one-liner">Multi-threading for I/O efficiency (shared memory); Multi-processing for parallelism (bypassing GIL/Isolation).</div>
+                <table>
+                    <tr>
+                        <th>Model</th>
+                        <th>Strengths</th>
+                        <th>Resource Cost</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Threading</strong></td>
+                        <td>Low overhead, shared memory state.</td>
+                        <td>Memory per thread is small.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Processing</strong></td>
+                        <td>Parallel computation, crash isolation.</td>
+                        <td>High overhead (IPC required).</td>
+                    </tr>
+                </table>
             </div>
         </div>
 
-        <div class="qa-container" id="q65">
-            <h3>Q65: What is database normalization and when do you denormalize?</h3>
+        <div class="qa-container" id="task-queues">
+            <h3>Q75: When do you use Celery vs BullMQ?</h3>
             <div class="answer">
-                <div class="one-liner">Normalize to eliminate redundancy and ensure data integrity; denormalize for read performance when query complexity becomes a bottleneck.</div>
-                <h4>Core Points</h4>
-                <ul>
-                    <li> 1NF: atomic values, no repeating groups; 2NF: no partial dependencies on composite keys; 3NF: no</li>
-                    <li>transitive dependencies</li>
-                    <li> Denormalization: duplicate data intentionally to avoid expensive JOINs — trade write overhead for</li>
-                    <li>read speed</li>
-                    <li> BFSI apps: normalize for OLTP (transactions); denormalize or use a separate OLAP model for</li>
-                    <li>reporting</li>
-                </ul>
-                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  Normalize["Normalization (1NF -> 3NF)"] --> Reduce["Reduces Data Redundancy"]
-  Reduce --> complex["Creates complex multi-join queries"]
-  Denormalize["Denormalization (adding redundant columns)"] --> ReadPerf["Increases Read Performance"]
-  ReadPerf --> WriteRisk["Risk of data inconsistency on writes"]
-                </div>
-
-                <div class="depth">
-                    <strong>Depth (Senior Signal):</strong>
-                    <ul>
-                        <li>Materialized views: precomputed denormalized query results, refreshed on schedule or on trigger</li>
-                        <li>JSONB column in Postgres: store semi-structured data without full denormalization</li>
-                    </ul>
-                </div>
-                <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Over-normalized schemas with too many joins are slow — 5+ table joins on hot paths warrant targeted denormalization
-                </div>
+                <div class="one-liner">Use Celery for Python-heavy heavy-lift tasks (ML, PDF gen); use BullMQ (Redis-based) for high-performance Node.js async jobs.</div>
+                <p>Key trade-off: Celery is robust but can be slow to configure; BullMQ is extremely fast and utilizes Redis lua scripts for atomicity.</p>
             </div>
         </div>
 
-        <div class="qa-container" id="q66">
-            <h3>Q66: How does PostgreSQL MVCC work?</h3>
+        <div class="qa-container" id="grpc-rest">
+            <h3>Q76: gRPC vs REST vs GraphQL.</h3>
             <div class="answer">
-                <div class="one-liner">MVCC (Multi-Version Concurrency Control) gives each transaction a consistent snapshot without blocking reads with write locks.</div>
-                <h4>Core Points</h4>
+                <div class="one-liner">gRPC for high-performance internal microservices; REST for external APIs; GraphQL for complex frontend data requirements.</div>
                 <ul>
-                    <li> Each row has xmin (created by) and xmax (deleted by) transaction IDs — transactions see rows</li>
-                    <li>where xmin <= their snapshot</li>
-                    <li> Readers never block writers and writers never block readers — high concurrency for mixed</li>
-                    <li>workloads</li>
-                    <li> Dead tuples: old versions of updated rows remain until VACUUM removes them — autovacuum runs</li>
-                    <li>automatically</li>
+                    <li><strong>gRPC:</strong> Uses Protocol Buffers (Binary) and HTTP/2. Lower latency.</li>
+                    <li><strong>REST:</strong> Standard JSON/HTTP. Highest compatibility.</li>
+                    <li><strong>GraphQL:</strong> Single endpoint. Client decides data shape.</li>
                 </ul>
-                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  Update["UPDATE row SET val=2"] --> MVCC["MVCC Mechanism"]
-  MVCC -- "Does not delete old row" --> OldRow["Old Row (xmin: 100) invisible to Tx > 105"]
-  MVCC -- "Creates new copy" --> NewRow["New Row (xmin: 105) visible to Tx > 105"]
-  Vacuum["Autovacuum"] -- "Cleans up dead tuples eventually" --> OldRow
-                </div>
-
-                <div class="depth">
-                    <strong>Depth (Senior Signal):</strong>
-                    <ul>
-                        <li>Transaction isolation levels: Read Committed (default), Repeatable Read, Serializable — each</li>
-                        <li>prevents different anomalies</li>
-                        <li>Serializable Snapshot Isolation (SSI) in Postgres: full serializability without full locking — uses</li>
-                        <li>conflict detection</li>
-                    </ul>
-                </div>
-                <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Long-running transactions block VACUUM from reclaiming dead tuples — table bloat and query slowdown follows; monitor transaction age
-                </div>
             </div>
         </div>
 
-        <div class="qa-container" id="q67">
-            <h3>Q67: How do you handle database migrations in production safely?</h3>
+        <div class="qa-container" id="n-plus-one">
+            <h3>Q77: What is the N+1 Query Problem and how to fix it?</h3>
             <div class="answer">
-                <div class="one-liner">Apply backward-compatible migrations — expand then contract; never drop columns or rename in a single deploy.</div>
-                <h4>Core Points</h4>
-                <ul>
-                    <li> Expand: add new column (nullable, no default) — old code still works</li>
-                    <li> Migrate: backfill data, update code to use new column</li>
-                    <li> Contract: once old code is gone, add NOT NULL constraint or drop old column</li>
-                </ul>
-                <div class="mermaid" style="margin-top: 1em; margin-bottom: 2em;">
-flowchart TD
-  Start["V1: App uses name column"] --> Step1["Add first_name, last_name cols"]
-  Step1 --> Step2["Deploy V2 App: Writes to both old and new."] 
-  Step2 --> Step3["Backfill old data into new columns"]
-  Step3 --> Step4["Deploy V3 App: Reads/Writes ONLY to new columns"]
-  Step4 --> Step5["Drop old name column"]
-                </div>
-
-                <div class="depth">
-                    <strong>Depth (Senior Signal):</strong>
-                    <ul>
-                        <li>Online schema changes: pt-online-schema-change (MySQL) or pg_repack (Postgres) for ALTER</li>
-                        <li>TABLE without locking</li>
-                        <li>Flyway/Liquibase: migration version control — track which migrations have run per environment</li>
-                    </ul>
-                </div>
-                <div class="trap">
-                    <strong>Trap / Watch Out:</strong> Adding NOT NULL column without a DEFAULT in a single migration locks the entire table in Postgres until backfill completes
-                </div>
+                <div class="one-liner">Executing one query to get a list, then N additional queries for related data (e.g., getting users, then a query for each user's orders).</div>
+                <div class="depth"><strong>Fix:</strong> Use Eager Loading (JOINs or <code>SELECT IN (...)</code>) to fetch all related data in 1 or 2 queries instead of N+1.</div>
             </div>
         </div>
 
+        <div class="qa-container" id="connection-pooling">
+            <h3>Q78: Why do we need Connection Pooling?</h3>
+            <div class="answer">
+                <div class="one-liner">Establishing a new DB connection is expensive (TCP handshake + Auth). Pools keep a set of "warm" connections open for reuse.</div>
+                <div class="trap"><strong>Trap:</strong> Exhausting the pool (too many concurrent requests) causes the app to hang while waiting for a connection to free up.</div>
             </div>
-    <script src="animations.js"></script>
+        </div>
+
+    </div>
     <script src="sidebar.js?v=2"></script>
 </body>
+
 </html>

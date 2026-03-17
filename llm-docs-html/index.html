@@ -67,7 +67,7 @@
             <strong>RSA Sales QA Dashboard</strong>.
         </p>
 
-        
+
         <h2 class="category-title"
             style="margin-top: 30px; border-bottom: 2px solid var(--wp-accent); padding-bottom: 5px; color: var(--wp-title-text);">
             TRADITIONAL ML & FOUNDATIONS</h2>
@@ -103,7 +103,7 @@
                 <span class="chapter-desc">Historical roadmap from RNNs and LSTMs to Transformers.</span>
             </li>
         </ul>
-<h2 class="category-title"
+        <h2 class="category-title"
             style="margin-top: 30px; border-bottom: 2px solid var(--wp-accent); padding-bottom: 5px; color: var(--wp-title-text);">
             GEN AI</h2>
         <ul class="chapter-list">
@@ -214,38 +214,82 @@
             </li>
             <li class="chapter-item">
                 <span class="chapter-number">22</span>
+                <a href="inference_optimization.html" class="chapter-link">Inference Optimization</a>
+                <span class="chapter-desc">KV Caching, Speculative Decoding, and Quantization.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">23</span>
                 <a href="react_pattern.html" class="chapter-link">ReAct (Reason + Act) Pattern</a>
                 <span class="chapter-desc">The iterative loop of deep reasoning frameworks.</span>
             </li>
             <li class="chapter-item">
-                <span class="chapter-number">23</span>
+                <span class="chapter-number">24</span>
                 <a href="multi_agent_systems.html" class="chapter-link">Multi-Agent Orchestration</a>
                 <span class="chapter-desc">Coordinating teams of specialist LLMs.</span>
             </li>
             <li class="chapter-item">
-                <span class="chapter-number">24</span>
-                <a href="agent_failure_recovery.html" class="chapter-link">Failure Modes & Self-Correction</a>
-                <span class="chapter-desc">Preventing infinite loops in autonomus tasks.</span>
-            </li>
-            <li class="chapter-item">
                 <span class="chapter-number">25</span>
-                <a href="scaling_rag_millions.html" class="chapter-link">Scaling RAG to Millions of Users</a>
-                <span class="chapter-desc">Architecture for hyperscale production environments.</span>
+                <a href="agent_failure_recovery.html" class="chapter-link">Failure Modes & Self-Correction</a>
+                <span class="chapter-desc">Preventing infinite loops in autonomous tasks.</span>
             </li>
             <li class="chapter-item">
                 <span class="chapter-number">26</span>
+                <a href="scaling_rag_millions.html" class="chapter-link">Scaling RAG to Millions of Users</a>
+                <span class="chapter-desc">Architecture for hyperscale production.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">27</span>
                 <a href="high_efficiency_indexing.html" class="chapter-link">CRAG / Self-RAG</a>
                 <span class="chapter-desc">Corrective RAG, RAPTOR, and Tree Indexing.</span>
             </li>
             <li class="chapter-item">
-                <span class="chapter-number">27</span>
-                <a href="20_interview_questions.html" class="chapter-link">Interview Questions Recap</a>
-                <span class="chapter-desc">A quick recap of Q&A from Phase 1 to Phase 5.</span>
+                <span class="chapter-number">28</span>
+                <a href="evaluation_ragas_langsmith.html" class="chapter-link">Evaluation Hub</a>
+                <span class="chapter-desc">Testing and monitoring LLM applications.</span>
             </li>
             <li class="chapter-item">
-                <span class="chapter-number">28</span>
-                <a href="21_real_world_questions.html" class="chapter-link">Real World Production Questions</a>
-                <span class="chapter-desc">Deep dive architectural decisions.</span>
+                <span class="chapter-number">29</span>
+                <a href="20_interview_questions.html" class="chapter-link">Interview Recap</a>
+                <span class="chapter-desc">Comprehensive Q&A from all phases.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">30</span>
+                <a href="21_real_world_questions.html" class="chapter-link">Real World Production</a>
+                <span class="chapter-desc">Architectural trade-offs and scenarios.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">31</span>
+                <a href="llm_serving.html" class="chapter-link">LLM Serving & Performance</a>
+                <span class="chapter-desc">vLLM, Triton, and high-throughput serving architectures.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">32</span>
+                <a href="mcp_protocol.html" class="chapter-link">Model Context Protocol (MCP)</a>
+                <span class="chapter-desc">The open standard for connecting AI models to data sources and tools.</span>
+            </li>
+        </ul>
+
+        <h2 class="category-title"
+            style="margin-top: 40px; border-bottom: 2px solid var(--wp-accent); padding-bottom: 5px; color: var(--wp-title-text);">
+            JS & TS MASTERY</h2>
+        <ul class="chapter-list">
+            <li class="chapter-item">
+                <span class="chapter-number">J1</span>
+                <a href="js_mastery.html" class="chapter-link">Senior JS/TS Mastery</a>
+                <span class="chapter-desc">50-question deep dive into Closures, Prototypes, Async, and TS
+                    Generics.</span>
+            </li>
+        </ul>
+
+        <h2 class="category-title"
+            style="margin-top: 40px; border-bottom: 2px solid var(--wp-accent); padding-bottom: 5px; color: var(--wp-title-text);">
+            PYTHON MASTERY</h2>
+        <ul class="chapter-list">
+            <li class="chapter-item">
+                <span class="chapter-number">P1</span>
+                <a href="python_mastery.html" class="chapter-link">Senior Python Mastery</a>
+                <span class="chapter-desc">50-question deep dive into AsyncIO, Memory, Meta-programming &
+                    Pydantic.</span>
             </li>
         </ul>
 
@@ -256,12 +300,22 @@
             <li class="chapter-item">
                 <span class="chapter-number">B1</span>
                 <a href="backend_core.html" class="chapter-link">Backend Core</a>
-                <span class="chapter-desc">Microservices & Async Processing.</span>
+                <span class="chapter-desc">Microservices & Concurrency Basics.</span>
             </li>
             <li class="chapter-item">
                 <span class="chapter-number">B2</span>
+                <a href="backend_fastapi.html" class="chapter-link">FastAPI Mastery</a>
+                <span class="chapter-desc">Architecture, Asyncio & Dependency Injection.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">B3</span>
+                <a href="backend_nodejs.html" class="chapter-link">Node.js Mastery</a>
+                <span class="chapter-desc">50-question deep dive into V8, Libuv & Event Loop Internals.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">B4</span>
                 <a href="backend_scaling.html" class="chapter-link">Backend Scaling</a>
-                <span class="chapter-desc">Concurrency & Load Balancing.</span>
+                <span class="chapter-desc">Distributed Systems & Peak Load.</span>
             </li>
         </ul>
 

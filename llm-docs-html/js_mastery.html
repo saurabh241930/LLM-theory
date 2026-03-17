@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS & TS Mastery</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .code-block {
+            background-color: #202122;
+            color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>JS & TS Mastery</h1>
+        <div class="subtitle">Deep Internals, Modern JS & TypeScript Generics</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="js-internals">
+            <h2>1. JavaScript Core & Internals</h2>
+            
+    <div class="qa-container" id="js-q1">
+        <h3>Q1: Explain 'Closures' in JavaScript.</h3>
+        <div class="answer">
+            <p>A closure is the combination of a function bundled together (enclosed) with references to its surrounding state (the lexical environment). This allows a function to access variables from an outer scope even after that outer scope has closed.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q2">
+        <h3>Q2: What is the 'Event Loop' in the browser?</h3>
+        <div class="answer">
+            <p>The event loop is a mechanism that handles asynchronous callbacks. It constantly checks if the call stack is empty; if so, it pushes the first task from the task queue to the stack.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q3">
+        <h3>Q3: Explain Prototype Inheritance.</h3>
+        <div class="answer">
+            <p>Every object in JS has a prototype property. When we try to access a property, if not found on the object, JS looks it up in its prototype, following the 'prototype chain' until it finds it or hits null.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q4">
+        <h3>Q4: Difference between `null` and `undefined`?</h3>
+        <div class="answer">
+            <p>`undefined` means a variable has been declared but not assigned a value. `null` is an assignment value representing 'no value' or 'nothing'.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q5">
+        <h3>Q5: What is 'this' keyword in JS?</h3>
+        <div class="answer">
+            <p>The value of `this` depends on how a function is called. In global scope, it's `window` (or `global`). In an object method, it's the object. In an arrow function, it's lexically inherited.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q6">
+        <h3>Q6: Explain `call`, `apply`, and `bind`.</h3>
+        <div class="answer">
+            <p>`call` and `apply` invoke a function immediately with a specific `this`. `bind` returns a new function with `this` permanently set.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q7">
+        <h3>Q7: What is 'Hoisting'?</h3>
+        <div class="answer">
+            <p>JS moves variable and function declarations to the top of their scope before code execution. Only declarations are hoisted, not initializations.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q8">
+        <h3>Q8: `let` vs `const` vs `var`?</h3>
+        <div class="answer">
+            <p>`var` is function-scoped and hoisted. `let` and `const` are block-scoped and not accessible before declaration (Temporal Dead Zone). `const` cannot be reassigned.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q9">
+        <h3>Q9: What are 'Promises'?</h3>
+        <div class="answer">
+            <p>A Promise represents the eventual completion (or failure) of an asynchronous operation and its resulting value (Pending, Fulfilled, Rejected).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q10">
+        <h3>Q10: `async` vs `await`?</h3>
+        <div class="answer">
+            <p>`async` makes a function return a promise. `await` pauses execution until a promise is settled, making async code look synchronous.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q11">
+        <h3>Q11: What is 'Currying'?</h3>
+        <div class="answer">
+            <p>A technique of transforming a function that takes multiple arguments into a sequence of functions that each take a single argument.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q12">
+        <h3>Q12: Explain 'Debouncing' and 'Throttling'.</h3>
+        <div class="answer">
+            <p>Debouncing delays execution until a certain time has passed since the last call. Throttling limits execution to once every X milliseconds.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q13">
+        <h3>Q13: What is 'Rest' vs 'Spread' operator?</h3>
+        <div class="answer">
+            <p>Rest (`...`) collects multiple elements into an array. Spread (`...`) expands an array/object into individual elements.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q14">
+        <h3>Q14: Shallow vs Deep Copy?</h3>
+        <div class="answer">
+            <p>Shallow copy only copies the first level of references. Deep copy recursively copies all levels (e.g., using `JSON.parse(JSON.stringify(obj))` or `structuredClone`).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q15">
+        <h3>Q15: What are 'WeakMap' and 'WeakSet'?</h3>
+        <div class="answer">
+            <p>They are collections where keys (Map) or values (Set) must be objects and are held 'weakly'—they don't prevent garbage collection if no other references exist.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q16">
+        <h3>Q16: Explain 'Event Delegation'.</h3>
+        <div class="answer">
+            <p>A technique where you attach a single event listener to a parent element to handle events for all its children, using 'bubbling'.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q17">
+        <h3>Q17: What is the 'Execution Context'?</h3>
+        <div class="answer">
+            <p>An environment in which JS code is executed. It contains the variable object, scope chain, and `this` value.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q18">
+        <h3>Q18: Explain 'Map' vs 'Object'.</h3>
+        <div class="answer">
+            <p>Map keys can be any type; Object keys are strings/symbols. Maps maintain insertion order and have better performance for frequent additions/removals.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q19">
+        <h3>Q19: What is 'Strict Mode'?</h3>
+        <div class="answer">
+            <p>`'use strict'` enables a constrained version of JS that catches common coding bloopers and prevents certain 'unsafe' actions (like assigning to undeclared variables).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q20">
+        <h3>Q20: What are 'Symbols' in JS?</h3>
+        <div class="answer">
+            <p>A unique and immutable data type used for object property keys to avoid name collisions.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q21">
+        <h3>Q21: Explain 'Generator Functions'.</h3>
+        <div class="answer">
+            <p>Functions that can be paused and resumed (`function*` with `yield`). They return an iterator.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q22">
+        <h3>Q22: What is 'The Temporal Dead Zone'?</h3>
+        <div class="answer">
+            <p>The period between a variable's block start and its declaration (for `let`/`const`) where accessing it throws a ReferenceError.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q23">
+        <h3>Q23: How does 'Garbage Collection' work in JS?</h3>
+        <div class="answer">
+            <p>Primarily 'Mark and Sweep'. It starts from 'roots' and marks reachable objects; anything unmaked is swept away.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q24">
+        <h3>Q24: What is 'Macrotasks' vs 'Microtasks'?</h3>
+        <div class="answer">
+            <p>Microtasks (Promises, queueMicrotask) run after the current task and before the next Macrotask (setTimeout, I/O).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q25">
+        <h3>Q25: Explain 'Proxy' and 'Reflect'.</h3>
+        <div class="answer">
+            <p>Proxy lets you intercept and redefine operations for an object (like GET/SET). Reflect provides methods for the interceptable JS operations.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q26">
+        <h3>Q26: What are the benefits of TypeScript over JS?</h3>
+        <div class="answer">
+            <p>Static typing, early error detection, IDE support (intellisense), and better documentation through types.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q27">
+        <h3>Q27: Difference between `interface` and `type`?</h3>
+        <div class="answer">
+            <p>Both define shapes. Interfaces support declaration merging and are generally preferred for public APIs. Types support unions, intersections, and aliases.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q28">
+        <h3>Q28: What is 'Any' vs 'Unknown'?</h3>
+        <div class="answer">
+            <p>`any` turns off type checking. `unknown` is safe; you must perform type checking (narrowing) before using the value.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q29">
+        <h3>Q29: Explain 'Generics'.</h3>
+        <div class="answer">
+            <p>Allow creating reusable components that work with a variety of types while maintaining type safety (e.g., `function identity<T>(arg: T): T`).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q30">
+        <h3>Q30: What is 'Type Guarding' / 'Type Narrowing'?</h3>
+        <div class="answer">
+            <p>Using code to refine a broader type into a more specific one (e.g., `typeof`, `instanceof`, or custom `is` functions).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q31">
+        <h3>Q31: Explain 'Partial', 'Pick', and 'Omit' utility types.</h3>
+        <div class="answer">
+            <p>`Partial<T>` makes all keys optional. `Pick<T, K>` creates a type with selected keys K. `Omit<T, K>` removes keys K.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q32">
+        <h3>Q32: What is 'ReadOnly' vs 'const' in TS?</h3>
+        <div class="answer">
+            <p>`const` is for variable reassignment. `ReadOnly<T>` makes properties of an object immutable at the type level.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q33">
+        <h3>Q33: Explain 'Union' and 'Intersection' types.</h3>
+        <div class="answer">
+            <p>Union (`A | B`) means a value can be either A OR B. Intersection (`A & B`) means it has ALL properties of both.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q34">
+        <h3>Q34: What is 'keyof' operator?</h3>
+        <div class="answer">
+            <p>Produces a union of an object's keys (e.g., `keyof {id: 1, name: 'a'}` is `'id' | 'name'`).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q35">
+        <h3>Q35: Explain 'Mapped Types'.</h3>
+        <div class="answer">
+            <p>Creating new types by iterating over keys of an existing type (e.g., `{ [K in keyof T]: boolean }`).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q36">
+        <h3>Q36: What is 'Conditional Types'?</h3>
+        <div class="answer">
+            <p>Types that depend on a condition (`T extends U ? X : Y`).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q37">
+        <h3>Q37: Explain 'as const' (const assertions).</h3>
+        <div class="answer">
+            <p>Marks a value as immutable and its type as literal (not inferred broadly).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q38">
+        <h3>Q38: What are 'Decorators'?</h3>
+        <div class="answer">
+            <p>A special kind of declaration used to modify classes, methods, or properties at design time (experimental feature).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q39">
+        <h3>Q39: Difference between 'Abstract Class' and 'Interface'?</h3>
+        <div class="answer">
+            <p>Abstract classes can contain implementation; interfaces cannot. Classes can implement multiple interfaces but only extend one abstract class.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q40">
+        <h3>Q40: What is 'Record<K, T>'?</h3>
+        <div class="answer">
+            <p>A utility type for creating a map-like type where keys are K and values are T.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q41">
+        <h3>Q41: Explain 'NonNullable<T>'.</h3>
+        <div class="answer">
+            <p>Removes `null` and `undefined` from a union type.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q42">
+        <h3>Q42: What is 'Tuple' in TS?</h3>
+        <div class="answer">
+            <p>An array with a fixed number of elements where each element has a specific type (e.g., `[string, number]`).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q43">
+        <h3>Q43: Explain 'Lookup Types' (Indexed Access Types).</h3>
+        <div class="answer">
+            <p>Accessing a property type of another type using `T[K]` (e.g., `User['id']`).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q44">
+        <h3>Q44: What is 'Template Literal Types'?</h3>
+        <div class="answer">
+            <p>Types that use template string syntax to create new string union types.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q45">
+        <h3>Q45: Difference between `enum` and `const enum`?</h3>
+        <div class="answer">
+            <p>`enum` exists at runtime. `const enum` is inlined at compile time, saving bundle size.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q46">
+        <h3>Q46: What is 'Type Assertions' (`as` keyword)?</h3>
+        <div class="answer">
+            <p>Telling the compiler 'Trust me, I know the type better than you do'. It doesn't perform runtime casting.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q47">
+        <h3>Q47: Explain 'Infer' keyword.</h3>
+        <div class="answer">
+            <p>Used within conditional types to infer a type variable (e.g., `T extends (...args: any[]) => infer R ? R : any`).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q48">
+        <h3>Q48: What is 'Ambient Modules' (`declare`)?</h3>
+        <div class="answer">
+            <p>Used to describe the shape of libraries not written in TS, usually in `.d.ts` files.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q49">
+        <h3>Q49: Explain 'Module Resolution' strategies.</h3>
+        <div class="answer">
+            <p>How TS finds files for imports: 'Node' (following node_modules) or 'Classic' (legacy).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="js-q50">
+        <h3>Q50: Why use 'Utility Types'?</h3>
+        <div class="answer">
+            <p>To transform existing types into new variations without duplication, keeping the codebase DRY and maintainable.</p>
+        </div>
+    </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

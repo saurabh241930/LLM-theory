@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Inference Optimization</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .optimization-card {
+            background: #fdfdfe;
+            border: 1px solid var(--wp-border);
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 5px solid #3366cc;
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            border: 1px solid #a2a9b1;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .matrix-table th {
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>LLM Inference & GPU Optimization</h1>
+        <div class="subtitle">Scaling models for production: Latency, Throughput, and Cost</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="kv-cache">
+            <h2>1. KV Caching: The Performance Lifeline</h2>
+            <p>During LLM generation, the model predicts one token at a time. Without <strong>KV (Key-Value)
+                    Caching</strong>, the model would re-calculate the Attention keys and values for all previous tokens
+                in every step ($O(n^2)$ complexity).</p>
+            <div class="optimization-card">
+                <strong>Mechanism:</strong> We store the computed K and V vectors in GPU memory. For the next token, we
+                only calculate K/V for the <em>new</em> token and concatenate it with the cache. This brings complexity
+                down to $O(n)$.
+                <br><br>
+                <strong>The Cost:</strong> High VRAM usage. A Llama-3 70B model with a large context can consume
+                gigabytes of VRAM just for the KV cache.
+            </div>
+        </section>
+
+        <section id="speculative-decoding">
+            <h2>2. Speculative Decoding</h2>
+            <p>How do we speed up a massive model? Use a tiny "Draft" model to guess the next 5-10 tokens, and then use
+                the "Large" model to verify them in a single forward pass.</p>
+            <div class="mermaid">
+                graph TD
+                A[Tiny Model] -->|Speculates| B[Token 1, 2, 3]
+                B --> C[Large Model]
+                C -->|Single Pass| D{Validate}
+                D -- Correct --> E[Accept all 3]
+                D -- Wrong --> F[Reject & regenerate from error]
+            </div>
+            <p><strong>Benefit:</strong> 2x-3x speedup without any loss in accuracy.</p>
+        </section>
+
+        <section id="quantization">
+            <h2>3. Quantization: Fitting Giants on Small GPUs</h2>
+            <p>Reducing the precision of model weights (e.g., from 16-bit to 4-bit) to save memory and increase speed.
+            </p>
+            <table class="matrix-table">
+                <tr>
+                    <th>Method</th>
+                    <th>Mechanism</th>
+                    <th>Best for</th>
+                </tr>
+                <tr>
+                    <td><strong>GPTQ</strong></td>
+                    <td>Post-training quantization using second-order info.</td>
+                    <td>Static batching, generic usage.</td>
+                </tr>
+                <tr>
+                    <td><strong>AWQ</strong></td>
+                    <td>Activation-aware Weight Quantization. Preserves "important" weights.</td>
+                    <td>Better accuracy at 4-bit than GPTQ.</td>
+                </tr>
+                <tr>
+                    <td><strong>GGUF</strong></td>
+                    <td>CPU/GPU hybrid format (llama.cpp).</td>
+                    <td>Local/Consumer hardware.</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="parallelism">
+            <h2>4. Model Parallelism</h2>
+            <p>When a model is too big for one GPU (e.g. 175B params), we split it.</p>
+            <ul>
+                <li><strong>Pipeline Parallelism:</strong> Splitting by layers. GPU 1 handles layers 1-10, GPU 2 handles
+                    11-20. (Higher latency due to sequential flow).</li>
+                <li><strong>Tensor Parallelism:</strong> Splitting the actual weight matrices. Each GPU calculates a
+                    part of the matrix multiplication simultaneously. (Requires high-speed NVLink).</li>
+            </ul>
+        </section>
+
+        <section id="flash-attention">
+            <h2>5. Flash Attention</h2>
+            <p>Standard attention is memory-bottlenecked (waiting for data from VRAM). <strong>Flash Attention</strong>
+                is an IO-aware algorithm that calculates attention in "tiles" within the GPU's fast SRAM, drastically
+                reducing memory lookups.</p>
+        </section>
+    </div>
+
+    <script src="sidebar.js"></script>
+</body>
+
+</html>

@@ -65,26 +65,46 @@
         </section>
 
         <section id="optimizers">
-            <h2>3. Modern Optimizers</h2>
-            <p>While basic Gradient Descent works, modern high-scale models use more sophisticated algorithms:</p>
+            <h2>3. Modern Optimizers: Beyond SGD</h2>
+            <p>While basic Gradient Descent works, modern high-scale models use more sophisticated algorithms that adapt
+                the learning rate dynamically.</p>
+
+            <div class="comparison-card">
+                <h3>Adam: The Gold Standard</h3>
+                <p>Adam (Adaptive Moment Estimation) effectively combines two ideas: <strong>Momentum</strong> (v) and
+                    <strong>RMSProp</strong> (s).</p>
+                <div class="math-block">
+                    m_t = β₁ m_{t-1} + (1 - β₁) g_t <br>
+                    v_t = β₂ v_{t-1} + (1 - β₂) g_t² <br>
+                    ŵ = w - η * (m_t / (√v_t + ε))
+                </div>
+                <ul>
+                    <li><strong>m_t (1st Moment):</strong> Estimates the mean of the gradients (Momentum). Helps dampen
+                        oscillations.</li>
+                    <li><strong>v_t (2nd Moment):</strong> Estimates the uncentered variance (RMSProp). Scales learning
+                        rate for each parameter individually.</li>
+                </ul>
+            </div>
+
             <table>
                 <thead>
                     <tr>
                         <th>Optimizer</th>
                         <th>Core Idea</th>
-                        <th>Use Case</th>
+                        <th>Senior Insight</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><strong>SGD</strong></td>
-                        <td>Update weights for 1 sample at a time.</td>
-                        <td>Large datasets, noisy but fast.</td>
+                        <td><strong>SGD + Momentum</strong></td>
+                        <td>Adds a fraction of the previous update to the current one.</td>
+                        <td>Prevents getting stuck in local minima or plateaus.</td>
                     </tr>
                     <tr>
-                        <td><strong>Adam</strong></td>
-                        <td>"Adaptive Moment Estimation." Combines momentum with learning rate adjustment.</td>
-                        <td><span style="color:var(--wp-accent)">Most Deep Learning / LLMs.</span></td>
+                        <td><strong>AdamW</strong></td>
+                        <td>Adam with decoupled weight decay.</td>
+                        <td>Standard for Transformer training (GPT, BERT) as it generalizes better than standard Adam.
+                        </td>
                     </tr>
                 </tbody>
             </table>

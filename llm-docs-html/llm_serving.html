@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Serving & Performance Optimization</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .metric-card {
+            background: #fdfdfd;
+            border: 1px solid #c8ccd1;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .metric-title {
+            font-weight: bold;
+            color: var(--wp-accent);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .perf-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>LLM Serving & Performance</h1>
+        <div class="subtitle">vLLM, Triton, PagedAttention, and Hyperscale Metrics</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="serving-stacks">
+            <h2>1. Modern LLM Serving Stacks</h2>
+            <p>Serving LLMs in production is fundamentally different from standard web serving due to GPU memory
+                constraints and varying completion lengths.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Stack</th>
+                        <th>Core Innovation</th>
+                        <th>Best For</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>vLLM</strong></td>
+                        <td>PagedAttention (Operating System style memory management)</td>
+                        <td>Highest throughput demand.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>NVIDIA Triton</strong></td>
+                        <td>Model Analyzer & Multi-framework support</td>
+                        <td>Enterprise pipelines needing multi-model serving.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TGI (HuggingFace)</strong></td>
+                        <td>Optimized for Transformers library integration</td>
+                        <td>Fast prototyping to production.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="metrics">
+            <h2>2. Key Performance Metrics (SLAs)</h2>
+            <div class="perf-grid">
+                <div class="metric-card">
+                    <span class="metric-title">TTFT (Time to First Token)</span>
+                    <p>The latency from request to seeing the first word. Crucial for perceived user experience.</p>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-title">ITL (Inter-Token Latency)</span>
+                    <p>The time between subsequent tokens. High ITL leads to "choppy" reading experiences.</p>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-title">Tokens Per Second (TPS)</span>
+                    <p>The overall speed. p99 TPS is a key reliability metric.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="optimizations">
+            <h2>3. Serving Optimizations</h2>
+            <div class="comparison-card">
+                <h3>Continuous Batching</h3>
+                <p>Unlike static batching, continuous batching allows the server to insert new requests as soon as an
+                    existing request finishes a token, rather than waiting for the whole batch to complete.</p>
+                <div class="mermaid">
+                    graph LR
+                    A[Req 1: End] --> B[Insert Req 3]
+                    C[Req 2: Middle] --> D[Keep Processing]
+                </div>
+            </div>
+
+            <div class="comparison-card">
+                <h3>Speculative Decoding</h3>
+                <p>Use a smaller "draft" model to predict the next few tokens, then have the large "target" model verify
+                    them in a single forward pass. Can result in 2x-3x speedup.</p>
+            </div>
+        </section>
+
+        <section id="serving-interview">
+            <h2>4. Interview: Scaling to 1M QPS</h2>
+            <div class="qa-container">
+                <h3>Q: How do you serve 1 million queries per second for an LLM?</h3>
+                <div class="answer">
+                    <p>This is a trick question. 1M QPS for LLMs would require thousands of H100 GPU clusters. The
+                        answer lies in:</p>
+                    <ul>
+                        <li><strong>Aggressive Semantic Caching:</strong> Using Redis/Vector DB to cache common
+                            math/logic queries.</li>
+                        <li><strong>Router Orchestration:</strong> Routing simple tasks to 8B models and complex ones to
+                            70B+ models.</li>
+                        <li><strong>Multi-Region Clusters:</strong> Distributing GPU load across data centers to bypass
+                            local GPU quotas.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js"></script>
+</body>
+
+</html>

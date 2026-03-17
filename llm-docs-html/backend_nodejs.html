@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node.js Mastery</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Node.js Mastery</h1>
+        <div class="subtitle">V8 Engine, Libuv & The Real Event Loop</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="architecture">
+            <h2>1. Architecture: V8 & Libuv</h2>
+            <p>Node.js is a runtime that pairs Google's <strong>V8 Engine</strong> (the JS parser) with
+                <strong>Libuv</strong> (the C library that handles the event loop and thread pool).</p>
+            <div class="mermaid">
+                graph LR
+                JS[JavaScript Code] --> V8[V8 Engine]
+                V8 --> NodeAPI[Node.js Bindings]
+                NodeAPI --> Libuv[Libuv Event Loop]
+                Libuv --> OS[Operating System Kernal]
+            </div>
+        </section>
+
+        <section id="event-loop-phases">
+            <h2>2. The 6 Phases of the Node.js Event Loop</h2>
+            <div class="qa-container">
+                <h3>Q: Can you name the primary phases of the Libuv loop?</h3>
+                <div class="answer">
+                    <ol>
+                        <li><strong>Timers:</strong> Executes callbacks from <code>setTimeout</code> and
+                            <code>setInterval</code>.</li>
+                        <li><strong>Pending Callbacks:</strong> Executes I/O callbacks deferred to the next iteration.
+                        </li>
+                        <li><strong>Idle, Prepare:</strong> Internal use only.</li>
+                        <li><strong>Poll:</strong> Retrieves new I/O events; executes I/O-related callbacks.</li>
+                        <li><strong>Check:</strong> Executes <code>setImmediate()</code> callbacks.</li>
+                        <li><strong>Close Callbacks:</strong> Executes closing handles like
+                            <code>socket.on('close', ...)</code>.</li>
+                    </ol>
+                    <div class="depth"><strong>Senior Signal:</strong> <code>process.nextTick()</code> is NOT part of
+                        the event loop. It's part of the **Microtask Queue**, which is processed immediately after the
+                        current operation finishes, before the next phase starts.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="worker-threads">
+            <h2>3. Worker Threads vs Clustering</h2>
+            <div class="qa-container">
+                <h3>Q: When do you use Worker Threads vs. the Cluster Module?</h3>
+                <div class="answer">
+                    <div class="one-liner">Use Clusters to scale to multiple CPU cores (horizontal scaling on one
+                        machine); use Worker Threads for heavy CPU-bound tasks in a single process (vertical scaling).
+                    </div>
+                    <p>Clusters create separate processes with their own memory; Worker Threads share memory using
+                        <code>ArrayBuffer</code>.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="streams">
+            <h2>4. Node.js Streams & Backpressure</h2>
+            <div class="qa-container">
+                <h3>Q: What is Backpressure in Node.js streams?</h3>
+                <div class="answer">
+                    <div class="one-liner">When a data source (Readable) sends data faster than the destination
+                        (Writable) can process it.</div>
+                    <p>Fix: Streams signal the source to pause until the buffer is drained. Always use
+                        <code>pipeline()</code> instead of <code>.pipe()</code> for better error handling.</p>
+                </div>
+            </div>
+        </section><section id="fifty-questions">\n    <h2>5. The Senior Node.js 50-Question Mastery</h2>\n
+    <div class="qa-container" id="node-q1">
+        <h3>Q1: What is the primary difference between `process.nextTick()` and `setImmediate()`?</h3>
+        <div class="answer">
+            <p>nextTick fires immediately after the current operation and before the event loop continues. setImmediate fires in the 'check' phase of the next loop iteration. nextTick can starve I/O if called recursively.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q2">
+        <h3>Q2: How does Node.js handle heavy CPU tasks without blocking the main thread?</h3>
+        <div class="answer">
+            <p>By using Worker Threads (worker_threads module) for true parallelism or the Cluster module for process-level scaling. For simple async tasks, Libuv's thread pool is used.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q3">
+        <h3>Q3: Explain 'Backpressure' in Node.js Streams.</h3>
+        <div class="answer">
+            <p>Backpressure occurs when the data source (Readable) is faster than the destination (Writable). The writable stream returns `false` on `.write()`, signaling the readable stream to pause until 'drain' is emitted.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q4">
+        <h3>Q4: What are 'Async Hooks' in Node.js?</h3>
+        <div class="answer">
+            <p>The `async_hooks` module provides an API to track the lifetime of asynchronous resources (like promises or timers). Useful for distributed tracing and context propagation.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q5">
+        <h3>Q5: Difference between `module.exports` and `exports`?</h3>
+        <div class="answer">
+            <p>`module.exports` is the actual object returned by `require()`. `exports` is just a reference to `module.exports`. If you reassign `exports`, you break the reference.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q6">
+        <h3>Q6: How would you debug a Memory Leak in Node.js?</h3>
+        <div class="answer">
+            <p>Use `node --inspect`, take heap snapshots via Chrome DevTools, and look for 'Detached DOM nodes' equivalent in Node (objects that should be GC'd but are held by global roots or closures).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q7">
+        <h3>Q7: Describe the purpose of the 'Libuv' Thread Pool size.</h3>
+        <div class="answer">
+            <p>By default, Libuv has 4 threads for handling FS, DNS, and Crypto tasks. Increasing `UV_THREADPOOL_SIZE` can improve performance for high-volume disk/crypto operations.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q8">
+        <h3>Q8: What is 'Zombie Process' and how to prevent it in Cluster module?</h3>
+        <div class="answer">
+            <p>A zombie process occurs when a child process terminates but remains in the process table because the parent hasn't 'waited' for it. Node's `cluster` module handles this automatically, but manually spawned processes need `.on('exit')` cleanup.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q9">
+        <h3>Q9: How do you secure a Node.js API against ReDoS (Regular Expression Denial of Service)?</h3>
+        <div class="answer">
+            <p>Avoid 'evil regex' with catastrophic backtracking (nested quantifiers like `(a+)+$`). Use `safe-regex` check or timeout-based regex execution.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q10">
+        <h3>Q10: Explain the 'Stream.pipeline()' vs 'Stream.pipe()'.</h3>
+        <div class="answer">
+            <p>`pipeline()` properly handles errors by forwarding them to a callback and cleaning up all streams in the chain. `.pipe()` doesn't necessarily close all streams on error.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q11">
+        <h3>Q11: What is the role of `Buffer.allocUnsafe()`?</h3>
+        <div class="answer">
+            <p>It allocates memory without zero-filling it. It is faster but can contain sensitive data from previous allocations. Use only when you are sure to overwrite the entire buffer.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q12">
+        <h3>Q12: How does the `cluster` module share the port?</h3>
+        <div class="answer">
+            <p>The primary process listens on the port and hands off handles to worker processes using Round-Robin (except on Windows).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q13">
+        <h3>Q13: What is 'Hardening' a Node.js production app?</h3>
+        <div class="answer">
+            <p>Using Helmet for headers, setting `NODE_ENV=production`, disabling `X-Powered-By`, limiting payload size, and using a non-root user in Docker.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q14">
+        <h3>Q14: Explain 'CJS' (CommonJS) vs 'ESM' (ES Modules) in Node.</h3>
+        <div class="answer">
+            <p>CJS is synchronous and uses `require()`. ESM is asynchronous, supports top-level await, and use `import`. ESM is the future-proof standard.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q15">
+        <h3>Q15: How to handle Uncaught Exceptions and Unhandled Rejections?</h3>
+        <div class="answer">
+            <p>Listen to `process.on('uncaughtException')` and `unhandledRejection`. Always log the error and perform a graceful shutdown (`process.exit(1)`) as the app state is now unreliable.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q16">
+        <h3>Q16: How do you achieve 100% test coverage for async code?</h3>
+        <div class="answer">
+            <p>Use `null` injection for mocks, simulate network timeouts, and ensure every `catch` block is triggered in unit tests via forced errors.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q17">
+        <h3>Q17: What is 'Tracing' vs 'Logging' in a distributed Node ecosystem?</h3>
+        <div class="answer">
+            <p>Logging records discrete events. Tracing (OpenTelemetry) tracks a single request across multiple services using a TraceID/SpanID.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q18">
+        <h3>Q18: How does `crypto.pbkdf2` work?</h3>
+        <div class="answer">
+            <p>It's a key derivation function with a salt and many iterations to prevent brute-force attacks on passwords. It runs on the Libuv thread pool.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q19">
+        <h3>Q19: Explain the 'Reactor Pattern' in Node.js.</h3>
+        <div class="answer">
+            <p>It's the design pattern where a service handler demultiplexes incoming requests and dispatches them synchronously to associated request handlers.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q20">
+        <h3>Q20: What is 'Garbage Collection Strategy' in V8?</h3>
+        <div class="answer">
+            <p>V8 uses a generational GC (Scavenger for young generation, Mark-Sweep-Compact for old generation). It uses a 'Stop-the-world' approach but optimizes for short pauses.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q21">
+        <h3>Q21: How to implement Rate Limiting without Redis?</h3>
+        <div class="answer">
+            <p>Use memory-stores like `lru-cache` or `express-rate-limit` built-in memory store. Risk: it resets on restart and doesn't share state between cluster workers.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q22">
+        <h3>Q22: Difference between `spawn()`, `exec()`, and `fork()`?</h3>
+        <div class="answer">
+            <p>`spawn` streams data (best for large data). `exec` buffers output (best for small commands). `fork` creates a new Node process with an IPC channel.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q23">
+        <h3>Q23: How do you measure 'Event Loop Lag'?</h3>
+        <div class="answer">
+            <p>By measuring the delay between a `setTimeout(..., 0)` callback and the current time. High lag indicates a CPU-bottlenecked main thread.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q24">
+        <h3>Q24: What is the 'Buffer' size limit?</h3>
+        <div class="answer">
+            <p>In 64-bit Node, it's roughly 2GB-4GB depending on the version. Large buffers can lead to 'Array buffer allocation failed' errors.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q25">
+        <h3>Q25: Explain 'Hot Path' optimization.</h3>
+        <div class="answer">
+            <p>Identifying functions that run most frequently and optimizing them (e.g., avoiding unnecessary object allocations or using bitwise ops where appropriate).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q26">
+        <h3>Q26: How to handle 'Circular Dependencies' in CJS?</h3>
+        <div class="answer">
+            <p>CJS allows it by returning an incomplete `exports` object. It can lead to 'undefined' if you access properties too early. Best to refactor.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q27">
+        <h3>Q27: What is `AbortController` in modern Node?</h3>
+        <div class="answer">
+            <p>A standard way to cancel asynchronous tasks like `fetch` or file reads. It emits an 'abort' event.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q28">
+        <h3>Q28: Importance of `package-lock.json`?</h3>
+        <div class="answer">
+            <p>Ensures deterministic builds. It locks the exact version of every nested dependency so that 'npm install' yields the same 'node_modules' on all machines.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q29">
+        <h3>Q29: How to protect against 'NoSQL Injection' in MongoDB/Node?</h3>
+        <div class="answer">
+            <p>Sanitize inputs. Never pass raw user objects to queries like `db.collection.find(req.body)`. Use Mongoose schemas.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q30">
+        <h3>Q30: Explain 'Graceful Shutdown'.</h3>
+        <div class="answer">
+            <p>Closing server to new connections, finishing pending requests, closing DB pools, and finally `process.exit(0)` after a timeout.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q31">
+        <h3>Q31: What is the 'REPL' in Node?</h3>
+        <div class="answer">
+            <p>Read-Eval-Print Loop. An interactive shell for testing JS code snippets directly in the terminal.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q32">
+        <h3>Q32: Role of 'N-API' / 'Node-API'?</h3>
+        <div class="answer">
+            <p>A stable C API for writing native add-ons that is independent of the V8 version, preventing breakage on Node upgrades.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q33">
+        <h3>Q33: How to optimize 'JSON.parse' for huge payloads?</h3>
+        <div class="answer">
+            <p>Use `JSONStream` or `oboe.js` to parse objects incrementally rather than loading the entire string into memory.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q34">
+        <h3>Q34: What is 'Dead Letter Queue' in Node task processing?</h3>
+        <div class="answer">
+            <p>A queue for messages that failed processing multiple times. Prevents 'poison pills' from blocking the main queue.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q35">
+        <h3>Q35: Explain 'Dependency Injection' in Node.js.</h3>
+        <div class="answer">
+            <p>Passing dependencies (DB, services) into constructors or functions instead of requiring them globally. Eases testing and modularity.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q36">
+        <h3>Q36: How to share memory between Workers?</h3>
+        <div class="answer">
+            <p>Use `SharedArrayBuffer` and `Atomics` for thread-safe operations on shared memory.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q37">
+        <h3>Q37: What is 'SemVer'?</h3>
+        <div class="answer">
+            <p>Semantic Versioning: MAJOR.MINOR.PATCH. ^1.2.3 allows minor/patch updates; ~1.2.3 allows only patch updates.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q38">
+        <h3>Q38: How to prevent 'Callback Hell'?</h3>
+        <div class="answer">
+            <p>Use Promises, then chain them; or use `async/await`. Use `util.promisify` to convert older callback-based APIs.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q39">
+        <h3>Q39: What is the 'Global Object' in Node?</h3>
+        <div class="answer">
+            <p>`global`. It's the equivalent of `window` in the browser. Avoid polluting it.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q40">
+        <h3>Q40: How to profile a Node.js app performance?</h3>
+        <div class="answer">
+            <p>Use `node --prof`, `clinic.js`, or `0x` (flamegraphs) to find CPU bottlenecks.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q41">
+        <h3>Q41: Difference between `fs.readFile` and `fs.createReadStream`?</h3>
+        <div class="answer">
+            <p>`readFile` loads the whole file into RAM. `createReadStream` reads in chunks (low memory footprint).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q42">
+        <h3>Q42: What is 'Event Orientation' vs 'Object Orientation' in Node?</h3>
+        <div class="answer">
+            <p>Node is heavily 'Even-Oriented' using EventEmitter. OO is used for structure, but communication is often via events.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q43">
+        <h3>Q43: How to use `pnpm` vs `npm`?</h3>
+        <div class="answer">
+            <p>`pnpm` uses hard links and symlinks to save disk space and is generally faster due to its content-addressable storage.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q44">
+        <h3>Q44: What is 'Serverless Node.js' cold start?</h3>
+        <div class="answer">
+            <p>The delay when a function is invoked for the first time in a while. Reduced by minimizing package size and dependencies.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q45">
+        <h3>Q45: How to handle 'Large Integer' precision in JS (Node)?</h3>
+        <div class="answer">
+            <p>Use `BigInt` (e.g., `100n`). Numbers in JS are 64-bit floats and lose precision above ~9 quadrillion.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q46">
+        <h3>Q46: Role of `.npmrc`?</h3>
+        <div class="answer">
+            <p>Configuration file for npm. Used for setting registry URLs, auth tokens for private packages, and installation defaults.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q47">
+        <h3>Q47: What is 'Middle-ware' pattern?</h3>
+        <div class="answer">
+            <p>A series of functions that process a request/response object sequentially. Used in Express/Koa for auth, logging, etc.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q48">
+        <h3>Q48: How to implement 'Circuit Breaker' in Node?</h3>
+        <div class="answer">
+            <p>Use libraries like `opossum`. It stops making calls to a failing downstream service to allow it to recover.</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q49">
+        <h3>Q49: What is 'SSR' (Server Side Rendering) with Node?</h3>
+        <div class="answer">
+            <p>Rendering the initial HTML on the server (using React/Vue) before sending it to the client for faster FCP (First Contentful Paint).</p>
+        </div>
+    </div>
+    <div class="qa-container" id="node-q50">
+        <h3>Q50: Why is 'Node.js' popular for Microservices?</h3>
+        <div class="answer">
+            <p>Lightweight, fast startup, easy to dockerize, and built-in support for async I/O and streaming.</p>
+        </div>
+    </div>\n</section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>
