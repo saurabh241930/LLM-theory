@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Learning Origins: Neural Networks</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .neuron-viz {
+            border: 1px solid var(--wp-border);
+            padding: 15px;
+            background: #fff;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Origins of Deep Learning</h1>
+        <div class="subtitle">From the Perceptron to the Multi-Layer Perceptron (MLP)</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="perceptron">
+            <h2>1. The Perceptron (1950s)</h2>
+            <p>The atom of deep learning. It mimics a biological neuron: multiple inputs are weighted, summed, and
+                passed through an activation function.</p>
+
+            <div class="mermaid">
+                graph LR
+                X1[Input x1] -- w1 --> S((Σ))
+                X2[Input x2] -- w2 --> S
+                B[Bias b] --> S
+                S --> F[Activation Function]
+                F --> Y[Output y]
+            </div>
+            <p><strong>Limitation:</strong> Single perceptrons can only solve "Linearly Separable" problems (They fail
+                at XOR logic!).</p>
+        </section>
+
+        <section id="mlp">
+            <h2>2. Multi-Layer Perceptron (The "Deep" in DL)</h2>
+            <p>By stacking layers of perceptrons, we create a <strong>Neural Network</strong>. The layers between input
+                and output are called "Hidden Layers." This allows models to learn <strong>Non-linear</strong>
+                relationships.</p>
+
+            <div class="mermaid">
+                graph LR
+                I[Input Layer] --> H1[Hidden Layer 1]
+                H1 --> H2[Hidden Layer 2]
+                H2 --> O[Output Layer]
+            </div>
+        </section>
+
+        <section id="activations">
+            <h2>3. Activation Functions: Adding Non-Linearity</h2>
+            <p>Without activation functions, a 100-layer neural network is mathematically the same as a 1-layer model.
+                They allow the network to "bent" the space.</p>
+            <ul>
+                <li><strong>ReLU (Rectified Linear Unit):</strong> f(x) = max(0, x). <span
+                        style="color:var(--wp-accent)">Most common in LLMs.</span></li>
+                <li><strong>Sigmoid / Tanh:</strong> Older functions with "vanishing gradient" problems at scale.</li>
+            </ul>
+        </section>
+
+        <section id="backprop">
+            <h2>4. Backpropagation & Universal Approximation</h2>
+            <p>The <strong>Universal Approximation Theorem</strong> states that a neural network with even a single
+                hidden layer can approximate <em>any</em> continuous function. <strong>Backpropagation</strong> is the
+                algorithm that propagates the error backward through the network to update the weights.</p>
+        </section>
+    </div>
+
+    <script src="sidebar.js"></script>
+</body>
+
+</html>

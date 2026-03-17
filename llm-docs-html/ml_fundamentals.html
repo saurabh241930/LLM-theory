@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Fundamentals: Regression & Classification</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .comparison-card {
+            background: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .math-block {
+            background: #f1f3f5;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'serif';
+            text-align: center;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>ML Fundamentals: Foundations of Prediction</h1>
+        <div class="subtitle">Linear Regression, Logistic Regression, and the Bias-Variance Tradeoff</div>
+    </header>
+
+    <aside class="infobox">
+        <div class="infobox-title">Core Concepts</div>
+        <div class="infobox-data">
+            <div class="infobox-row">
+                <div class="infobox-label">Type</div>
+                <div class="infobox-value">Supervised Learning</div>
+            </div>
+            <div class="infobox-row">
+                <div class="infobox-label">Goal</div>
+                <div class="infobox-value">Pattern Recognition</div>
+            </div>
+            <div class="infobox-row">
+                <div class="infobox-label">Output</div>
+                <div class="infobox-value">Continuous / Discrete</div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="content-wrapper">
+        <section id="supervised-learning">
+            <h2>1. Supervised Learning: The Starting Point</h2>
+            <p>Before jumping into LLMs, we must understand the core of prediction: <strong>Supervised
+                    Learning</strong>. This is where a model learns a mapping from inputs (X) to outputs (y) based on
+                labeled examples.</p>
+
+            <div class="mermaid">
+                graph LR
+                A[Input X] --> B{ML Model}
+                B --> C[Prediction ŷ]
+                C --- D[Ground Truth y]
+                D -.->|Loss Calculation| B
+            </div>
+        </section>
+
+        <section id="linear-regression">
+            <h2>2. Linear Regression (Predicting Numbers)</h2>
+            <p>Linear regression is the simplest algorithm, often used for predicting continuous values (e.g., house
+                prices, sales revenue).</p>
+            <div class="math-block">
+                ŷ = β₀ + β₁x₁ + β₂x₂ + ... + ε
+            </div>
+            <p>In our <strong>RSA Sales QA</strong> case study, linear regression could be used to predict the
+                <strong>length of a call</strong> based on the complexity of the inquiry.</p>
+        </section>
+
+        <section id="logistic-regression">
+            <h2>3. Logistic Regression (Predicting Classes)</h2>
+            <p>Despite the name, this is a <strong>Classification</strong> algorithm. It predicts the probability that
+                an input belongs to a certain category (0 or 1).</p>
+            <div class="comparison-card">
+                <strong>The Sigmoid Function:</strong> Maps any real value into a range between 0 and 1.
+                <div class="math-block">
+                    σ(z) = 1 / (1 + e⁻ᶻ)
+                </div>
+            </div>
+            <p><strong>Use Case:</strong> Predicting if a sale will be "Successful" or "Unsuccessful" based on
+                historical customer interaction data.</p>
+        </section>
+
+        <section id="bias-variance">
+            <h2>4. The Bias-Variance Tradeoff</h2>
+            <p>This is the most critical concept in all of Machine Learning. It explains why models fail to generalize.
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Concept</th>
+                        <th>Problem</th>
+                        <th>State</th>
+                        <th>Solution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>High Bias</strong></td>
+                        <td>Underfitting</td>
+                        <td>Too simple, misses patterns</td>
+                        <td>Add complexity / features</td>
+                    </tr>
+                    <tr>
+                        <td><strong>High Variance</strong></td>
+                        <td>Overfitting</td>
+                        <td>Too complex, learns noise</td>
+                        <td>Regularization / Simplify</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="mermaid">
+                graph TD
+                A[Model Error] --> B[Bias Error]
+                A --> C[Variance Error]
+                A --> D[Irreducible Noise]
+                style A fill:#f9f,stroke:#333
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js"></script>
+</body>
+
+</html>

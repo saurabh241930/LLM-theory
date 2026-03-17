@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimization: How Models Learn</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .gradient-box {
+            background: linear-gradient(135deg, #eef2ff 0%, #f8f9fa 100%);
+            border-left: 4px solid #3366cc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .concept-pill {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Optimization: The Engine of Learning</h1>
+        <div class="subtitle">Loss Functions, Gradient Descent, and Convergence</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="loss-functions">
+            <h2>1. Loss Functions: Measuring Error</h2>
+            <p>Every ML model needs a way to measure how wrong its predictions are. The goal of optimization is to
+                minimize this "Loss."</p>
+            <ul>
+                <li><strong>MSE (Mean Squared Error):</strong> Standard for Regression.</li>
+                <li><strong>Cross-Entropy Loss:</strong> Standard for Classification and LLMs.</li>
+            </ul>
+        </section>
+
+        <section id="gradient-descent">
+            <h2>2. Gradient Descent: Walking Downhill</h2>
+            <p>Imagine being on top of a foggy mountain (High Loss) and wanting to find the valley (Minimal Loss). You
+                take steps in the direction of the steepest descent.</p>
+
+            <div class="mermaid">
+                graph TD
+                A[Start at Random Weights] --> B[Calculate Gradient/Slope]
+                B --> C[Update Weights: w = w - η * ∇]
+                C --> D{Is Loss Minimal?}
+                D -->|No| B
+                D -->|Yes| E[Model Converged!]
+            </div>
+
+            <div class="gradient-box">
+                <h4>Learning Rate (η): The Step Size</h4>
+                <p>If η is <strong>too high</strong>, you overstep the valley and diverge. If η is <strong>too
+                        low</strong>, the model takes forever to learn.</p>
+            </div>
+        </section>
+
+        <section id="optimizers">
+            <h2>3. Modern Optimizers</h2>
+            <p>While basic Gradient Descent works, modern high-scale models use more sophisticated algorithms:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Optimizer</th>
+                        <th>Core Idea</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>SGD</strong></td>
+                        <td>Update weights for 1 sample at a time.</td>
+                        <td>Large datasets, noisy but fast.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Adam</strong></td>
+                        <td>"Adaptive Moment Estimation." Combines momentum with learning rate adjustment.</td>
+                        <td><span style="color:var(--wp-accent)">Most Deep Learning / LLMs.</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <script src="sidebar.js"></script>
+</body>
+
+</html>

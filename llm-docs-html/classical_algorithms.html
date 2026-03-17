@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classical Algorithms: From Trees to XGBoost</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .algo-box {
+            border: 1px solid var(--wp-border);
+            padding: 15px;
+            margin: 15px 0;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .highlight {
+            color: var(--wp-accent);
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Classical Algorithms: Decision Trees to XGBoost</h1>
+        <div class="subtitle">Ensemble Learning, Random Forests, and Boosting Powerhouses</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="decision-trees">
+            <h2>1. Decision Trees</h2>
+            <p>The foundation of tree-based learning. It works by recursively splitting data based on feature thresholds
+                that maximize <strong>Information Gain</strong> or minimize <strong>Gini Impurity</strong>.</p>
+            <div class="mermaid">
+                graph TD
+                A[Is Call Duration > 5 min?] -->|Yes| B[Is Manager Present?]
+                A -->|No| C[Is Issue Resolved?]
+                B -->|Yes| D[High Probability Sale]
+                B -->|No| E[Medium Probability]
+            </div>
+        </section>
+
+        <section id="ensemble-learning">
+            <h2>2. Ensemble Learning: Wisdom of the Crowd</h2>
+            <p>Instead of relying on one "Smart" tree, we combine many "Weak" models to create a "Strong" one. This
+                leads to two main strategies:</p>
+
+            <div class="algo-box">
+                <h3>Bagging (Bootstrap Aggregating)</h3>
+                <p>Builds multiple independent trees in parallel and averages their results. <span
+                        class="highlight">Example: Random Forest.</span></p>
+                <p><strong>Benefit:</strong> Reduces Variance (Overfitting).</p>
+            </div>
+
+            <div class="algo-box">
+                <h3>Boosting</h3>
+                <p>Builds trees sequentially. Each new tree focuses on correcting the errors of the previous ones. <span
+                        class="highlight">Example: XGBoost, LightGBM, CatBoost.</span></p>
+                <p><strong>Benefit:</strong> Reduces Bias and Variance (High Accuracy).</p>
+            </div>
+        </section>
+
+        <section id="xgboost">
+            <h2>3. XGBoost: The Kaggle King</h2>
+            <p><strong>eXtreme Gradient Boosting</strong> is the most popular algorithm for tabular data. It includes
+                built-in regularization, handles missing values, and is highly optimized for performance.</p>
+
+            <div class="comparison-card" style="background: #eef2ff; border-left-color: #3366cc; padding: 15px;">
+                <h4>Why iterate on XGBoost?</h4>
+                <ul>
+                    <li><strong>Parallel Processing:</strong> Unlike standard GBM, it builds trees in parallel across
+                        CPU cores.</li>
+                    <li><strong>Tree Pruning:</strong> Uses a "depth-first" approach for more efficient growth.</li>
+                    <li><strong>Regularization:</strong> L1 (Lasso) and L2 (Ridge) penalties prevent overfitting.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="svm">
+            <h2>4. Support Vector Machines (SVM)</h2>
+            <p>Finds the "Maximum Margin Hyperplane" that separates two classes. It uses the <strong>Kernel
+                    Trick</strong> to map data into higher dimensions where they become linearly separable.</p>
+        </section>
+    </div>
+
+    <script src="sidebar.js"></script>
+</body>
+
+</html>

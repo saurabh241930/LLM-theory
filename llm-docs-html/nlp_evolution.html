@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Evolution of NLP: To GPT & Beyond</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .timeline-item {
+            border-left: 2px solid var(--wp-accent);
+            padding-left: 20px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: var(--wp-accent);
+            border-radius: 50%;
+            position: absolute;
+            left: -7px;
+            top: 5px;
+        }
+
+        .year {
+            font-weight: bold;
+            color: var(--wp-accent);
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>The Evolution of NLP: The Path to Transformers</h1>
+        <div class="subtitle">How machines went from understanding words to understanding context</div>
+    </header>
+
+    <div class="content-wrapper">
+        <div class="timeline-item">
+            <div class="year">1980s-2010s: RNNs (Recurrent Neural Networks)</div>
+            <p>Designed for sequences. They process words one by one, passing a "hidden state" (memory) forward.</p>
+            <p><strong>Failure:</strong> They suffer from <strong>Vanishing Gradients</strong>. By the time they reach
+                the 20th word, they've forgotten the 1st word.</p>
+        </div>
+
+        <div class="timeline-item">
+            <div class="year">1997: LSTMs (Long Short-Term Memory)</div>
+            <p>Introduced a "Cell State" and gates (forget gate, input gate) to selectively keep important information
+                for much longer.</p>
+            <p><strong>Failure:</strong> Sequential processing—they cannot be parallelized, making them too slow for
+                massive datasets.</p>
+        </div>
+
+        <div class="timeline-item">
+            <div class="year">2014: Seq2Seq & Encoder-Decoders</div>
+            <p>The architecture that powered Google Translate. An <strong>Encoder</strong> reads the input sentence into
+                a "Context Vector," and a <strong>Decoder</strong> generates the translation.</p>
+            <p><strong>Failure:</strong> The "Bottleneck Problem"—compressing a 100-word sentence into one vector loses
+                detail.</p>
+        </div>
+
+        <div class="timeline-item">
+            <div class="year">2017: The Transformer ("Attention Is All You Need")</div>
+            <p>The breakthrough. It removed recurrence entirely and replaced it with <strong>Self-Attention</strong>.
+            </p>
+            <div class="mermaid">
+                graph LR
+                A[Input Sequence] --> B[Positional Encoding]
+                B --> C[Multi-Head Attention]
+                C --> D[Feed Forward Network]
+                D --> E[Output Layers]
+            </div>
+            <p><strong>Result:</strong> Massively parallelizable and captures <strong>Global Context</strong> instantly.
+                This enabled GPT (Generative Pre-trained Transformer).</p>
+        </div>
+
+        <div class="timeline-item">
+            <div class="year">2018-Present: The Era of Pre-trained LLMs</div>
+            <p>The birth of <strong>BERT</strong> (Encoder-only) and <strong>GPT-1/2/3/4</strong> (Decoder-only),
+                leading to the current Generative AI revolution.</p>
+        </div>
+    </div>
+
+    <script src="sidebar.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feature Engineering: Junk in, Junk out</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+</head>
+
+<body>
+    <header>
+        <h1>Feature Engineering & Data Preprocessing</h1>
+        <div class="subtitle">Turning Raw Data into Predictive Signals</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="importance">
+            <h2>1. Why Engineering Matters</h2>
+            <p>Algorithms are only as good as the data they receive. In traditional ML, 80% of the work is often
+                preprocessing.</p>
+        </section>
+
+        <section id="techniques">
+            <h2>2. Essential Techniques</h2>
+
+            <h3>Data Cleaning</h3>
+            <ul>
+                <li><strong>Imputation:</strong> Filling missing values (Mean, Median, or specialized models).</li>
+                <li><strong>Outlier Removal:</strong> Getting rid of erroneous data points that skew the mean.</li>
+            </ul>
+
+            <h3>Categorical Encoding</h3>
+            <p>Models only understand numbers. We must convert text categories into numerical form.</p>
+            <ul>
+                <li><strong>One-Hot Encoding:</strong> Creating binary columns for each category (City_NY, City_LA).
+                </li>
+                <li><strong>Label Encoding:</strong> Assigning a unique integer (NY=0, LA=1).</li>
+            </ul>
+
+            <h3>Numerical Scaling</h3>
+            <p>If one feature is "Age" (0-100) and another is "Income" (0-1,000,000), the model will think Income is
+                10,000x more important just because the number is larger.</p>
+            <ul>
+                <li><strong>Standardization (Z-score):</strong> (x - μ) / σ</li>
+                <li><strong>Normalization (Min-Max):</strong> Rescaling to 0-1 range.</li>
+            </ul>
+        </section>
+
+        <section id="pca">
+            <h2>3. Dimensionality Reduction (PCA)</h2>
+            <p><strong>Principal Component Analysis</strong> reduces the number of features while preserving as much
+                variance as possible. This is the 1D, 2D, and 3D plotting predecessor to modern high-dimensional
+                <strong>Embeddings</strong>.</p>
+        </section>
+    </div>
+
+    <script src="sidebar.js"></script>
+</body>
+
+</html>

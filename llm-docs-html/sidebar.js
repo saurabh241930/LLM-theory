@@ -1,6 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
     const menu = [
         {
+            category: 'TRADITIONAL ML',
+            links: [
+                { id: 'ml_fundamentals.html', title: '1. ML Foundations' },
+                { id: 'classical_algorithms.html', title: '2. Classical Algorithms' },
+                { id: 'optimization_math.html', title: '3. Optimization Math' },
+                { id: 'feature_engineering.html', title: '4. Feature Engineering' },
+                { id: 'deep_learning_origins.html', title: '5. Deep Learning Origins' },
+                { id: 'nlp_evolution.html', title: '6. Evolution of GPT' }
+            ]
+        },
+        {
             category: 'GEN AI',
             links: [
                 { id: 'index.html', title: 'Contents Hub' },
