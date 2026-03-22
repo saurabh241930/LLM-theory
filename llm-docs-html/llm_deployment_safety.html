@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A/B Testing & Deployment Safety</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .timeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50px;
+            right: 50px;
+            height: 4px;
+            background: #ddd;
+            z-index: 0;
+        }
+
+        .stage {
+            background: #202122;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 30px;
+            position: relative;
+            z-index: 1;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .stage span {
+            display: block;
+            font-size: 0.8em;
+            font-weight: normal;
+            color: #1dd1a1;
+            margin-top: 5px;
+        }
+
+        .table-deploy {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .table-deploy th,
+        .table-deploy td {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .table-deploy th {
+            background: #eef2ff;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>A/B Testing & Deployment Safety</h1>
+        <div class="subtitle">Shadow deployments, Canary releases, and protecting the user from silent failures</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The "Vibe Check" Problem</h2>
+            <p>When you update your system prompt, change your embedding model, or switch from GPT-4 to Claude 3.5, you
+                cannot simply compile the code and ship it. Because LLMs are non-deterministic, a tiny prompt tweak
+                might fix one bug but silently completely break 50 other conversational paths. Relying on "Vibe Checks"
+                (manually asking it 5 questions to see if it feels right) is unacceptable in production.</p>
+        </section>
+
+        <section>
+            <h2>The Golden Dataset (Regression Testing)</h2>
+            <p>Every serious AI company maintains a <strong>Golden Dataset</strong>: 500-1000 carefully curated User
+                Queries mapped to their absolutely perfect, human-verified Ideal Answers.</p>
+            <p>Before launching a new system prompt (System B), you run System B against all 1,000 Golden Queries
+                offline. You then use an <em>LLM-as-a-Judge</em> to instantly grade System B's answers against the Ideal
+                Answers. If System B scores 85% and System A (currently live) scores 92%, you halt the deployment
+                immediately.</p>
+        </section>
+
+        <section>
+            <h2>The Safe Deployment Pipeline</h2>
+
+            <div class="timeline">
+                <div class="stage">1. Offline Eval<br><span>Golden Dataset</span></div>
+                <div class="stage" style="background: #3498db;">2. Shadow Deploy<br><span>Silent Execution</span></div>
+                <div class="stage" style="background: #feca57;">3. Canary Release<br><span>5% Live Traffic</span></div>
+                <div class="stage" style="background: #1dd1a1;">4. Full Rollout<br><span>100% Traffic</span></div>
+            </div>
+
+            <table class="table-deploy">
+                <tr>
+                    <th>Deployment Strategy</th>
+                    <th>How It Works</th>
+                    <th>Why It's Critical for AI</th>
+                </tr>
+                <tr>
+                    <td><strong>Shadow Deployment</strong></td>
+                    <td>Both System A and System B are running live. The user sends a request. Only System A responds to
+                        the user. System B also processes the total request in the background, but deletes its answer.
+                    </td>
+                    <td>Allows you to capture 10,000 real-world, highly unpredictable user queries and compare System
+                        B's hallucination rate against System A, without <em>ever</em> risking exposing System B's
+                        output to a real customer.</td>
+                </tr>
+                <tr>
+                    <td><strong>Canary Release</strong></td>
+                    <td>System B is deployed live, but only to 5% of your users. System A handles the other 95%.</td>
+                    <td>Allows you to measure real-world <em>Online Evals</em> (Do users click "Thumbs Up" more on
+                        System B? Do they churn less?). If System B goes rogue, the blast radius is contained.</td>
+                </tr>
+                <tr>
+                    <td><strong>A/B Testing (Evals)</strong></td>
+                    <td>Traffic is split 50/50. You measure explicit business metrics (conversion rates, resolution
+                        times) rather than just accuracy.</td>
+                    <td>Proves whether switching to an expensive model actually impacts the Company ROI enough to
+                        justify the API cost increase.</td>
+                </tr>
+            </table>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

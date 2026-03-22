@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Expansion (In-Depth) - RAG</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .method-card {
+            background: #fff;
+            border-top: 5px solid #ccc;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+
+        .vs-card {
+            background: #eef2ff;
+            border-left: 5px solid #3366cc;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Query Expansion (In-Depth)</h1>
+        <div class="subtitle">PRF, Synonyms, and LLM-Expansion vs HyDE</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>Beyond the Raw Prompt</h2>
+            <p>Users are notoriously bad at writing search queries. They submit shorthand ("aws s3 error 403") when the
+                vector database contains beautiful documentation ("Amazon Simple Storage Service Access Denied
+                Exception"). <strong>Query Expansion</strong> fixes the user's laziness before hitting the database.</p>
+
+            <div class="grid-3">
+                <div class="method-card" style="border-top-color: #feca57;">
+                    <h3>1. Keyword / Synonym Expansion</h3>
+                    <p><strong>How it works:</strong> Uses a static dictionary or simple NLP model (like Word2Vec) to
+                        append related terms.</p>
+                    <p><em>"car insurance"</em> → <em>"car auto vehicle insurance coverage"</em></p>
+                    <p><strong>Pros:</strong> Lightning fast, zero LLM cost.<br><strong>Cons:</strong> Lacks context.
+                        Might expand "apple" to "fruit" when the user meant "iPhone".</p>
+                </div>
+
+                <div class="method-card" style="border-top-color: #3366cc;">
+                    <h3>2. Pseudo-Relevance Feedback (PRF)</h3>
+                    <p><strong>How it works:</strong> The gold standard of traditional search (BM25). You run the raw
+                        query, take the top 3 results, extract the most common/important keywords from those documents,
+                        append them to the query, and search again.</p>
+                    <p><strong>Pros:</strong> Grounded entirely in your actual dataset.<br><strong>Cons:</strong>
+                        Requires two full search passes, doubling latency.</p>
+                </div>
+
+                <div class="method-card" style="border-top-color: #1dd1a1;">
+                    <h3>3. LLM-Based Expansion</h3>
+                    <p><strong>How it works:</strong> You prompt a fast LLM (like GPT-3.5 or Haiku) to explicitly
+                        brainstorm variations before searching.</p>
+                    <p><em>"Write 3 different ways a user might ask about [original query]."</em></p>
+                    <p><strong>Pros:</strong> Unbeatable semantic understanding. Captures edge cases
+                        perfectly.<br><strong>Cons:</strong> Adds ~500ms of LLM generation delay to every search.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Expansion vs HyDE / Step-Back</h2>
+            <p>It is critical to distinguish LLM <em>Expansion</em> from other advanced rewriting techniques:</p>
+
+            <div class="vs-card">
+                <h3>Query Expansion</h3>
+                <p>The LLM generates <strong>more questions</strong> or keywords. (e.g., <em>"How do I reset my
+                        router?", "WiFi restarting steps", "Router reboot guide"</em>). You vector search all three and
+                    fuse the results. Used to cover vocabulary mismatch.</p>
+            </div>
+
+            <div class="vs-card" style="border-left-color: #e55039; background: #fff0f0;">
+                <h3>HyDE (Hypothetical Document Embeddings)</h3>
+                <p>The LLM generates a <strong>fake answer</strong> to the question, and you embed the <em>answer</em>,
+                    not the question. (e.g., <em>"To reset your router, unplug it for 30 seconds..."</em>). Used when
+                    the question looks completely different in vector space than the target document.</p>
+            </div>
+
+            <div class="vs-card" style="border-left-color: #9b59b6; background: #f9f0ff;">
+                <h3>Step-Back Prompting</h3>
+                <p>The LLM generates a <strong>broader, more general question</strong>. (e.g., <em>"Why did the 1998
+                        NASA Mars orbiter crash?"</em> → <em>"What are the standard units of measurement for NASA
+                        orbital missions?"</em>). Used when specific details trap the search algorithm, requiring
+                    physical principles to solve.</p>
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

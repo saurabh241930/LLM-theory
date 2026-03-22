@@ -111,14 +111,56 @@
         </section>
 
         <section id="flash-attention">
-            <h2>5. Flash Attention</h2>
-            <p>Standard attention is memory-bottlenecked (waiting for data from VRAM). <strong>Flash Attention</strong>
-                is an IO-aware algorithm that calculates attention in "tiles" within the GPU's fast SRAM, drastically
-                reducing memory lookups.</p>
+            <h2>5. Flash Attention: The IO-Aware Breakthrough</h2>
+            <p>Standard attention is memory-bottlenecked, meaning the GPU spends more time waiting for data from VRAM
+                than actually calculating. <strong>Flash Attention</strong> (Dao et al.) optimized this by rethinking
+                the algorithm for GPU architecture.</p>
+
+            <div class="optimization-card">
+                <h3>Mechanism: Tiling & Recomputation</h3>
+                <ul>
+                    <li><strong>Tiling:</strong> It breaks the large Q, K, and V matrices into small "tiles" that fit
+                        inside the GPU's <strong>SRAM</strong> (which is 10x faster than VRAM).</li>
+                    <li><strong>Recomputation:</strong> Instead of storing the massive $O(N^2)$ attention matrix in
+                        VRAM, Flash Attention recalculates parts of it during the backward pass. This trade-off (more
+                        math, less memory) is actually faster because memory IO is the real bottleneck.</li>
+                </ul>
+                <p><strong>Result:</strong> Drastically reduces memory footprint and allows for massive 100k+ context
+                    windows.</p>
+            </div>
+        </section>
+
+        <section id="moe">
+            <h2>6. Mixture of Experts (MoE): Sparse Activation</h2>
+            <p>Why use a 1.8 trillion parameter model (like GPT-4) for every single query? <strong>MoE</strong> only
+                activates a small fraction of the model for each token.</p>
+
+            <div class="optimization-card">
+                <h3>Architecture: The Router</h3>
+                <p>Instead of one large Feed-Forward Network (FFN), we have multiple "Experts" (smaller FFNs).</p>
+                <div class="mermaid">
+                    graph TD
+                    A[Input Token] --> B{Gating/Router}
+                    B -->|Expert 1| C[FFN 1]
+                    B -->|Expert 2| D[FFN 2]
+                    B -->|Expert 3| E[FFN 3]
+                    C --> F[Weighted Sum]
+                    D --> F
+                    E --> F
+                    F --> G[Output]
+                </div>
+                <ul>
+                    <li><strong>Total Params:</strong> High (e.g., 8 experts x 7B each = 56B).</li>
+                    <li><strong>Active Params:</strong> Low (e.g., only 2 experts used = 12.9B).</li>
+                </ul>
+                <p><strong>Trade-off:</strong> You get the <strong>performance</strong> of a huge model with the
+                    <strong>inference cost</strong> of a smaller one. However, it requires massive VRAM to keep all
+                    experts loaded.</p>
+            </div>
         </section>
     </div>
 
-    <script src="sidebar.js"></script>
+    <script src="sidebar.js?v=2"></script>
 </body>
 
 </html>

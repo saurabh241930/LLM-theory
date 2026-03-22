@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3B1B Self vs Cross Attention</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .attn-panel {
+            background: #111;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+            color: #ecf0f1;
+            position: relative;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .toggle-btn {
+            background: #34495e;
+            color: white;
+            border: 2px solid #7f8c8d;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: 0.3s;
+        }
+
+        .toggle-btn.active {
+            background: #3498db;
+            border-color: #3498db;
+            box-shadow: 0 0 15px #3498db;
+            transform: scale(1.05);
+        }
+
+        .diagram-area {
+            position: relative;
+            height: 450px;
+            background: #202122;
+            border: 2px solid #444;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding-top: 20px;
+        }
+
+        .seq-box {
+            background: #2c3e50;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2em;
+            border: 2px solid #576574;
+            z-index: 10;
+        }
+
+        .qkv-node {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            z-index: 5;
+            color: white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .q-node {
+            background: #3498db;
+        }
+
+        .k-node {
+            background: #e74c3c;
+        }
+
+        .v-node {
+            background: #2ecc71;
+        }
+
+        /* Math operation nodes */
+        .op-node {
+            position: absolute;
+            width: 80px;
+            height: 40px;
+            background: #8e44ad;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            z-index: 4;
+            transition: all 0.5s;
+            opacity: 0;
+        }
+
+        .math-blurb {
+            text-align: left;
+            padding: 20px;
+            background: #1a1a1a;
+            border-left: 4px solid #3498db;
+            margin-top: 30px;
+            line-height: 1.6;
+            font-size: 1.1em;
+        }
+
+        /* Flow Lines (using canvas via JS) */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Self vs Cross Attention</h1>
+        <div class="subtitle">Where do the Queries, Keys, and Values actually come from?</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of Source</h2>
+            <p>Every Attention mechanism universally computes <code>Softmax(Q &middot; K) &middot; V</code>. The
+                mathematical equation is completely identical in all architectures. The <strong>only</strong> difference
+                between Self-Attention and Cross-Attention is physical plumbing: where the data originates before it
+                enters the matrices.</p>
+        </section>
+
+        <section class="attn-panel">
+            <div class="controls">
+                <button class="toggle-btn active" id="selfBtn" onclick="setMode('self')">Self-Attention</button>
+                <button class="toggle-btn" id="crossBtn" onclick="setMode('cross')">Cross-Attention</button>
+            </div>
+
+            <div class="diagram-area" id="diagramArea">
+                <canvas id="flowCanvas"></canvas>
+
+                <!-- Inputs -->
+                <div class="seq-box" id="seqA"
+                    style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%);">
+                    Input: "The cat sat"
+                </div>
+
+                <div class="seq-box" id="seqB"
+                    style="position: absolute; top: 20px; left: 75%; transform: translateX(-50%); opacity: 0;">
+                    Target: "Le chat"
+                </div>
+
+                <!-- QKV Nodes -->
+                <div class="qkv-node q-node" id="nodeQ">Q</div>
+                <div class="qkv-node k-node" id="nodeK">K</div>
+                <div class="qkv-node v-node" id="nodeV">V</div>
+
+                <!-- Ops -->
+                <div class="op-node" id="opDot">Dot (Q&middot;K)</div>
+                <div class="op-node" id="opOut" style="background: #e67e22; width: 120px;">Output Feature</div>
+            </div>
+
+            <div class="math-blurb" id="blurbText">
+                <p><strong>Self-Attention:</strong> In a standard Transformer layer (like GPT), a sequence only talks to
+                    itself. A single embedding vector ("The cat sat") mathematically forks into 3 separate identical
+                    copies. Then, linear weights project them into Q, K, and V. The words query against themselves, find
+                    keys within themselves, and extract values from themselves.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('flowCanvas');
+        const ctx = canvas.getContext('2d');
+        let currentMode = 'self';
+
+        let animProgress = 0;
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function setMode(mode) {
+            currentMode = mode;
+            animProgress = 0;
+
+            document.getElementById('selfBtn').classList.remove('active');
+            document.getElementById('crossBtn').classList.remove('active');
+
+            const seqA = document.getElementById('seqA');
+            const seqB = document.getElementById('seqB');
+            const nodeQ = document.getElementById('nodeQ');
+            const nodeK = document.getElementById('nodeK');
+            const nodeV = document.getElementById('nodeV');
+            const opDot = document.getElementById('opDot');
+            const opOut = document.getElementById('opOut');
+
+            if (mode === 'self') {
+                document.getElementById('selfBtn').classList.add('active');
+
+                seqA.style.left = "50%";
+                seqA.innerText = 'Input Sequence (e.g., "The cat")';
+                seqB.style.opacity = "0";
+
+                // Position QKV under SeqA
+                nodeQ.style.top = "150px"; nodeQ.style.left = "25%";
+                nodeK.style.top = "150px"; nodeK.style.left = "50%";
+                nodeV.style.top = "150px"; nodeV.style.left = "75%";
+
+                // Ops
+                opDot.style.opacity = "1";
+                opDot.style.top = "250px"; opDot.style.left = "35%";
+
+                opOut.style.opacity = "1";
+                opOut.style.top = "350px"; opOut.style.left = "55%";
+
+                document.getElementById('blurbText').innerHTML = `
+                    <p><strong>Self-Attention:</strong> A single sequence ("The cat") talks to itself. The exact same input tensor enters the layer, and mathematically forks into 3 pipes. It is projected into Q, K, and V. The words query themselves, match their own keys, and extract their own values.</p>`;
+            }
+            else {
+                document.getElementById('crossBtn').classList.add('active');
+
+                seqA.style.left = "25%";
+                seqA.innerText = 'Encoder Output (French)';
+
+                seqB.style.opacity = "1";
+                seqB.style.left = "75%";
+                seqB.innerText = 'Decoder Input (English)';
+
+                // Q comes from Decoder (SeqB). K, V come from Encoder (SeqA).
+                nodeQ.style.top = "150px"; nodeQ.style.left = "75%"; // Decoder side
+                nodeK.style.top = "150px"; nodeK.style.left = "15%"; // Encoder side
+                nodeV.style.top = "150px"; nodeV.style.left = "35%"; // Encoder side
+
+                // Ops
+                opDot.style.opacity = "1";
+                opDot.style.top = "250px"; opDot.style.left = "45%";
+
+                opOut.style.opacity = "1";
+                opOut.style.top = "350px"; opOut.style.left = "40%";
+
+                document.getElementById('blurbText').innerHTML = `
+                    <p><strong>Cross-Attention:</strong> This is the bridge between the Encoder and Decoder. The <strong>Decoder</strong> generates the Query (Q) — "What French word do I translate next?". But it queries the <strong>Encoder's</strong> Keys (K), and extracts the <strong>Encoder's</strong> Values (V).</p>
+                    <p>The math is identical, but the physical input plumbing allows one neural network (Decoder) to directly "ask questions" to the data structures of a completely separate neural network (Encoder).</p>`;
+            }
+        }
+
+        function drawAnimatedLine(x1, y1, x2, y2, color) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.setLineDash([10, 10]);
+            ctx.lineDashOffset = -animProgress * 2;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Get center coordinates of nodes
+            const getC = (id) => {
+                const el = document.getElementById(id);
+                if (el.style.opacity === '0') return null;
+                return {
+                    x: el.offsetLeft + el.offsetWidth / 2,
+                    y: el.offsetTop + el.offsetHeight / 2
+                };
+            };
+
+            const sA = getC('seqA'); const sB = getC('seqB');
+            const nQ = getC('nodeQ'); const nK = getC('nodeK'); const nV = getC('nodeV');
+            const oD = getC('opDot'); const oO = getC('opOut');
+
+            if (currentMode === 'self') {
+                // Seq A -> Q, K, V
+                drawAnimatedLine(sA.x, sA.y, nQ.x, nQ.y - 30, '#fff');
+                drawAnimatedLine(sA.x, sA.y, nK.x, nK.y - 30, '#fff');
+                drawAnimatedLine(sA.x, sA.y, nV.x, nV.y - 30, '#fff');
+            } else {
+                // Seq A -> K, V
+                drawAnimatedLine(sA.x, sA.y, nK.x, nK.y - 30, '#fff');
+                drawAnimatedLine(sA.x, sA.y, nV.x, nV.y - 30, '#fff');
+                // Seq B -> Q
+                drawAnimatedLine(sB.x, sB.y, nQ.x, nQ.y - 30, '#fff');
+            }
+
+            // Q & K -> Dot
+            drawAnimatedLine(nQ.x, nQ.y + 30, oD.x, oD.y - 20, '#3498db');
+            drawAnimatedLine(nK.x, nK.y + 30, oD.x, oD.y - 20, '#e74c3c');
+
+            // Dot & V -> Output
+            drawAnimatedLine(oD.x, oD.y + 20, oO.x, oO.y - 20, '#8e44ad');
+            drawAnimatedLine(nV.x, nV.y + 30, oO.x, oO.y - 20, '#2ecc71');
+
+            animProgress += 1;
+            requestAnimationFrame(render);
+        }
+
+        // Init
+        setTimeout(() => {
+            setMode('self');
+            render();
+        }, 100);
+
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

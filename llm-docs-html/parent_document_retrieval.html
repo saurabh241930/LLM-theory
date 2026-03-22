@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Document Retrieval - RAG</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .split-box {
+            display: flex;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin: 30px 0;
+            border-top: 5px solid #1dd1a1;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .small-chunks {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .chunk {
+            background: #dceefc;
+            border: 2px solid #3498db;
+            padding: 10px;
+            text-align: center;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .chunk.active {
+            background: #e55039;
+            color: white;
+            border-color: #e55039;
+        }
+
+        .parent-doc {
+            background: #fff3cd;
+            border: 2px dashed #feca57;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            width: 250px;
+            font-weight: bold;
+        }
+
+        .arrow {
+            font-size: 2rem;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .concept-card {
+            background: #eef2ff;
+            border-left: 5px solid #3366cc;
+            padding: 20px;
+            border-radius: 0 4px 4px 0;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Parent Document Retrieval</h1>
+        <div class="subtitle">Small-to-Big Retrieval: Optimizing both Search and Generation</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Chunking Paradox</h2>
+            <p>Standard RAG forces you into a brutal trade-off when deciding your chunk size (e.g., 200 tokens vs 1000
+                tokens):</p>
+            <ul>
+                <li><strong>Tiny chunks (200 tokens):</strong> Phenomenal for vector search. The embedding perfectly
+                    captures the dense meaning of those 3 sentences. But terrible for generation; the LLM lacks the
+                    surrounding context to give a full answer.</li>
+                <li><strong>Large chunks (1000 tokens):</strong> Perfect for generation; the LLM has all the context.
+                    But terrible for vector search. A 1000-word paragraph has too much noise, watering down the
+                    embedding and destroying retrieval accuracy.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>The Solution: Small-to-Big Retrieval</h2>
+            <p>We decouple the retrieval chunk from the generation chunk. We slice a massive document into a hierarchy:
+                1 large "Parent" chunk, split into multiple tiny "Child" chunks.</p>
+
+            <div class="split-box">
+                <div style="text-align: center;">
+                    <h3>Step 1: Embed the Children (Search)</h3>
+                    <div class="small-chunks">
+                        <div class="chunk">S1</div>
+                        <div class="chunk active" title="Vector DB hits this chunk!">S2 (Hit!)</div>
+                        <div class="chunk">S3</div>
+                        <div class="chunk">S4</div>
+                    </div>
+                </div>
+
+                <div class="arrow">→</div>
+
+                <div style="text-align: center;">
+                    <h3>Step 2: Inject the Parent (Generate)</h3>
+                    <div class="parent-doc">
+                        Original Document (1000 tokens)<br><br>
+                        <span style="font-weight: normal; font-size: 0.9em;">(Contains S1, S2, S3, S4 in their natural
+                            context)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="concept-card">
+                <h3>Under the Hood</h3>
+                <p>In a database like Chroma or Qdrant, you only embed and search against the tiny Child chunks (e.g.,
+                    100 tokens). They yield highly precise cosine similarity search results.</p>
+                <p>However, when a Child chunk ranks #1, you <em>do not</em> send the Child text to the LLM. Every Child
+                    chunk is tagged with a <code>parent_id</code>. The orchestrator (Langchain/LlamaIndex) uses that ID
+                    to fetch the massive Parent Document from a standard Key-Value store (or document store) and injects
+                    the entire Parent into the prompt.</p>
+                <p><strong>The ultimate result:</strong> The ultra-high precision of tiny-chunk vector search, combined
+                    with the incredibly rich context of large-chunk generation.</p>
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

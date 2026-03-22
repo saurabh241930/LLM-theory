@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,11 +14,23 @@
             border-left: 4px solid var(--wp-accent);
             border-radius: 4px;
         }
-        .qa-container h3 { margin-top: 0; color: var(--wp-title-text); }
-        .qa-container .answer { margin-top: 10px; }
-        .one-liner { font-weight: bold; margin-bottom: 10px; }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .qa-container .answer {
+            margin-top: 10px;
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
+
 <body>
     <header>
         <h1>RAG Types</h1>
@@ -25,31 +38,146 @@
     </header>
     <div class="content-wrapper">
 
-        <div class="qa-container" id="rag-types-overview">
-            <h3>What are the main architectural types of RAG?</h3>
-            <div class="answer">
-                <div class="one-liner">RAG has evolved from simple vector retrieval (Naive) to Advanced (pre/post retrieval optimization) to Modular and Agentic RAG.</div>
-                
-<p>There are several distinct types of RAG topologies:</p>
-<ul>
-    <li><strong>Naive RAG:</strong> The standard Index -> Retrieve -> Generate flow using basic chunking and a single vector DB.</li>
-    <li><strong>Advanced RAG:</strong> Incorporates Query Translation, Reranking, Hybrid Search, and advanced chunking (Parent-child).</li>
-    <li><strong>Modular RAG:</strong> Decoupled RAG where specific modules (routing, predicting, verifying) can be swapped dynamically.</li>
-    <li><strong>Graph RAG:</strong> Uses Knowledge Graphs (Neo4j) alongside Vectors for deep relation traversal.</li>
-    <li><strong>Agentic RAG:</strong> LLM agents actively orchestrate the retrieval process, invoking different tools and databases iteratively.</li>
-</ul>
-<div class="mermaid">
-flowchart LR
-  A[Naive RAG] --> B[Advanced RAG]
-  B --> C[Modular RAG]
-  C --> D[Agentic & Graph RAG]
-</div>
-
+        <section id="naive-rag">
+            <h2>1. Naive RAG (The Baseline)</h2>
+            <div class="qa-container">
+                <div class="answer">
+                    <div class="one-liner">The traditional "Index → Retrieve → Generate" linear pipeline.</div>
+                    <p><strong>Workflow:</strong> Documents are chunked, embedded into a Vector DB. At query time, the
+                        top-k most similar chunks are retrieved and sent to the LLM context.</p>
+                    <div class="mermaid">
+                        graph LR
+                        A[Documents] --> B[Chunk & Embed]
+                        B --> C[(Vector DB)]
+                        D[Query] --> E[Retrieve Top-K]
+                        C --> E
+                        E --> F[LLM Generation]
+                    </div>
+                    <p><strong>Example:</strong> A simple "Chat with PDF" app where users ask questions about a singular
+                        local document.</p>
+                    <div class="trap"><strong>Trap:</strong> Poor retrieval accuracy due to semantic shifts or bad
+                        chunking. LLM may hallucinate if provided irrelevant noise.</div>
+                </div>
             </div>
-        </div>
+        </section>
+
+        <section id="advanced-rag">
+            <h2>2. Advanced RAG (Optimization)</h2>
+            <div class="qa-container">
+                <div class="answer">
+                    <div class="one-liner">Solves Naive RAG issues by adding Pre-Retrieval and Post-Retrieval
+                        processing.</div>
+                    <ul>
+                        <li><strong>Pre-Retrieval:</strong> Query Rewriting, HyDE (Hypothetical Document Embeddings),
+                            and Multi-query expansion.</li>
+                        <li><strong>Post-Retrieval:</strong> Rerankers (Cross-encoders) to filter noise and Context
+                            Compression to fit long documents into tokens.</li>
+                    </ul>
+                    <div class="mermaid">
+                        graph TD
+                        Q[User Query] --> PRE[Pre-Processing: HyDE/Rewrite]
+                        PRE --> RET[Retrieval: Vector/Hybrid]
+                        RET --> POST[Post-Processing: Rerank/Compress]
+                        POST --> GEN[LLM Generation]
+                    </div>
+                    <p><strong>Example:</strong> Enterprise search where the user's initial query "budget info" is
+                        expanded to "What is the 2024 marketing budget allocation?" for better vector matches.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="modular-rag">
+            <h2>3. Modular RAG (Flexibility)</h2>
+            <div class="qa-container">
+                <div class="answer">
+                    <div class="one-liner">Decouples components into specialized modules like "Routing", "Searching",
+                        and "Verifying".</div>
+                    <p>Unlike Advanced RAG's fixed pipeline, Modular RAG can skip certain steps or loop back based on
+                        the query complexity.</p>
+                    <div class="mermaid">
+                        graph LR
+                        R[Router] --> SRCH[Search Module]
+                        R --> MEM[Memory Module]
+                        SRCH --> VRFY[Verify/Filter Module]
+                        VRFY --> GEN[Generation]
+                    </div>
+                    <p><strong>Example:</strong> A system that first routes a query to "Memory" if it's a follow-up, or
+                        to "Search" if it's a new fact-based question.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="graph-rag">
+            <h2>4. Graph RAG (Deep Relationships)</h2>
+            <div class="qa-container">
+                <div class="answer">
+                    <div class="one-liner">Combines Vector search with Knowledge Graphs (Neo4j/LangChain Graph).</div>
+                    <p><strong>Why:</strong> Vector search is great for semantic similarity but fails at multi-hop
+                        reasoning (e.g., "Who is the CEO of the company that bought the company founded by X?").</p>
+                    <div class="mermaid">
+                        graph TD
+                        NQ[Query] --> VEC[Vector Search: Entities]
+                        VEC --> KG[Graph Traversal: Relationships]
+                        KG --> CONT[Aggregated Context]
+                        CONT --> GEN[LLM Final Answer]
+                    </div>
+                    <p><strong>Example:</strong> Compliance auditing where you need to track relationships between
+                        financial entities across thousands of documents.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="agentic-rag">
+            <h2>5. Agentic RAG (Orchestration)</h2>
+            <div class="qa-container">
+                <div class="answer">
+                    <div class="one-liner">LLM agents act as autonomous researchers, iteratively searching and
+                        reasoning.</div>
+                    <p><strong>Behavior:</strong> The agent can decide to search again if the first results are
+                        insufficient, or use different tools (Google Search vs. Internal DB) depending on the gap in its
+                        knowledge.</p>
+                    <div class="mermaid">
+                        graph TD
+                        S[User Task] --> AG[Agentic Loop]
+                        AG --> TOOL{Tool Choice}
+                        TOOL --> DB[(Vector DB)]
+                        TOOL --> WEB[Web Search]
+                        DB --> EVAL[Evaluate Results]
+                        WEB --> EVAL
+                        EVAL -- "Incomplete" --> AG
+                        EVAL -- "Complete" --> ANS[Final Answer]
+                    </div>
+                    <p><strong>Example:</strong> An AI Market Researcher that needs to combine stale internal reports
+                        with live stock market data to provide a "Market Heatmap".</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="senior-interview-rag">
+            <h2>Senior Interview Deep-Dive</h2>
+            <div class="qa-container">
+                <h3>Q: When should you choose Graph RAG over Vector RAG?</h3>
+                <div class="answer">
+                    <p>Choose Graph RAG when the primary challenge is **relationship density** rather than semantic
+                        overlap. If the answer requires traversing nodes (Person -> Works At -> Company -> Owns ->
+                        Project), a vector search will get "lost" in similar-sounding chunks, while a graph traversal
+                        follows the deterministic edges.</p>
+                </div>
+            </div>
+            <div class="qa-container">
+                <h3>Q: What is the biggest drawback of Agentic RAG in production?</h3>
+                <div class="answer">
+                    <p><strong>Latency and Cost.</strong> Because agents are iterative, they might make 5-10 LLM calls
+                        for a single query. This creates high TTFT (Time to First Token) and consumes significant
+                        tokens. Scaling requires aggressive semantic caching and strict stop-conditions (recursion
+                        limits).</p>
+                </div>
+            </div>
+        </section>
 
     </div>
     <script src="animations.js"></script>
     <script src="sidebar.js?v=2"></script>
 </body>
+
 </html>

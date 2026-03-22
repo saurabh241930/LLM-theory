@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mixture of Experts (MoE)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .moe-playground {
+            background: #2c3e50;
+            padding: 40px;
+            border-radius: 8px;
+            color: #ecf0f1;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .router {
+            background: #e74c3c;
+            width: 120px;
+            height: 60px;
+            line-height: 60px;
+            font-weight: bold;
+            border-radius: 30px;
+            margin: 0 auto;
+            margin-bottom: 50px;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 0 15px #e74c3c;
+        }
+
+        .expert-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            position: relative;
+        }
+
+        .expert {
+            background: #34495e;
+            border: 2px solid #7f8c8d;
+            padding: 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .expert.active {
+            background: #2ecc71;
+            border-color: #2ecc71;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px #2ecc71;
+            color: #fff;
+        }
+
+        .expert.inactive {
+            opacity: 0.3;
+            transform: scale(0.95);
+        }
+
+        /* The path lines */
+        .path {
+            position: absolute;
+            height: 4px;
+            background: #95a5a6;
+            top: -50px;
+            z-index: 1;
+            transition: all 0.3s;
+            opacity: 0.2;
+            transform-origin: top center;
+        }
+
+        .path.active {
+            background: #2ecc71;
+            opacity: 1;
+            box-shadow: 0 0 10px #2ecc71;
+            z-index: 5;
+        }
+
+        .token-selector {
+            margin-bottom: 30px;
+        }
+
+        select {
+            padding: 10px;
+            font-size: 1em;
+            background: #34495e;
+            color: #ecf0f1;
+            border: 1px solid #7f8c8d;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .math-blurb {
+            text-align: left;
+            background: #1a252f;
+            padding: 20px;
+            margin-top: 30px;
+            border-left: 4px solid #e74c3c;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            color: #f1c40f;
+            font-weight: bold;
+        }
+
+        .metric-box {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px dashed #f1c40f;
+            font-family: monospace;
+            font-size: 1.2em;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Mixture of Experts (MoE)</h1>
+        <div class="subtitle">Sparse Activation and the death of monolithic networks</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of compute bounds</h2>
+            <p>If you train a 100-Billion parameter dense model like GPT-3, every single one of those 100 billion
+                parameters must be loaded into VRAM and mathematically multiplied against the input token. Whether the
+                user asks "What is 2+2" or writes a 4,000 line Python OS kernel, <strong>the exact same computational
+                    price is paid.</strong> This is incredibly inefficient.</p>
+        </section>
+
+        <section class="moe-playground">
+            <h3>Interactive Routing Visualizer</h3>
+
+            <div class="token-selector">
+                <label>Incoming Token Domain: </label>
+                <select id="tokenSelect">
+                    <option value="none">-- Select Token --</option>
+                    <option value="math">"Calculate the derivative of x^2"</option>
+                    <option value="code">"def fetch_api_data():"</option>
+                    <option value="french">"Bonjour mon ami"</option>
+                    <option value="creative">"The dragon soared over the crimson mountains"</option>
+                </select>
+            </div>
+
+            <div class="router">ROUTER Gate</div>
+
+            <div class="expert-grid">
+                <!-- Hardcoded CSS transform origins for paths since they are static HTML -->
+                <div class="path active" id="path0" style="left: 12.5%; width: 2px; height: 50px;"></div>
+                <div class="path" id="path1" style="left: 37.5%; width: 2px; height: 50px;"></div>
+                <div class="path" id="path2" style="left: 62.5%; width: 2px; height: 50px;"></div>
+                <div class="path" id="path3" style="left: 87.5%; width: 2px; height: 50px;"></div>
+
+                <div class="expert" id="exp0">Expert 0<br><span
+                        style="font-size:0.7em;color:#bdc3c7;">(Math/Logic)</span></div>
+                <div class="expert" id="exp1">Expert 1<br><span
+                        style="font-size:0.7em;color:#bdc3c7;">(Programming)</span></div>
+                <div class="expert" id="exp2">Expert 2<br><span
+                        style="font-size:0.7em;color:#bdc3c7;">(Translation)</span></div>
+                <div class="expert" id="exp3">Expert 3<br><span style="font-size:0.7em;color:#bdc3c7;">(Creative
+                        Writing)</span></div>
+            </div>
+
+            <div class="metric-box" id="activeParams">
+                Active Parameters for this Token: <span class="highlight">0 Billion</span> / 100 Billion Total
+            </div>
+
+            <div class="math-blurb">
+                <p><strong>How the Router works:</strong> <br>The Router is a tiny, incredibly fast feed-forward
+                    network. It computes the dot product of the incoming token against its routing weights, generating a
+                    probability distribution via Softmax.</p>
+                <p>Instead of activating the actual expert networks (which hold the massive 100B weights), it
+                    <strong>forces Top-K sparsity (usually Top-1 or Top-2)</strong>. <br>If Top-1 routing is enabled,
+                    <code>99% probability</code> is funneled entirely to Expert 1, and the other 7 Experts are
+                    completely bypassed. <span class="highlight">The GPU literally skips doing the math for 85 Billion
+                        parameters.</span></p>
+                <p>This is why Mixtral 8x7B (56 Billion total parameters) runs at the inference speed of a tiny 14B
+                    model. The remaining 42 Billion weights sit completely dormant in RAM during that token's inference
+                    cycle.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const mapping = {
+            'none': [],
+            'math': [0],
+            'code': [1],
+            'french': [2],
+            'creative': [3]
+        };
+
+        const topK = 1; // Top-1 routing example
+        const paramPerExpert = 25; // Imagine 100B total across 4 experts
+
+        function routeToken() {
+            const val = document.getElementById('tokenSelect').value;
+            const activeExperts = mapping[val];
+
+            // Reset
+            document.querySelectorAll('.expert').forEach(e => {
+                e.classList.remove('active');
+                e.classList.add('inactive');
+            });
+            document.querySelectorAll('.path').forEach(p => p.classList.remove('active'));
+
+            if (activeExperts.length > 0) {
+                // Activate mapped
+                activeExperts.forEach(idx => {
+                    document.getElementById(`exp${idx}`).classList.remove('inactive');
+                    document.getElementById(`exp${idx}`).classList.add('active');
+                    document.getElementById(`path${idx}`).classList.add('active');
+                });
+
+                document.getElementById('activeParams').innerHTML = `Active Parameters for this Token: <span class="highlight">${(activeExperts.length * paramPerExpert).toFixed(0)} Billion</span> / 100 Billion Total`;
+            } else {
+                document.querySelectorAll('.expert').forEach(e => e.classList.remove('inactive'));
+                document.getElementById('activeParams').innerHTML = `Active Parameters for this Token: <span class="highlight">0 Billion</span> / 100 Billion Total`;
+            }
+        }
+
+        document.getElementById('tokenSelect').addEventListener('change', routeToken);
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -63,23 +63,73 @@
         <section id="activations">
             <h2>3. Activation Functions: Adding Non-Linearity</h2>
             <p>Without activation functions, a 100-layer neural network is mathematically the same as a 1-layer model.
-                They allow the network to "bent" the space.</p>
-            <ul>
-                <li><strong>ReLU (Rectified Linear Unit):</strong> f(x) = max(0, x). <span
-                        style="color:var(--wp-accent)">Most common in LLMs.</span></li>
-                <li><strong>Sigmoid / Tanh:</strong> Older functions with "vanishing gradient" problems at scale.</li>
-            </ul>
+                They allow the network to "bend" the space.</p>
+
+            <div class="comparison-card">
+                <h3>ReLU (Rectified Linear Unit)</h3>
+                <div class="one-liner">f(x) = max(0, x)</div>
+                <p><strong>Pros:</strong> Computationally efficient, avoids the <strong>Vanishing Gradient
+                        Problem</strong> in most cases. Most common in LLM feed-forward layers.</p>
+                <p><strong>Cons:</strong> "Dying ReLU" – neurons can output 0 and never recover if weights aren't
+                    updated. Fix: <strong>Leaky ReLU</strong> or <strong>SwiGLU</strong>.</p>
+            </div>
+
+            <div class="comparison-card">
+                <h3>Sigmoid vs. Softmax</h3>
+                <ul>
+                    <li><strong>Sigmoid:</strong> Output [0,1]. Used for binary classification. Prone to vanishing
+                        gradients in deep networks.</li>
+                    <li><strong>Softmax:</strong> Multi-class output. Sum of all probabilities equals 1. Used in the
+                        final layer of LLMs for token prediction.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="normalization">
+            <h2>4. Normalization: Stabilizing the Network</h2>
+            <p>Normalization ensures that values flowing through the network stay within a reasonable range, speeding up
+                training.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Technique</th>
+                        <th>Mechanism</th>
+                        <th>Used in...</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Batch Norm</strong></td>
+                        <td>Normalizes across the <strong>Batch</strong> dimension.</td>
+                        <td>CNNs, Vision models.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Layer Norm</strong></td>
+                        <td>Normalizes across the <strong>Feature</strong> dimension.</td>
+                        <td><strong>Transformers (LLMs)</strong>. Works better for variable-length sequences.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="vanishing-gradients">
+            <h2>5. The Vanishing Gradient Problem</h2>
+            <p>During backpropagation, gradients are multiplied layer by layer. If gradients are small (using
+                Sigmoid/Tanh), they shrink exponentially, and the early layers 'never learn'.</p>
+            <div class="one-liner"><strong>Solution:</strong> Use ReLU activation and Residual Connections (Skip
+                connections).</div>
         </section>
 
         <section id="backprop">
-            <h2>4. Backpropagation & Universal Approximation</h2>
+            <h2>6. Backpropagation & Universal Approximation</h2>
             <p>The <strong>Universal Approximation Theorem</strong> states that a neural network with even a single
                 hidden layer can approximate <em>any</em> continuous function. <strong>Backpropagation</strong> is the
                 algorithm that propagates the error backward through the network to update the weights.</p>
         </section>
     </div>
 
-    <script src="sidebar.js"></script>
+    <script src="sidebar.js?v=2"></script>
 </body>
 
 </html>

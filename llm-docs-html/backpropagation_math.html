@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3B1B Backpropagation</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .backprop-panel {
+            background: #111;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            color: #ecf0f1;
+            position: relative;
+        }
+
+        canvas {
+            background: #1e272e;
+            border-radius: 8px;
+            border: 1px solid #485460;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .btn-red {
+            background: #e74c3c;
+        }
+
+        .btn-red:hover {
+            background: #c0392b;
+        }
+
+        .math-blurb {
+            background: #202122;
+            padding: 20px;
+            border-left: 4px solid #e74c3c;
+            text-align: left;
+            margin-top: 20px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .flow-text {
+            font-family: monospace;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Backpropagation & The Chain Rule</h1>
+        <div class="subtitle">Visualizing Gradients flowing backward through a computational graph</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of Optimization</h2>
+            <p>Every neural network in existence is just an insanely massive, deeply nested algebraic equation. To
+                adjust the weights, we must figure out the <strong>Partial Derivative</strong> (how much the final Loss
+                changes if we tweak one specific weight by a tiny amount).</p>
+            <p>Because the network is nested, we use the <strong>Chain Rule of Calculus</strong>. We calculate the
+                gradient at the very end (the Loss), and literally push it backwards through the mathematical
+                operations, multiplying local derivatives together.</p>
+        </section>
+
+        <section class="backprop-panel">
+            <h3>Interactive Computational Graph</h3>
+            <p>Equation: <code>y = (w1 * x1) + (w2 * x2)</code> | Target: <code>10.0</code></p>
+
+            <canvas id="compGraph" width="800" height="400"></canvas>
+
+            <div class="controls">
+                <button onclick="forwardPass()">1. Forward Pass (Calculate Loss)</button>
+                <button class="btn-red" onclick="backwardPass()">2. Backward Pass (Flow Gradients)</button>
+                <button style="background:#2ecc71;" onclick="updateWeights()">3. Update Weights</button>
+            </div>
+
+            <div class="math-blurb" id="statusBox">
+                <p><strong>Step 1:</strong> Click "Forward Pass" to shoot the input data (X1, X2) through the weights
+                    and operations to calculate the final Loss error.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('compGraph');
+        const ctx = canvas.getContext('2d');
+
+        // Graph State
+        let x1 = 2.0; let x2 = -1.0;
+        let w1 = 0.5; let w2 = 2.0; // Weights
+        let target = 10.0;
+
+        let m1 = 0; let m2 = 0; // Multiply nodes
+        let sum = 0;
+        let loss = 0;
+
+        // Gradients (dLoss / d*)
+        let gSum = 0;
+        let gm1 = 0; let gm2 = 0;
+        let gw1 = 0; let gw2 = 0;
+        let learningRate = 0.5;
+
+        // Animations Let
+        let forwardProgress = 0;
+        let backwardProgress = 0;
+        let state = "init"; // init, forward, backward, updated
+
+        // Node Geometry
+        const N_X1 = 100, N_Y1 = 100;
+        const N_W1 = 100, N_Y1W = 200;
+        const N_M1 = 300, N_YM1 = 150;
+
+        const N_X2 = 100, N_Y2 = 300;
+        const N_W2 = 100, N_Y2W = 400; // offset visually
+        const N_M2 = 300, N_YM2 = 350;
+
+        const N_SUM = 500, N_YSUM = 250;
+        const N_LOSS = 700, N_YLOSS = 250;
+
+        function drawNode(x, y, label, val, isOp = false) {
+            ctx.beginPath();
+            ctx.arc(x, y, 40, 0, Math.PI * 2);
+            ctx.fillStyle = isOp ? "#34495e" : "#2c3e50";
+            ctx.fill();
+            ctx.strokeStyle = "#7f8c8d";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(label, x, y - 5);
+
+            if (val !== null && state !== "init" || label.startsWith("x") || label.startsWith("w") || label === "Target") {
+                let displayVal = val !== null ? val.toFixed(2) : "?";
+                ctx.fillStyle = "#f1c40f";
+                ctx.fillText(displayVal, x, y + 15);
+            }
+        }
+
+        function drawLine(x1, y1, x2, y2) {
+            ctx.strokeStyle = "#576574";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        function drawGradient(x, y, val) {
+            if (state !== "backward" && state !== "updated") return;
+            ctx.fillStyle = "#e74c3c";
+            ctx.font = "bold 14px monospace";
+            ctx.fillText("dL=" + val.toFixed(2), x, y - 45);
+        }
+
+        function drawParticle(x1, y1, x2, y2, progress, color, label) {
+            const px = x1 + (x2 - x1) * progress;
+            const py = y1 + (y2 - y1) * progress;
+            ctx.beginPath();
+            ctx.arc(px, py, 12, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            if (label) {
+                ctx.fillStyle = "#fff";
+                ctx.font = "12px Arial";
+                ctx.fillText(label, px, py - 18);
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Edges
+            drawLine(N_X1 + 40, N_Y1, N_M1 - 40, N_YM1);
+            drawLine(N_W1 + 40, N_Y1W, N_M1 - 40, N_YM1);
+            drawLine(N_M1 + 40, N_YM1, N_SUM - 40, N_YSUM);
+
+            drawLine(N_X2 + 40, N_Y2, N_M2 - 40, N_YM2);
+            drawLine(N_W2 + 40, N_W2 + 40, N_M2 - 40, N_YM2); // approx
+            ctx.beginPath(); ctx.moveTo(N_W2 + 40, 380); ctx.lineTo(N_M2 - 40, N_YM2); ctx.stroke();
+            drawLine(N_M2 + 40, N_YM2, N_SUM - 40, N_YSUM);
+
+            drawLine(N_SUM + 40, N_YSUM, N_LOSS - 40, N_YLOSS);
+
+            // Nodes
+            drawNode(N_X1, N_Y1, "x1", x1);
+            drawNode(N_W1, N_Y1W, "w1", w1);
+            drawNode(N_M1, N_YM1, "(*)", m1, true);
+
+            drawNode(N_X2, N_Y2, "x2", x2);
+            drawNode(N_W2, 380, "w2", w2);
+            drawNode(N_M2, N_YM2, "(*)", m2, true);
+
+            drawNode(N_SUM, N_YSUM, "(+)", sum, true);
+            drawNode(N_LOSS, N_YLOSS, "Loss (L)", loss, true);
+
+            // Target ghost node
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.arc(N_LOSS + 50, N_YLOSS - 80, 20, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = "#fff"; ctx.fillText("10.0", N_LOSS + 50, N_YLOSS - 75);
+            ctx.setLineDash([]);
+
+            // Draw Gradient values (Red text above nodes)
+            drawGradient(N_LOSS, N_YLOSS, 1.0); // dL/dL = 1
+            drawGradient(N_SUM, N_YSUM, gSum);
+            drawGradient(N_M1, N_YM1, gm1);
+            drawGradient(N_M2, N_YM2, gm2);
+            drawGradient(N_W1, N_Y1W, gw1);
+            drawGradient(N_W2, 380, gw2);
+
+            // Forward Particles
+            if (state === "forward") {
+                drawParticle(N_X1, N_Y1, N_M1, N_YM1, forwardProgress, "#f1c40f", x1.toFixed(1));
+                drawParticle(N_W1, N_Y1W, N_M1, N_YM1, forwardProgress, "#f1c40f", w1.toFixed(1));
+
+                drawParticle(N_X2, N_Y2, N_M2, N_YM2, forwardProgress, "#f1c40f", x2.toFixed(1));
+                drawParticle(N_W2, 380, N_M2, N_YM2, forwardProgress, "#f1c40f", w2.toFixed(1));
+
+                if (forwardProgress > 0.5) {
+                    drawParticle(N_M1, N_YM1, N_SUM, N_YSUM, (forwardProgress - 0.5) * 2, "#2ecc71", m1.toFixed(1));
+                    drawParticle(N_M2, N_YM2, N_SUM, N_YSUM, (forwardProgress - 0.5) * 2, "#2ecc71", m2.toFixed(1));
+                }
+                if (forwardProgress > 0.8) {
+                    drawParticle(N_SUM, N_YSUM, N_LOSS, N_YLOSS, (forwardProgress - 0.8) * 5, "#3498db", sum.toFixed(1));
+                }
+            }
+
+            // Backward Particles (Red)
+            if (state === "backward") {
+                drawParticle(N_LOSS, N_YLOSS, N_SUM, N_YSUM, backwardProgress, "#e74c3c", "1.0");
+                if (backwardProgress > 0.3) {
+                    let pg = (backwardProgress - 0.3) / 0.7;
+                    drawParticle(N_SUM, N_YSUM, N_M1, N_YM1, pg, "#e74c3c", gSum.toFixed(2));
+                    drawParticle(N_SUM, N_YSUM, N_M2, N_YM2, pg, "#e74c3c", gSum.toFixed(2));
+                }
+                if (backwardProgress > 0.6) {
+                    let pg = (backwardProgress - 0.6) / 0.4;
+                    drawParticle(N_M1, N_YM1, N_W1, N_Y1W, pg, "#e74c3c", gw1.toFixed(2));
+                    drawParticle(N_M2, N_YM2, N_W2, 380, pg, "#e74c3c", gw2.toFixed(2));
+                }
+            }
+        }
+
+        function animateForward() {
+            forwardProgress += 0.02;
+            if (forwardProgress > 1) {
+                forwardProgress = 1;
+                document.getElementById('statusBox').innerHTML = `<p><strong>Step 2:</strong> Forward Pass complete. We calculated Sum = -1.0, but our Target is 10.0. Our Loss (Error) is 11.0. <br>Click "Backward Pass" to flow the gradients backwards.</p>`;
+                return;
+            }
+            render();
+            requestAnimationFrame(animateForward);
+        }
+
+        function animateBackward() {
+            backwardProgress += 0.015;
+            if (backwardProgress > 1) {
+                backwardProgress = 1;
+                document.getElementById('statusBox').innerHTML = `<p><strong>Step 3:</strong> Backprop complete via Chain Rule! <br>Look at the Red <code>dL</code> values. <code>dL/dw1 = -2.0</code>. <code>dL/dw2 = 1.0</code>. This tells the network exactly how to tweak the weights to fix the 11.0 error. <br>Click "Update Weights" to apply Gradient Descent.</p>`;
+                return;
+            }
+            render();
+            requestAnimationFrame(animateBackward);
+        }
+
+        window.forwardPass = () => {
+            state = "forward";
+            forwardProgress = 0;
+            // Math
+            m1 = x1 * w1;
+            m2 = x2 * w2;
+            sum = m1 + m2;
+            loss = Math.abs(target - sum); // L1 loss for simplicity
+            render();
+            animateForward();
+        };
+
+        window.backwardPass = () => {
+            if (state !== "forward" || forwardProgress < 1) return;
+            state = "backward";
+            backwardProgress = 0;
+
+            // Calculus Gradients (Chain Rule)
+            // L = |10 - sum|. If sum is -1, dL/dSum = -1 (direction to increase loss, but gradient descent goes anti-gradient)
+            // For visualization, we'll frame it as "direction to increase sum to reach target"
+            gSum = -1; // Loss derivative
+
+            // Add node: local derivative is 1. dL/dM = dL/dSum * dSum/dM = -1 * 1 = -1
+            gm1 = gSum * 1;
+            gm2 = gSum * 1;
+
+            // Multiply node: local derivative of (x*w) w.r.t w is x.
+            // dL/dw1 = dL/dM1 * dM1/dw1 = gm1 * x1 = -1 * 2.0 = -2.0
+            gw1 = gm1 * x1;
+            // dL/dw2 = dL/dM2 * dM2/dw2 = gm2 * x2 = -1 * -1.0 = 1.0
+            gw2 = gm2 * x2;
+
+            render();
+            animateBackward();
+        };
+
+        window.updateWeights = () => {
+            if (state !== "backward" || backwardProgress < 1) return;
+            // W_new = W_old - (LR * dL/dW)
+            w1 = w1 - (learningRate * gw1);
+            w2 = w2 - (learningRate * gw2);
+
+            // Reset state
+            state = "init";
+            m1 = 0; m2 = 0; sum = 0; loss = 0;
+            document.getElementById('statusBox').innerHTML = `<p><strong>Weights Updated!</strong> w1 shifted to ${w1.toFixed(2)}, w2 shifted to ${w2.toFixed(2)}.<br>Click "Forward Pass" again to see the Loss shrink drastically!</p>`;
+            render();
+        };
+
+        render();
+
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3B1B Encoder-Decoder Architecture</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .encdec-panel {
+            background: #111;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            color: #ecf0f1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 20;
+            position: relative;
+        }
+
+        button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #2ecc71;
+        }
+
+        .math-blurb {
+            background: #202122;
+            padding: 20px;
+            border-left: 4px solid #f39c12;
+            text-align: left;
+            margin-top: 30px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .architecture {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            padding: 0 20px;
+        }
+
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 30%;
+        }
+
+        .token-box {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border: 2px solid #576574;
+            opacity: 0.2;
+            transition: all 0.5s;
+        }
+
+        .context-vector {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #34495e 0%, #111 80%);
+            border: 4px solid #f39c12;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #f39c12;
+            box-shadow: 0 0 20px #f39c12;
+            transition: all 0.5s;
+            position: relative;
+        }
+
+        .context-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: rgba(243, 156, 18, 0.5);
+            transition: height 0.5s;
+            border-radius: 50%;
+        }
+
+        /* Flow lines */
+        .flow-line {
+            position: absolute;
+            width: 100px;
+            height: 4px;
+            background: #f39c12;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Encoder-Decoder Architecture</h1>
+        <div class="subtitle">The Sequence-to-Sequence translation pipeline</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of Context Compression</h2>
+            <p>If you want to translate a sentence from English to French, you cannot translate word-for-word. "The
+                white house" becomes "La maison blanche" (The house white). Grammar rules and sequence lengths change
+                entirely.</p>
+            <p>The solution is the <strong>Encoder-Decoder</strong>. First, the Encoder reads the entire English
+                sentence and mathematically crushes it into a single, dense geometry point called the <strong>Context
+                    Vector</strong>. Then, the Decoder uses <em>only</em> that compressed context to generate the French
+                sentence entirely from scratch.</p>
+        </section>
+
+        <section class="encdec-panel">
+            <h3>Interactive Seq2Seq Translation Pipeline</h3>
+
+            <div class="architecture">
+                <div class="stack" id="encStack">
+                    <h3 style="color:#3498db; margin-bottom: 20px;">ENCODER</h3>
+                    <div class="token-box" id="e1">1. "The"</div>
+                    <div class="token-box" id="e2">2. "white"</div>
+                    <div class="token-box" id="e3">3. "house"</div>
+                </div>
+
+                <div class="context-vector">
+                    <div class="context-fill" id="cFill"></div>
+                    <span style="z-index: 10;">Context<br>Vector</span>
+                </div>
+
+                <div class="stack" id="decStack">
+                    <h3 style="color:#2ecc71; margin-bottom: 20px;">DECODER</h3>
+                    <div class="token-box" id="d1">1. "La"</div>
+                    <div class="token-box" id="d2">2. "maison"</div>
+                    <div class="token-box" id="d3">3. "blanche"</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="stepBtn" onclick="nextStep()">Step 1: Encode Word</button>
+                <button onclick="resetPipeline()" style="background:#555;">Reset</button>
+            </div>
+
+            <div class="math-blurb">
+                <p><strong>The Context Bottleneck:</strong> Notice how the pure mathematical essence of "The white
+                    house" is literally squeezed into a single circle (vector). The Decoder is blind to the English
+                    words; it only sees the numerical "fingerprint" inside the Context Vector.</p>
+                <p>While this architecture revolutionized translation in 2014, it struggled with massive paragraphs
+                    because squishing 500 words into a single Context Vector inevitably caused meaning to spill over and
+                    be lost. This exact limitation is what directly forced the invention of the <strong>Attention
+                        Mechanism</strong> in 2017 to bypass the bottleneck!</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        let step = 0;
+
+        function nextStep() {
+            step++;
+            const btn = document.getElementById('stepBtn');
+            const cFill = document.getElementById('cFill');
+
+            if (step === 1) {
+                document.getElementById('e1').style.opacity = "1";
+                document.getElementById('e1').style.borderColor = "#3498db";
+                cFill.style.height = "33%";
+                btn.innerText = "Step 2: Encode Word";
+            }
+            else if (step === 2) {
+                document.getElementById('e2').style.opacity = "1";
+                document.getElementById('e2').style.borderColor = "#3498db";
+                cFill.style.height = "66%";
+                btn.innerText = "Step 3: Encode Word";
+            }
+            else if (step === 3) {
+                document.getElementById('e3').style.opacity = "1";
+                document.getElementById('e3').style.borderColor = "#3498db";
+                cFill.style.height = "100%";
+                document.querySelector('.context-vector').style.boxShadow = "0 0 40px #f39c12";
+                btn.innerText = "Step 4: Decode Context";
+            }
+            else if (step === 4) {
+                document.getElementById('d1').style.opacity = "1";
+                document.getElementById('d1').style.borderColor = "#2ecc71";
+                btn.innerText = "Step 5: Decode Context";
+            }
+            else if (step === 5) {
+                document.getElementById('d2').style.opacity = "1";
+                document.getElementById('d2').style.borderColor = "#2ecc71";
+                btn.innerText = "Step 6: Decode Context";
+            }
+            else if (step === 6) {
+                document.getElementById('d3').style.opacity = "1";
+                document.getElementById('d3').style.borderColor = "#2ecc71";
+                btn.innerText = "Translation Complete!";
+                btn.style.background = "#555";
+                btn.disabled = true;
+            }
+        }
+
+        window.resetPipeline = () => {
+            step = 0;
+            const btn = document.getElementById('stepBtn');
+            btn.innerText = "Step 1: Encode Word";
+            btn.style.background = "#27ae60";
+            btn.disabled = false;
+
+            document.getElementById('cFill').style.height = "0%";
+            document.querySelector('.context-vector').style.boxShadow = "0 0 20px #f39c12";
+
+            ['e1', 'e2', 'e3', 'd1', 'd2', 'd3'].forEach(id => {
+                document.getElementById(id).style.opacity = "0.2";
+                document.getElementById(id).style.borderColor = "#576574";
+            });
+        };
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

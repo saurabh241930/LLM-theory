@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layer Norm & Residuals - Transformer Internals</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .res-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 40px 0;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 5px solid #1dd1a1;
+            font-family: monospace;
+            font-size: 1.2rem;
+        }
+
+        .norm-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .norm-table th,
+        .norm-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .norm-table th {
+            background-color: #eef2ff;
+        }
+
+        .highlight-row {
+            background-color: #fff9e6;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Residuals & Layer Norm Variants</h1>
+        <div class="subtitle">Skip connections, Pre-LN vs Post-LN, and why RMSNorm took over</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of Stability (Residual Connections)</h2>
+            <p>If you stack 100 layers of neural networks sequentially, the gradients flowing backwards during training
+                will almost certainly vanish to zero before reaching the start. The original Transformer entirely avoids
+                this by heavily utilizing <strong>Residual Connections (Skip Connections)</strong> borrowed from ResNet.
+            </p>
+
+            <div class="res-diagram">
+                x<sub>in</sub> → [ Attention block ] → F(x) <br>
+                &nbsp;&nbsp;↳ ---------------------- ↳ (+) → x<sub>out</sub> = F(x) + x<sub>in</sub>
+            </div>
+
+            <p>Instead of the output of layer 2 replacing the input from layer 1, it simply <em>adds</em> to it.
+                Mathematically, <code>Derivative(F(x) + x) = F'(x) + 1</code>. That isolated <code>+ 1</code> guarantees
+                that no matter how deep the network gets, the gradient will always bypass the complex math and flow
+                completely undisturbed directly to the very first layer.</p>
+        </section>
+
+        <section>
+            <h2>Pre-LN vs Post-LN (The Architecture War)</h2>
+            <p>Every Transformer block contains Layer Normalization. However, exactly <em>where</em> you place it
+                drastically alters the stability of billion-parameter models.</p>
+
+            <table class="norm-table">
+                <tr>
+                    <th>Architecture</th>
+                    <th>Equation</th>
+                    <th>Pros & Cons</th>
+                </tr>
+                <tr>
+                    <td><strong>Post-LN</strong><br>(Original 2017 Transformer)</td>
+                    <td><code>x = Norm( x + F(x) )</code></td>
+                    <td><strong>Pro:</strong> Achieves slightly better absolute performance at smaller parameter
+                        scales.<br><strong>Con:</strong> Because the Residual path itself is normalized, the gradients
+                        violently vanish in deep networks. Almost impossible to train without a highly tuned Learning
+                        Rate Warmup schedule.</td>
+                </tr>
+                <tr class="highlight-row">
+                    <td><strong>Pre-LN</strong><br>(GPT-2, T5, LLaMA)</td>
+                    <td><code>x = x + F( Norm(x) )</code></td>
+                    <td><strong>Pro:</strong> The residual path is completely untouched and clean. Gradients flow
+                        perfectly backwards. Infinitely more stable to train at massive 100B+
+                        scales.<br><strong>Con:</strong> <em>The Modern Standard.</em> Every massive foundational LLM
+                        uses Pre-LN today.</td>
+                </tr>
+            </table>
+        </section>
+
+        <section>
+            <h2>The Evolution of the Norm Layer</h2>
+            <p>In Deep Learning, normalizing means subtracting the mean and dividing by the standard deviation across an
+                entire hidden vector. This centers the data at 0 with a variance of 1.0.</p>
+
+            <div
+                style="background: #fff; padding: 20px; border-left: 5px solid #2ecc71; margin: 20px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 4px;">
+                <h3>Batch Norm vs Layer Norm</h3>
+                <p><strong>BatchNorm (Used in Vision/CNNs):</strong> Normalizes across the batch size (vertically).
+                    Requires massive batch sizes to calculate accurate statistics. Horrible for language models where
+                    sequences vary in length.</p>
+                <p><strong>LayerNorm (Used in Transformers):</strong> Normalizes across the embedding dimension
+                    (horizontally) for <em>a single specific token</em>. Sequence length and batch size do not matter.
+                </p>
+            </div>
+
+            <div
+                style="background: #fff; padding: 20px; border-left: 5px solid #9b59b6; margin: 20px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 4px;">
+                <h3>The Rise of RMSNorm</h3>
+                <p>Standard LayerNorm requires calculating the Mean (average) of the vector, shifting the vector by the
+                    mean, and then calculating the Variance. This is computationally expensive memory overhead during
+                    fast inference.</p>
+                <p><strong>Root Mean Square Normalization (RMSNorm)</strong> drops the Mean-centering entirely. It
+                    mathematically assumes the mean is approximately zero anyway, and simply divides the vector by its
+                    Root Mean Square.</p>
+                <p><strong>Result:</strong> It uses 10-30% less computation time, acts nearly identically to LayerNorm,
+                    and is now the universal standard for modern models (LLaMA, Mistral, Gemma).</p>
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

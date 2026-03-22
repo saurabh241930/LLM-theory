@@ -4,58 +4,284 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feature Engineering: Junk in, Junk out</title>
+    <title>Advanced Feature Engineering</title>
     <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .fe-panel {
+            background: #111;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 30px 0;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            color: #ecf0f1;
+            text-align: center;
+        }
+
+        canvas {
+            background: #1e272e;
+            border-radius: 8px;
+            border: 1px solid #485460;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1.1em;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .math-blurb {
+            background: #202122;
+            padding: 20px;
+            border-left: 4px solid #3498db;
+            text-align: left;
+            margin-top: 20px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+    </style>
 </head>
 
 <body>
     <header>
-        <h1>Feature Engineering & Data Preprocessing</h1>
-        <div class="subtitle">Turning Raw Data into Predictive Signals</div>
+        <h1>Advanced Feature Engineering</h1>
+        <div class="subtitle">Visualizing brutal transformations on raw data</div>
     </header>
 
+    <!-- 1. LOG TRANSFORM -->
     <div class="content-wrapper">
-        <section id="importance">
-            <h2>1. Why Engineering Matters</h2>
-            <p>Algorithms are only as good as the data they receive. In traditional ML, 80% of the work is often
-                preprocessing.</p>
+        <section class="fe-panel">
+            <h2 style="color: #f1c40f;">1. The Log Transform (Taming Outliers)</h2>
+            <canvas id="logCanvas" width="800" height="250"></canvas>
+            <div class="controls">
+                <button onclick="applyLog()">Apply Log Transform [ y = log(x) ]</button>
+                <button onclick="resetLog()" style="background:#555;">Reset</button>
+            </div>
+            <div class="math-blurb" style="border-left-color: #f1c40f;">
+                <p><strong>The Problem:</strong> When training on Income or Housing Prices, the data is violently
+                    right-skewed. 99% of people make $50k, but Elon Musk makes $100 Billion. The neural network's MSE
+                    loss will hyper-focus solely on fixing Elon's error, ignoring everyone else.</p>
+                <p><strong>The Geometrical Fix:</strong> The Natural Log <code>ln(x)</code> mathematically crushes
+                    exponentially large numbers while barely touching small numbers. <strong>Click the button</strong>
+                    to watch a massively skewed wealth distribution physically compress into a learnable Bell Curve.</p>
+            </div>
         </section>
 
-        <section id="techniques">
-            <h2>2. Essential Techniques</h2>
-
-            <h3>Data Cleaning</h3>
-            <ul>
-                <li><strong>Imputation:</strong> Filling missing values (Mean, Median, or specialized models).</li>
-                <li><strong>Outlier Removal:</strong> Getting rid of erroneous data points that skew the mean.</li>
-            </ul>
-
-            <h3>Categorical Encoding</h3>
-            <p>Models only understand numbers. We must convert text categories into numerical form.</p>
-            <ul>
-                <li><strong>One-Hot Encoding:</strong> Creating binary columns for each category (City_NY, City_LA).
-                </li>
-                <li><strong>Label Encoding:</strong> Assigning a unique integer (NY=0, LA=1).</li>
-            </ul>
-
-            <h3>Numerical Scaling</h3>
-            <p>If one feature is "Age" (0-100) and another is "Income" (0-1,000,000), the model will think Income is
-                10,000x more important just because the number is larger.</p>
-            <ul>
-                <li><strong>Standardization (Z-score):</strong> (x - μ) / σ</li>
-                <li><strong>Normalization (Min-Max):</strong> Rescaling to 0-1 range.</li>
-            </ul>
+        <!-- 2. MIN-MAX SCALING -->
+        <section class="fe-panel">
+            <h2 style="color: #2ecc71;">2. Min-Max Scaling (Squashing Space)</h2>
+            <canvas id="scaleCanvas" width="800" height="300"></canvas>
+            <div class="controls">
+                <button onclick="applyScale()">Apply Min-Max Scale to [0, 1]</button>
+                <button onclick="resetScale()" style="background:#555;">Reset</button>
+            </div>
+            <div class="math-blurb" style="border-left-color: #2ecc71;">
+                <p><strong>The Problem:</strong> Imagine a dataset with Age (0-100) and Salary ($0 - $200,000). During
+                    gradient descent, the Salary weights will receive gradients 2000x larger than the Age weights. The
+                    landscape becomes an unnavigable ravine, and the optimizer crashes.</p>
+                <p><strong>The Geometrical Fix:</strong> We force everything into the exact same physical bounding box.
+                    <strong>Click the button</strong> to watch wild, unbound data dimensions physically squash into a
+                    tiny, perfect 1x1 mathematical square.</p>
+            </div>
         </section>
 
-        <section id="pca">
-            <h2>3. Dimensionality Reduction (PCA)</h2>
-            <p><strong>Principal Component Analysis</strong> reduces the number of features while preserving as much
-                variance as possible. This is the 1D, 2D, and 3D plotting predecessor to modern high-dimensional
-                <strong>Embeddings</strong>.</p>
+        <!-- 3. PCA -->
+        <section class="fe-panel">
+            <h2 style="color: #e74c3c;">3. Principal Component Analysis (PCA)</h2>
+            <canvas id="pcaCanvas" width="800" height="400"></canvas>
+            <div class="controls">
+                <button onclick="runPCA()">1. Align Variance</button>
+                <button onclick="dropDim()">2. Drop Y-Axis (Compress to 1D)</button>
+                <button onclick="resetPCA()" style="background:#555;">Reset</button>
+            </div>
+            <div class="math-blurb" style="border-left-color: #e74c3c;">
+                <p><strong>The Problem:</strong> You have 10,000 features, but half of them are highly correlated (e.g.,
+                    "Square Footage" and "Number of Rooms"). Keeping both wastes RAM and induces overfitting (The Curse
+                    of Dimensionality).</p>
+                <p><strong>The Geometrical Fix:</strong> PCA calculates the <em>Eigenvectors</em> of the data to find
+                    the single diagonal line that contains the highest variance. It <strong>rotates</strong> the entire
+                    universe so that line becomes the X-axis. Then, it ruthlessly deletes the Y-axis. <strong>Click the
+                        buttons</strong> to visually reduce 2D data down to a 1D line하면서 virtually zero information
+                    loss.</p>
+            </div>
         </section>
     </div>
 
-    <script src="sidebar.js"></script>
+    <script>
+        // --- 1. LOG TRANSFORM ANIMATION ---
+        const logC = document.getElementById('logCanvas').getContext('2d');
+        let logPoints = []; let logTarget = []; let logAnim = 0; let isLogAnim = false;
+
+        function resetLog() {
+            logPoints = []; logTarget = []; logAnim = 0; isLogAnim = false;
+            // Generate highly skewed right distribution
+            for (let i = 0; i < 300; i++) {
+                let val = Math.random() < 0.8 ? Math.random() * 50 : Math.random() * 700 + 50; // Skewed
+                let target = Math.log(val + 1) * 80; // Scaled log for visual
+                logPoints.push({ x: val, y: Math.random() * 100 + 100 });
+                logTarget.push({ x: target + 200, y: Math.random() * 100 + 100 });
+            }
+            renderLog();
+        }
+
+        function renderLog() {
+            logC.clearRect(0, 0, 800, 250);
+            logC.fillStyle = "#fff"; logC.font = "14px Arial";
+            logC.fillText(`X-Axis Max: ${isLogAnim ? '5.0 (Log)' : '800 (Raw)'}`, 10, 20);
+
+            for (let i = 0; i < logPoints.length; i++) {
+                let px = logPoints[i].x + (logTarget[i].x - logPoints[i].x) * logAnim;
+                let py = logPoints[i].y + (logTarget[i].y - logPoints[i].y) * logAnim;
+                logC.beginPath();
+                logC.arc(px + 20, py, 4, 0, Math.PI * 2);
+                logC.fillStyle = `rgba(241, 196, 15, ${Math.max(0.3, 1 - logAnim)})`;
+                if (logAnim > 0.1) logC.fillStyle = `rgba(241, 196, 15, 0.7)`;
+                logC.fill();
+            }
+            if (isLogAnim && logAnim < 1) { logAnim += 0.02; requestAnimationFrame(renderLog); }
+        }
+        window.applyLog = () => { isLogAnim = true; renderLog(); };
+        resetLog();
+
+
+        // --- 2. MIN MAX SCALING ANIMATION ---
+        const sclC = document.getElementById('scaleCanvas').getContext('2d');
+        let sclPoints = []; let sclTarget = []; let sclAnim = 0; let isSclAnim = false;
+
+        function resetScale() {
+            sclPoints = []; sclTarget = []; sclAnim = 0; isSclAnim = false;
+            // Generate wide bounding box
+            for (let i = 0; i < 200; i++) {
+                let px = Math.random() * 600 + 100;
+                let py = Math.random() * 200 + 50;
+                sclPoints.push({ x: px, y: py });
+                // Target is a tight 100x100 box in center
+                let tx = ((px - 100) / 600) * 100 + 350;
+                let ty = ((py - 50) / 200) * 100 + 100;
+                sclTarget.push({ x: tx, y: ty });
+            }
+            renderScale();
+        }
+
+        function renderScale() {
+            sclC.clearRect(0, 0, 800, 300);
+
+            // Draw Dynamic Bounding Box
+            let boxX = 100 + (350 - 100) * sclAnim;
+            let boxW = 600 + (100 - 600) * sclAnim;
+            let boxY = 50 + (100 - 50) * sclAnim;
+            let boxH = 200 + (100 - 200) * sclAnim;
+
+            sclC.strokeStyle = "#e74c3c"; sclC.lineWidth = 2; sclC.setLineDash([5, 5]);
+            sclC.strokeRect(boxX, boxY, boxW, boxH);
+            sclC.setLineDash([]);
+            sclC.fillStyle = "#fff"; sclC.font = "14px Arial";
+            let label = isSclAnim ? (sclAnim > 0.9 ? "[0, 1] Normalized Space" : "Squashing Space") : "Raw Feature Space [0, 200000]";
+            sclC.fillText(label, boxX, boxY - 10);
+
+            for (let i = 0; i < sclPoints.length; i++) {
+                let px = sclPoints[i].x + (sclTarget[i].x - sclPoints[i].x) * sclAnim;
+                let py = sclPoints[i].y + (sclTarget[i].y - sclPoints[i].y) * sclAnim;
+                sclC.beginPath();
+                sclC.arc(px, py, 4, 0, Math.PI * 2);
+                sclC.fillStyle = "rgba(46, 204, 113, 0.8)";
+                sclC.fill();
+            }
+            if (isSclAnim && sclAnim < 1) { sclAnim += 0.02; requestAnimationFrame(renderScale); }
+        }
+        window.applyScale = () => { isSclAnim = true; renderScale(); };
+        resetScale();
+
+
+        // --- 3. PCA ANIMATION ---
+        const pcaC = document.getElementById('pcaCanvas').getContext('2d');
+        let pcaPoints = []; let pcaRotTarget = []; let pcaFlatTarget = [];
+        let pcaAnim = 0; let pcaState = 0; // 0=raw, 1=rotating, 2=dropping
+        const CX = 400, CY = 200;
+
+        function resetPCA() {
+            pcaPoints = []; pcaRotTarget = []; pcaFlatTarget = [];
+            pcaAnim = 0; pcaState = 0;
+            // Generate diagonal ellipse (high variance on x=y line)
+            for (let i = 0; i < 400; i++) {
+                // random point in circle
+                let u = Math.random(), v = Math.random();
+                let r = 150 * Math.sqrt(u); let theta = v * 2 * Math.PI;
+                let x = r * Math.cos(theta); let y = r * Math.sin(theta);
+                // squash to ellipse
+                y = y * 0.2;
+                // rotate by 45 deg
+                let angle = Math.PI / 6;
+                let nx = x * Math.cos(angle) - y * Math.sin(angle);
+                let ny = x * Math.sin(angle) + y * Math.cos(angle);
+
+                pcaPoints.push({ x: nx + CX, y: ny + CY });
+
+                // Rot target: undo rotation so it aligns strictly with X axis horizontally
+                pcaRotTarget.push({ x: x + CX, y: y + CY });
+
+                // Flat target: crush Y to 0
+                pcaFlatTarget.push({ x: x + CX, y: CY });
+            }
+            renderPCA();
+        }
+
+        function renderPCA() {
+            pcaC.clearRect(0, 0, 800, 400);
+
+            // Draw Axes
+            pcaC.strokeStyle = "#555"; pcaC.lineWidth = 1;
+            pcaC.beginPath(); pcaC.moveTo(0, CY); pcaC.lineTo(800, CY); pcaC.stroke();
+            pcaC.beginPath(); pcaC.moveTo(CX, 0); pcaC.lineTo(CX, 400); pcaC.stroke();
+
+            for (let i = 0; i < pcaPoints.length; i++) {
+                let px, py;
+                if (pcaState === 1) {
+                    px = pcaPoints[i].x + (pcaRotTarget[i].x - pcaPoints[i].x) * pcaAnim;
+                    py = pcaPoints[i].y + (pcaRotTarget[i].y - pcaPoints[i].y) * pcaAnim;
+                } else if (pcaState === 2) {
+                    px = pcaRotTarget[i].x + (pcaFlatTarget[i].x - pcaRotTarget[i].x) * pcaAnim;
+                    py = pcaRotTarget[i].y + (pcaFlatTarget[i].y - pcaRotTarget[i].y) * pcaAnim;
+                } else {
+                    px = pcaPoints[i].x; py = pcaPoints[i].y;
+                }
+
+                pcaC.beginPath();
+                pcaC.arc(px, py, 3, 0, Math.PI * 2);
+                pcaC.fillStyle = pcaState === 2 && pcaAnim > 0.8 ? "#e67e22" : "rgba(231, 76, 60, 0.7)";
+                pcaC.fill();
+            }
+
+            if ((pcaState === 1 || pcaState === 2) && pcaAnim < 1) {
+                pcaAnim += 0.02;
+                requestAnimationFrame(renderPCA);
+            }
+        }
+
+        window.runPCA = () => { pcaState = 1; pcaAnim = 0; renderPCA(); };
+        window.dropDim = () => { if (pcaState === 1 && pcaAnim >= 1) { pcaState = 2; pcaAnim = 0; renderPCA(); } };
+        resetPCA();
+
+    </script>
+    <script src="sidebar.js?v=2"></script>
 </body>
 
 </html>

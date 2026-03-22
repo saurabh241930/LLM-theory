@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross Validation & Splits - ML Cheatsheet</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .split-box {
+            display: inline-block;
+            padding: 15px;
+            margin: 5px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .train-box {
+            background: #dceefc;
+            border: 2px solid #54a0ff;
+            color: #0d47a1;
+            width: 60%;
+        }
+
+        .val-box {
+            background: #fcf1dc;
+            border: 2px solid #feca57;
+            color: #e67e22;
+            width: 15%;
+        }
+
+        .test-box {
+            background: #dcfce3;
+            border: 2px solid #1dd1a1;
+            color: #10ac84;
+            width: 15%;
+        }
+
+        .fold-container {
+            display: flex;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .fold {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border-right: 1px solid #ccc;
+            background: #f8f9fa;
+        }
+
+        .fold.val {
+            background: #feca57;
+            font-weight: bold;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Data Splitting & Cross Validation</h1>
+        <div class="subtitle">Proper Model Evaluation & Preventing Data Leakage</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Golden Rule of ML</h2>
+            <p><strong>Never evaluate a model on the data it was trained on.</strong></p>
+            <p>If you test a student on the exact homework questions they already saw, you don't know if they learned
+                the concepts or just memorized the answers. The same applies to ML models.</p>
+
+            <h3>The Standard Split (Train / Val / Test)</h3>
+            <div style="margin: 20px 0; width: 100%;">
+                <div class="split-box train-box">Training Set (70-80%)</div>
+                <div class="split-box val-box">Val Set (10-15%)</div>
+                <div class="split-box test-box">Test Set (10-15%)</div>
+            </div>
+
+            <ul>
+                <li><strong>Training Set:</strong> Used to compute gradients and update weights.</li>
+                <li><strong>Validation Set:</strong> Used during training to tune hyperparameters (like learning rate)
+                    and trigger Early Stopping.</li>
+                <li><strong>Test Set:</strong> Locked away until the absolute final step. Used exactly once to estimate
+                    real-world performance.</li>
+            </ul>
+
+            <div class="warning-box">
+                <h4>⚠️ Data Leakage (The Silent Killer)</h4>
+                <p>Data leakage occurs when information from outside the training dataset is used to create the model.
+                    If your model gets 99% accuracy but fails in production, you probably have leakage.</p>
+                <ul>
+                    <li><strong>Target Leakage:</strong> Including a feature that is a proxy for the label (e.g.,
+                        predicting if a user gets a loan, and including their "monthly loan payment amount" as a
+                        feature).</li>
+                    <li><strong>Temporal Leakage:</strong> Using future data to predict the past in time-series
+                        forecasting.</li>
+                    <li><strong>Leaky Preprocessing:</strong> Fitting a StandardScaler or TF-IDF Vectorizer on the
+                        <em>entire</em> dataset before splitting. Always split first, then fit on train, transform on
+                        val/test.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>k-Fold Cross Validation</h2>
+            <p>A single Train/Val split can be lucky or unlucky. k-Fold splitting divides the dataset into
+                <code>k</code> equal chunks (folds). The model is trained <code>k</code> separate times, using a
+                different fold as the validation set each time.</p>
+
+            <div style="margin: 20px 0;">
+                <p>Example: 5-Fold Cross Validation</p>
+                <div class="fold-container">
+                    <div class="fold val">Fold 1 (Val)</div>
+                    <div class="fold">Fold 2 (Train)</div>
+                    <div class="fold">Fold 3 (Train)</div>
+                    <div class="fold">Fold 4 (Train)</div>
+                    <div class="fold">Fold 5 (Train)</div>
+                </div>
+                <div class="fold-container">
+                    <div class="fold">Fold 1 (Train)</div>
+                    <div class="fold val">Fold 2 (Val)</div>
+                    <div class="fold">Fold 3 (Train)</div>
+                    <div class="fold">Fold 4 (Train)</div>
+                    <div class="fold">Fold 5 (Train)</div>
+                </div>
+                <div style="text-align: center; color: #888;">... repeats 5 times</div>
+            </div>
+
+            <p><strong>Result:</strong> Every single data point gets to be in the validation set exactly once. The final
+                score is the average of the <code>k</code> validation scores, providing a much more robust estimate of
+                true performance.</p>
+
+            <h3>Stratified k-Fold</h3>
+            <p>If your dataset is highly imbalanced (e.g., 99% benign, 1% fraud), a random split might create a fold
+                with zero fraud cases. <strong>Stratified splitting</strong> guarantees that every fold has the exact
+                same ratio of classes as the overall dataset.</p>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

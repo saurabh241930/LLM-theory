@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluation Metrics - ML Cheatsheet</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .confusion-matrix {
+            display: grid;
+            grid-template-columns: 100px 150px 150px;
+            grid-template-rows: 50px 100px 100px;
+            gap: 5px;
+            margin: 20px auto;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .cm-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            border: 1px solid #ccc;
+            background: #fff;
+            padding: 10px;
+        }
+
+        .cm-header {
+            font-weight: bold;
+            background: #f1f3f5;
+            border: none;
+        }
+
+        .cm-true-pos {
+            background: #dcfce3;
+        }
+
+        .cm-true-neg {
+            background: #dcfce3;
+        }
+
+        .cm-false-pos {
+            background: #fcf1dc;
+        }
+
+        .cm-false-neg {
+            background: #fcf1dc;
+        }
+
+        .metric-card {
+            background: #fff;
+            border-left: 4px solid var(--wp-accent);
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .formula {
+            font-family: monospace;
+            font-size: 1.1em;
+            background: #f8f9fa;
+            padding: 5px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Evaluation Metrics in Depth</h1>
+        <div class="subtitle">Precision, Recall, F1, and going beyond simple accuracy</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Problem with Accuracy</h2>
+            <p>If you build a model to detect a rare disease that affects 1 in 10,000 people, a model that simply
+                outputs "Healthy" 100% of the time will have 99.99% accuracy. <strong>But it's completely
+                    useless.</strong> Accuracy fails on imbalanced datasets.</p>
+
+            <h3>The Confusion Matrix</h3>
+            <p>The foundation of all robust evaluation metrics:</p>
+
+            <div class="confusion-matrix">
+                <div class="cm-cell cm-header" style="background:transparent;"></div>
+                <div class="cm-cell cm-header">Predicted Positive</div>
+                <div class="cm-cell cm-header">Predicted Negative</div>
+
+                <div class="cm-cell cm-header">Actual Positive</div>
+                <div class="cm-cell cm-true-pos">
+                    <strong>True Positive (TP)</strong>
+                    <div style="font-size: 0.8em; color: green;">Correctly caught</div>
+                </div>
+                <div class="cm-cell cm-false-neg">
+                    <strong>False Negative (FN)</strong>
+                    <div style="font-size: 0.8em; color: red;">Missed (Type II Error)</div>
+                </div>
+
+                <div class="cm-cell cm-header">Actual Negative</div>
+                <div class="cm-cell cm-false-pos">
+                    <strong>False Positive (FP)</strong>
+                    <div style="font-size: 0.8em; color: orange;">False Alarm (Type I Error)</div>
+                </div>
+                <div class="cm-cell cm-true-neg">
+                    <strong>True Negative (TN)</strong>
+                    <div style="font-size: 0.8em; color: green;">Correctly ignored</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Core Metrics</h2>
+
+            <div class="metric-card">
+                <h3>Precision</h3>
+                <p><em>"Of all the items the model flagged as positive, how many actually were?"</em></p>
+                <p><span class="formula">Precision = TP / (TP + FP)</span></p>
+                <p><strong>Optimize for this when:</strong> False Positives are expensive. (e.g., YouTube
+                    Recommendations, Spam Filtering). You don't want to show bad videos to users.</p>
+            </div>
+
+            <div class="metric-card">
+                <h3>Recall (Sensitivity)</h3>
+                <p><em>"Of all the actual positives in the real world, how many did the model find?"</em></p>
+                <p><span class="formula">Recall = TP / (TP + FN)</span></p>
+                <p><strong>Optimize for this when:</strong> False Negatives are expensive. (e.g., Cancer detection,
+                    Fraud detection). You'd rather have a false alarm than let a dying patient go untreated.</p>
+            </div>
+
+            <div class="metric-card">
+                <h3>F1 Score</h3>
+                <p>The harmonic mean of Precision and Recall. It punishes extreme values. If Precision is 1.0 and Recall
+                    is 0.0, the regular average is 0.5, but the F1 score is 0.</p>
+                <p><span class="formula">F1 = 2 * (Precision * Recall) / (Precision + Recall)</span></p>
+                <p>Best overall metric for imbalanced classification tasks.</p>
+            </div>
+
+            <div class="metric-card">
+                <h3>AUC-ROC</h3>
+                <p>The Area Under the Receiver Operating Characteristic Curve. It tells you the probability that the
+                    model will rank a randomly chosen positive instance higher than a randomly chosen negative one.</p>
+                <ul>
+                    <li>1.0 = Perfect model</li>
+                    <li>0.5 = Random guessing (useless)</li>
+                </ul>
+                <p>Crucially, AUC-ROC is <em>threshold-invariant</em>. It measures the fundamental separability of the
+                    classes, regardless of what probability threshold (e.g., > 0.5) you pick for classification.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>NLP & Text Generation Metrics</h2>
+            <p>Traditional ML metrics don't work for generative AI. How do you measure if a paragraph is "good"?</p>
+
+            <table class="wikitable">
+                <tr>
+                    <th>Metric</th>
+                    <th>What it measures</th>
+                    <th>Drawbacks</th>
+                </tr>
+                <tr>
+                    <td><strong>BLEU</strong></td>
+                    <td>n-gram overlap against a reference translation. (Precision-focused)</td>
+                    <td>Punishes valid synonyms. Very rigid.</td>
+                </tr>
+                <tr>
+                    <td><strong>ROUGE</strong></td>
+                    <td>Recall-oriented n-gram overlap. (Used heavily in Summarization)</td>
+                    <td>Still syntax-bound. Cannot evaluate creative reasoning.</td>
+                </tr>
+                <tr>
+                    <td><strong>LLM-as-a-Judge</strong></td>
+                    <td>Using GPT-4 to score accuracy, relevance, and tone. (RAGAS framework)</td>
+                    <td>Expensive, slow, and subject to LLM bias (e.g., preferring longer answers).</td>
+                </tr>
+            </table>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

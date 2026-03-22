@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gradient Clipping - Optimization & Training</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .clip-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .clip-card {
+            background: #fff;
+            padding: 20px;
+            border-top: 5px solid #ccc;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+
+        .math-block {
+            background: #202122;
+            color: white;
+            padding: 15px;
+            font-family: monospace;
+            border-radius: 8px;
+            text-align: center;
+            margin: 15px 0;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Gradient Clipping</h1>
+        <div class="subtitle">Taming the Exploding Gradient Problem in LLM Data Parallelism</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Catastrophe of the Exploding Gradient</h2>
+            <p>During Backpropagation, the Chain Rule multiplies gradients as they flow backwards through the network.
+                In deep networks, especially during the volatile early stages of LLM pretraining or when encountering a
+                massive batch of noisy data, these multiplied gradients can "explode" into astronomically large numbers.
+            </p>
+            <p>If an exploding gradient reaches the optimizer, the optimizer will take a massive, violent step in the
+                loss landscape. It will instantly destroy the billions of parameters the model has carefully learned of
+                the past several days, driving the Loss straight to `NaN` (infinity). At this point, the entire training
+                run is effectively dead and must be restarted from a checkpoint.</p>
+        </section>
+
+        <section>
+            <h2>Norm Clipping vs Value Clipping</h2>
+            <p>To prevent this, we <strong>clip</strong> the gradients before the optimizer is allowed to see them.
+                There are two mathematical ways to do this:</p>
+
+            <div class="clip-grid">
+                <div class="clip-card" style="border-top-color: #e55039;">
+                    <h3>Value Clipping (The Bad Way)</h3>
+                    <p>Simply cap every individual number in the gradient vector between a hard `-X` and `+X` threshold.
+                    </p>
+                    <p><strong>Example:</strong> Threshold = 1.0. Vector = <code>[0.5, 2.0, 5.0]</code>. Result =
+                        <code>[0.5, 1.0, 1.0]</code>.</p>
+                    <p><strong>Why it fails:</strong> The gradient vector points in a very specific mathematical
+                        "direction" in hyperspace. By capping only the largest numbers, you physically bend the vector
+                        so it points in the wrong direction. The optimizer takes a step towards the wrong solution.</p>
+                </div>
+
+                <div class="clip-card" style="border-top-color: #1dd1a1;">
+                    <h3>Norm Clipping (The Industry Standard)</h3>
+                    <p>Instead of looking at individual numbers, we calculate the Global L2 Norm (the total
+                        length/magnitude) of the entire massive gradient vector. If the total length exceeds the
+                        threshold, we scale down every single number in the vector by the exact same percentage.</p>
+                    <div class="math-block">
+                        Scale Factor = min(1, Threshold / ||Gradient||)
+                    </div>
+                    <p><strong>Example:</strong> Length = 5.0. Threshold = 1.0. The entire vector is scaled down by 80%.
+                        <strong>The direction is perfectly preserved</strong>, but the size of the step is safely
+                        shrunk.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div
+                style="background: #eef2ff; padding: 20px; border-left: 5px solid #3366cc; margin: 20px 0; border-radius: 4px;">
+                <h3 style="margin-top:0;">Typical Thresholds in LLM Training</h3>
+                <p>In standard PyTorch, this is implemented natively as:</p>
+                <code
+                    style="display:block; background:#fff; padding:10px; border:1px solid #ccc; margin:10px 0;">torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)</code>
+                <p>The standard <code>max_norm</code> threshold for almost all modern LLM pretraining (including LLaMA
+                    and GPT architectures) is precisely <strong>1.0</strong>. The hyperparameter is rarely tuned. If the
+                    global gradient length exceeds 1.0, it is forcefully scaled back down to exactly 1.0 before the
+                    AdamW optimizer is allowed to update the weights.</p>
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

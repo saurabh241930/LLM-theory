@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supervised vs Unsupervised vs Semi-supervised - ML Cheatsheet</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .paradigm-card {
+            background: #fff;
+            border-top: 5px solid var(--wp-accent);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .paradigm-card.unsupervised {
+            border-top-color: #f0ad4e;
+        }
+
+        .paradigm-card.semi {
+            border-top-color: #5cb85c;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Learning Paradigms</h1>
+        <div class="subtitle">Supervised, Unsupervised & Self-Supervised Learning</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Three Pillars of Machine Learning</h2>
+            <div class="comparison-grid">
+                <div class="paradigm-card">
+                    <h3>🎯 Supervised Learning</h3>
+                    <p><strong>Goal:</strong> Learn a mapping from inputs (X) to labels (Y).</p>
+                    <p><strong>Data:</strong> Fully labeled (e.g., thousands of emails manually marked "Spam" or "Not
+                        Spam").</p>
+                    <ul>
+                        <li><strong>Classification:</strong> Predicting categories.</li>
+                        <li><strong>Regression:</strong> Predicting numbers.</li>
+                    </ul>
+                </div>
+
+                <div class="paradigm-card unsupervised">
+                    <h3>🌌 Unsupervised Learning</h3>
+                    <p><strong>Goal:</strong> Discover hidden structures in data without human guidance.</p>
+                    <p><strong>Data:</strong> Completely unlabeled.</p>
+                    <ul>
+                        <li><strong>Clustering:</strong> K-Means, DBSCAN (Grouping similar customers).</li>
+                        <li><strong>Dimensionality Reduction:</strong> PCA, t-SNE (Compressing variables).</li>
+                    </ul>
+                </div>
+
+                <div class="paradigm-card semi">
+                    <h3>🌉 Semi & Self-Supervised</h3>
+                    <p><strong>Goal:</strong> Leverage massive unlabeled data using a small amount of labeled data, or
+                        generate labels automatically.</p>
+                    <p><strong>Self-Supervised (LLM Core!):</strong> The bridge to modern AI. The data <em>provides its
+                            own labels</em>.</p>
+                    <ul>
+                        <li><strong>Next Token Prediction:</strong> Hide the next word, predict it, then repeat. (GPT)
+                        </li>
+                        <li><strong>Masked Language Modeling:</strong> Hide middle words, predict them. (BERT)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mermaid">
+                graph TD
+                A[Machine Learning] --> B[Supervised]
+                A --> C[Unsupervised]
+                A --> D[Self-Supervised]
+                B --> B1[Classification]
+                B --> B2[Regression]
+                C --> C1[Clustering]
+                C --> C2[Dimensionality Reduction]
+                D --> D1[Next Token Prediction]
+                D --> D2[Masking]
+                style D fill:#eef2ff,stroke:#3366cc,stroke-width:2px
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

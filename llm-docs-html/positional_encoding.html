@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Positional Encoding & RoPE</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .rope-panel {
+            background: #1e272e;
+            padding: 30px;
+            border-radius: 8px;
+            color: #d2dae2;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .circle-container {
+            width: 300px;
+            height: 300px;
+            border: 2px dashed #485460;
+            border-radius: 50%;
+            margin: 20px auto;
+            position: relative;
+            background: radial-gradient(circle, #2C3A47 0%, #1e272e 100%);
+        }
+
+        .axis {
+            position: absolute;
+            background: #485460;
+        }
+
+        .x-axis {
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+        }
+
+        .y-axis {
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+        }
+
+        .vector {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            height: 4px;
+            width: 130px;
+            background: #0fbcf9;
+            transform-origin: 0% 50%;
+            transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-radius: 2px;
+            box-shadow: 0 0 10px #0fbcf9;
+        }
+
+        .vector::after {
+            content: '';
+            position: absolute;
+            right: -2px;
+            top: -6px;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-left: 12px solid #0fbcf9;
+        }
+
+        .slider-group {
+            margin: 20px 0;
+        }
+
+        .slider-label {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #0fbcf9;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input[type=range] {
+            width: 80%;
+            cursor: pointer;
+        }
+
+        .math-blurb {
+            font-size: 1.1em;
+            padding: 15px;
+            border-left: 4px solid #0fbcf9;
+            background: #2C3A47;
+            border-radius: 4px;
+            text-align: left;
+        }
+
+        .highlight {
+            color: #feca57;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Rotary Positional Embedding (RoPE)</h1>
+        <div class="subtitle">Interactive visualization of how LLMs inherently understand time and sequence</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The "Bag of Words" Problem</h2>
+            <p>A pure Transformer Attention mechanism has absolutely no concept of Time or Sequence. If you feed it "The
+                dog bit the man" and "The man bit the dog", the math inside the QKV matrices calculates <strong>the
+                    exact same semantic overlap</strong> because the sets of words are identical. The original 2017
+                paper solved this by <em>injecting Sinusoidal math</em> directly into the token embeddings.</p>
+            <p>Modern models (LLaMA 3, Mistral) use <strong>Rotary Positional Embedding (RoPE)</strong>. Instead of
+                adding a fixed integer to a variable, they physically rotate the semantic vector on a 2D plane by an
+                angle corresponding to its position index.</p>
+        </section>
+
+        <section class="rope-panel">
+            <h3>RoPE Rotation Simulator</h3>
+            <div class="circle-container">
+                <div class="axis x-axis"></div>
+                <div class="axis y-axis"></div>
+                <div class="vector" id="vectorLine"></div>
+            </div>
+
+            <div class="slider-group">
+                <label class="slider-label">Token Absolute Position (m): <span id="posValue"
+                        style="color:white;">0</span></label>
+                <input type="range" id="posSlider" min="0" max="20" step="1" value="0">
+            </div>
+
+            <div class="math-blurb">
+                <p><strong>Vector Angle &Theta; = <span class="highlight" id="angleOut">0&deg;</span></strong></p>
+                <p>Notice how Token 0 points directly Right. As the token moves further into the prompt sequence
+                    (Position 1, 2, 3...), the actual semantic embedding vector is mathematically forced to rotate
+                    <code>m * &theta;</code> degrees. <br><br>The brilliance of RoPE is that the <strong>relative
+                        distance</strong> between Token 3 and Token 8 is identical to the relative distance between
+                    Token 13 and Token 18. The dot product preserves this perfect relative rotation!</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function updateRotation() {
+            const pos = parseInt(document.getElementById('posSlider').value);
+            document.getElementById('posValue').innerText = pos;
+
+            // Base rotation constant (theta) for visualization purposes: e.g. 15 degrees per token position
+            const theta = 30;
+            const totalDegrees = pos * theta;
+
+            document.getElementById('vectorLine').style.transform = `rotate(-${totalDegrees}deg)`;
+            document.getElementById('angleOut').innerText = `${totalDegrees}\xB0`;
+        }
+
+        document.getElementById('posSlider').addEventListener('input', updateRotation);
+        window.onload = updateRotation;
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

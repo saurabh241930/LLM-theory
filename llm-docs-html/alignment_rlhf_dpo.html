@@ -154,6 +154,26 @@
                 simple classification problem. It bypasses the reward model entirely by optimizing the model's
                 likelihood of choosing "Winning" responses over "Losing" responses directly.</p>
 
+            <h2>Constitutional AI (CAI) & RLAIF</h2>
+            <p><strong>Constitutional AI</strong> (popularized by Anthropic) removes the "human-in-the-loop" bottleneck
+                by using a second AI to supervise and align the primary AI based on a written list of rules—the
+                <strong>Constitution</strong>.</p>
+
+            <div class="side-note">
+                <h3>The RLAIF Pipeline:</h3>
+                <ol>
+                    <li><strong>Critique:</strong> The model generates an initial response. A "Critique LLM" evaluates
+                        it based on Constitutional principles (e.g., "Is this respectful?").</li>
+                    <li><strong>Revision:</strong> The model rewrites its response to address the critique.</li>
+                    <li><strong>Preference Learning:</strong> The "Feedback LLM" looks at multiple revisions and picks
+                        the best one based on the Constitution.</li>
+                    <li><strong>Final Alignment:</strong> The model is fine-tuned (SFT or DPO) on these AI-generated
+                        preferences.</li>
+                </ol>
+                <p><strong>Key Benefit:</strong> Scaling alignment to massive datasets without needing thousands of
+                    human labelers.</p>
+            </div>
+
             <h2>Comparison Table: RLHF vs DPO</h2>
             <table class="wiki-table">
                 <thead>
@@ -227,7 +247,7 @@
 
     <script src="animations.js"></script>
 
-<script src="sidebar.js?v=2"></script>
+    <script src="sidebar.js?v=2"></script>
 </body>
 
 </html>

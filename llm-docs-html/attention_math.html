@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3B1B Attention Vector Projection</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .b1b-panel {
+            background: #1e1e24;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            color: #ecf0f1;
+            position: relative;
+        }
+
+        canvas {
+            background: #111;
+            border-radius: 4px;
+            border: 1px solid #333;
+            cursor: move;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .instruction {
+            font-size: 1.2em;
+            color: #f1c40f;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .math-blurb {
+            text-align: left;
+            padding: 20px;
+            background: #2c3e50;
+            border-left: 4px solid #3498db;
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+
+        .hud {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            text-align: left;
+            font-family: monospace;
+            font-size: 1.1em;
+            pointer-events: none;
+        }
+
+        .hud-line {
+            margin-bottom: 5px;
+        }
+
+        .color-q {
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .color-k {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .color-v {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .color-dp {
+            color: #f1c40f;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Attention Math (3Blue1Brown Geometric Edition)</h1>
+        <div class="subtitle">Visualizing the Q &middot; K Dot Product as a Physical Projection</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Geometry of Attention</h2>
+            <p>We often write the Attention equation as a matrix multiplication, but <strong>linear algebra is just
+                    geometry in disguise</strong>.</p>
+            <p>When the Transformer multiplies a Query Matrix by a Key Matrix, it is fundamentally computing the
+                <strong>Dot Product</strong> between two vectors. Geometrically, the Dot Product is calculating "How
+                much of the Query vector points in the exact same direction as the Key vector?"</p>
+        </section>
+
+        <section class="b1b-panel">
+            <div class="instruction">DRAG the Blue Query Vector (Q) to change its alignment with Key (K)</div>
+
+            <div class="hud">
+                <div class="hud-line"><span class="color-q">Query (Q)</span> is what this token is looking for.</div>
+                <div class="hud-line"><span class="color-k">Key (K)</span> is what the other token contains.</div>
+                <div class="hud-line"><span class="color-dp">Dot Product</span> measures their alignment.</div>
+                <div class="hud-line">The Dot Product mathematically shrinks or grows <span class="color-v">Value
+                        (V)</span>.</div>
+            </div>
+
+            <canvas id="attnCanvas" width="800" height="500"></canvas>
+
+            <div class="math-blurb">
+                <p><strong>The "Aha!" Moment:</strong> The <span class="color-dp">Yellow Dashed Line</span> represents
+                    projecting the Query directly onto the Key. The length of this shadow is the Dot Product.</p>
+                <p>Notice the <span class="color-v">Green Value (V) Vector</span> sticking out on the right. <br>The
+                    Value vector is the <em>actual payload</em> containing the semantic meaning of the token. The
+                    Transformer takes the raw number from the Dot Product (how aligned Q and K are) and multiplies it
+                    against the V vector.</p>
+                <p>If you drag Q to point exactly opposite of K, the Dot Product becomes negative/zero, and the Green V
+                    vector shrinks to nothing. The network completely ignores it!</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('attnCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        const ORIGIN = { x: 350, y: 350 };
+        const SCALE = 50;
+
+        // Vectors
+        let Q = { x: 2, y: 3 }; // Drag target
+        const K = { x: 4, y: 1 }; // Fixed Key
+        const V_base = { x: 1, y: -3 }; // Fixed Value direction payload (offset to right for visual clarity)
+
+        let isDragging = false;
+
+        function drawGrid() {
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 0; i < W; i += SCALE) { ctx.moveTo(i, 0); ctx.lineTo(i, H); }
+            for (let i = 0; i < H; i += SCALE) { ctx.moveTo(0, i); ctx.lineTo(W, i); }
+            ctx.stroke();
+
+            // Axes
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, ORIGIN.y); ctx.lineTo(W, ORIGIN.y);
+            ctx.moveTo(ORIGIN.x, 0); ctx.lineTo(ORIGIN.x, H);
+            ctx.stroke();
+        }
+
+        function drawArrow(startX, startY, vx, vy, color, width, label) {
+            const endX = startX + vx * SCALE;
+            const endY = startY - vy * SCALE;
+            const angle = Math.atan2(-vy, vx);
+            const headlen = 15;
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - headlen * Math.cos(angle - Math.PI / 6), endY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(endX - headlen * Math.cos(angle + Math.PI / 6), endY - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.fill();
+
+            if (label) {
+                ctx.fillStyle = color;
+                ctx.font = "bold 20px monospace";
+                ctx.fillText(label, endX + 10, endY - 10);
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+            drawGrid();
+
+            // Math
+            const dotProduct = (Q.x * K.x) + (Q.y * K.y);
+            const kMagSq = (K.x * K.x) + (K.y * K.y);
+
+            // Projection of Q onto K = (Q dot K / |K|^2) * K
+            const projScalar = dotProduct / kMagSq;
+            const projX = projScalar * K.x;
+            const projY = projScalar * K.y;
+
+            // Draw K (Red)
+            drawArrow(ORIGIN.x, ORIGIN.y, K.x, K.y, '#e74c3c', 4, "Key (K)");
+
+            // Draw dashed Projection line
+            const qRealX = ORIGIN.x + Q.x * SCALE;
+            const qRealY = ORIGIN.y - Q.y * SCALE;
+            const pRealX = ORIGIN.x + projX * SCALE;
+            const pRealY = ORIGIN.y - projY * SCALE;
+
+            ctx.strokeStyle = '#f1c40f';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(qRealX, qRealY);
+            ctx.lineTo(pRealX, pRealY);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset
+
+            // Draw projected segment (Thick yellow over Key)
+            drawArrow(ORIGIN.x, ORIGIN.y, projX, projY, '#f1c40f', 6, `Dot: ${dotProduct.toFixed(1)}`);
+
+            // Draw Q (Blue)
+            drawArrow(ORIGIN.x, ORIGIN.y, Q.x, Q.y, '#3498db', 5, "Query (Q)");
+
+            // Draw scaled Value V
+            // We scale V strictly down to simulate Softmax constraints for visualization, and offset it origin
+            const vOriginX = ORIGIN.x + 200; // Offset visually
+
+            // Softmax approx: if dot > 0, we scale. If negative, it zero's out.
+            let attentionWeight = Math.max(0, dotProduct / 10);
+            drawArrow(vOriginX, ORIGIN.y, V_base.x * attentionWeight, V_base.y * attentionWeight, '#2ecc71', 4, `Value Output`);
+
+            // Ghost V
+            ctx.globalAlpha = 0.2;
+            drawArrow(vOriginX, ORIGIN.y, V_base.x * 1, V_base.y * 1, '#2ecc71', 2, "Max V");
+            ctx.globalAlpha = 1.0;
+
+            // Target ring for drag
+            ctx.beginPath();
+            ctx.arc(qRealX, qRealY, 15, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(52, 152, 219, 0.5)';
+            ctx.fill();
+        }
+
+        // Mouse Events
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const qRealX = ORIGIN.x + Q.x * SCALE;
+            const qRealY = ORIGIN.y - Q.y * SCALE;
+
+            if (Math.hypot(mouseX - qRealX, mouseY - qRealY) < 30) {
+                isDragging = true;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            Q.x = (mouseX - ORIGIN.x) / SCALE;
+            Q.y = -(mouseY - ORIGIN.y) / SCALE;
+            render();
+        });
+
+        canvas.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('mouseleave', () => isDragging = false);
+
+        render();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

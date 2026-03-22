@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPT Pretraining & Scaling - Transformer Internals</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .chinchilla-card {
+            background: #fff;
+            padding: 20px;
+            border-left: 5px solid #ff9f43;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+
+        .loss-block {
+            background: #202122;
+            color: white;
+            padding: 20px;
+            font-family: monospace;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>GPT Pretraining & Scaling Laws</h1>
+        <div class="subtitle">Next-Token Prediction, Cross-Entropy Loss, and the Chinchilla ratio</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Unreasonable Effectiveness of Next-Token Prediction</h2>
+            <p>Every breakthrough in modern AI—from writing code to passing the Bar Exam—stems from a shockingly simple
+                pretraining objective: <strong>Next-Token Prediction</strong> (also known as Causal Language Modeling or
+                Autoregressive Generation).</p>
+            <p>Given the context <code>"The sky is"</code>, the model must output a probability distribution over its
+                entire vocabulary (e.g., 50,000 words), assigning the highest probability to the actual target token
+                (e.g., <code>"blue"</code>).</p>
+            <p><strong>Why is this so powerful?</strong> To perfectly predict the next word across a trillion tokens of
+                internet text, the model is physically forced to learn grammar, facts, reasoning, logic, and physics. To
+                predict the next word in a physics textbook problem, it has to learn how to solve the problem.</p>
+        </section>
+
+        <section>
+            <h2>The Mathematics of Learning (Cross-Entropy Loss)</h2>
+            <p>How do we actually update the model's weights? By measuring how "wrong" its probability distribution was
+                compared to reality.</p>
+
+            <div class="loss-block">
+                Loss = - Σ (y_true * log(y_pred))
+            </div>
+
+            <p>In standard pretraining, <code>y_true</code> is a <em>one-hot encoded vector</em>: the target word
+                ("blue") has a value of 1.0, and every other word is exactly 0.0.</p>
+            <p>If the model assigned a 99% probability (0.99) to "blue", the log of 0.99 is nearly 0, so the loss is
+                nearly 0 (no gradients). If the model only assigned a 1% probability (0.01) to "blue", the log of 0.01
+                is a massive negative number, generating a massive Loss, which backpropagates a massive gradient to
+                violently adjust the weights.</p>
+        </section>
+
+        <section>
+            <h2>The Chinchilla Scaling Laws (2022)</h2>
+            <p>For years, companies built larger and larger models (GPT-3 had 175 Billion parameters) but trained them
+                on very little data (300 Billion tokens). DeepMind's "Chinchilla" paper mathematically proved this was a
+                massive waste of resources.</p>
+
+            <div class="chinchilla-card">
+                <h3>The Compute-Optimal Ratio: 20x</h3>
+                <p>For every 1 parameter in a model, you should train it on exactly 20 tokens of data. If you have a
+                    budget to train a massive 100B model on 300B tokens (a 3x ratio), you will get a significantly
+                    smarter, better model by training a tiny 15B model on those same 300B tokens.</p>
+                <p><strong>The LLaMA Revolution:</strong> Meta took this to the extreme with LLaMA (1, 2, and 3).
+                    Instead of the 20x Chinchilla optimal limit, they trained small 7B and 8B parameter models on
+                    <strong>15 Trillion tokens</strong> (a 2000x ratio!). This created "over-trained" models that are
+                    small enough to run on a laptop but completely crush massive older models like GPT-3.</p>
+            </div>
+
+            <h3>Emergent Abilities</h3>
+            <p>As you scale either the parameter count or the token count, researchers noticed <em>Emergent
+                    Abilities</em>. A model with 1B parameters might completely fail at arithmetic. At 5B, it still
+                fails. At 10B, suddenly and unpredictably, it masters 3-digit arithmetic. The model undergoes a phase
+                transition, suddenly wiring together the intermediate subnetworks required to solve complex reasoning
+                problems.</p>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

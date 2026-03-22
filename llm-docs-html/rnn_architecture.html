@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3B1B RNN Architecture</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .rnn-panel {
+            background: #111;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            color: #ecf0f1;
+        }
+
+        canvas {
+            background: #1e272e;
+            border-radius: 8px;
+            border: 1px solid #485460;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            align-items: center;
+        }
+
+        button {
+            background: #eb3b5a;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #fc5c65;
+        }
+
+        .math-blurb {
+            background: #202122;
+            padding: 20px;
+            border-left: 4px solid #eb3b5a;
+            text-align: left;
+            margin-top: 20px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            color: #f7b731;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Recurrent Neural Networks (RNN)</h1>
+        <div class="subtitle">Visualizing Time Steps and the Vanishing Gradient</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of Memory</h2>
+            <p>Unlike standard Feed-Forward networks, an RNN attempts to understand time. It processes a sentence
+                word-by-word, maintaining a continual "Hidden State" vector that mathematically merges the current word
+                with all the memories of the past words.</p>
+        </section>
+
+        <section class="rnn-panel">
+            <h3>Interactive Unrolled RNN Visualizer</h3>
+
+            <canvas id="rnnCanvas" width="800" height="350"></canvas>
+
+            <div class="controls">
+                <button onclick="stepForward()">Process Next Word (T += 1)</button>
+                <button onclick="resetRNN()" style="background:#555;">Reset</button>
+            </div>
+
+            <div class="math-blurb">
+                <p><strong>Watch the Hidden State (Green Arrow):</strong> Every time you click "Process Next Word", the
+                    RNN takes the current input word and merges it with the existing Hidden State using a
+                    <code>tanh</code> activation matrix multiply.</p>
+                <p><strong>The <span class="highlight">Vanishing Gradient</span> Problem:</strong> Notice the red
+                    "Gradient Signal" bar at the bottom. During backpropagation, the gradients must travel backwards
+                    through time (from T=4 all the way to T=0). Because they are repeatedly multiplied by weights < 1.0,
+                        they geometrically shrink to <strong>Zero</strong>. By step 4, the RNN has completely
+                        mathematically "forgotten" the word at T=0. This fatal flaw necessitated the invention of the
+                        LSTM.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('rnnCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+
+        const sequence = ["The", "cat", "sat", "on", "the", "mat"];
+        let currentStep = -1; // -1 means start
+
+        const NODE_Y = 150;
+        const START_X = 100;
+        const SPACING = 120;
+
+        // Animation
+        let animProgress = 0;
+        let isAnimating = false;
+
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.font = "16px monospace";
+            ctx.textAlign = "center";
+
+            // Draw gradient timeline at bottom
+            ctx.fillStyle = "#fff";
+            ctx.fillText("Backprop Gradient Strength (Shrinking over time):", 200, H - 40);
+
+            // Draw all nodes up to current step
+            for (let i = 0; i < sequence.length; i++) {
+                const cx = START_X + i * SPACING;
+
+                // Draw Word Box (Input)
+                ctx.fillStyle = i <= currentStep ? "#3867d6" : "#4b6584";
+                ctx.fillRect(cx - 30, NODE_Y + 80, 60, 40);
+                ctx.fillStyle = "#fff";
+                ctx.fillText(sequence[i], cx, NODE_Y + 105);
+
+                // Draw RNN Node
+                ctx.beginPath();
+                ctx.arc(cx, NODE_Y, 35, 0, Math.PI * 2);
+                ctx.fillStyle = i <= currentStep ? "#26de81" : "#2d98da";
+                ctx.fill();
+                ctx.fillStyle = "#111";
+                ctx.font = "bold 20px Arial";
+                ctx.fillText("tanh", cx, NODE_Y + 7);
+
+                // Input Arrow (Up)
+                ctx.strokeStyle = i <= currentStep ? "#3867d6" : "#4b6584";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(cx, NODE_Y + 80);
+                ctx.lineTo(cx, NODE_Y + 35);
+                ctx.stroke();
+
+                // Output Arrow (Up)
+                ctx.strokeStyle = i <= currentStep ? "#f7b731" : "transparent";
+                ctx.beginPath();
+                ctx.moveTo(cx, NODE_Y - 35);
+                ctx.lineTo(cx, NODE_Y - 80);
+                ctx.stroke();
+                if (i <= currentStep) {
+                    ctx.fillStyle = "#f7b731";
+                    ctx.font = "14px monospace";
+                    ctx.fillText("y_" + i, cx, NODE_Y - 90);
+                }
+
+                // Hidden State Arrow (Right)
+                if (i < sequence.length - 1) {
+                    ctx.strokeStyle = i < currentStep ? "#20bf6b" : "#4b6584";
+                    ctx.lineWidth = i < currentStep ? 5 : 2;
+                    ctx.beginPath();
+                    ctx.moveTo(cx + 35, NODE_Y);
+                    ctx.lineTo(cx + SPACING - 35, NODE_Y);
+                    ctx.stroke();
+                    // arrow head
+                    if (i < currentStep) {
+                        ctx.beginPath();
+                        ctx.moveTo(cx + SPACING - 35, NODE_Y);
+                        ctx.lineTo(cx + SPACING - 45, NODE_Y - 10);
+                        ctx.lineTo(cx + SPACING - 45, NODE_Y + 10);
+                        ctx.fillStyle = "#20bf6b";
+                        ctx.fill();
+                    }
+                }
+
+                // Gradient Bar (Vanishing)
+                if (i <= currentStep && currentStep > 0) {
+                    // Exponential decay from current step backwards
+                    const distance = currentStep - i;
+                    const gradientStrength = Math.pow(0.4, distance); // 0.4 multiplier per step
+
+                    const barHeight = Math.max(2, gradientStrength * 40);
+                    ctx.fillStyle = "#eb3b5a";
+                    ctx.fillRect(cx - 15, H - 20 - barHeight, 30, barHeight);
+
+                    if (distance > 2) {
+                        ctx.fillStyle = "#ffcccc";
+                        ctx.font = "12px Arial";
+                        ctx.fillText("VANISHED", cx, H - 20 - barHeight - 10);
+                    }
+                } else if (i === 0 && currentStep === 0) {
+                    // Initial gradient is 1.0
+                    ctx.fillStyle = "#eb3b5a";
+                    ctx.fillRect(cx - 15, H - 60, 30, 40);
+                }
+            }
+
+            // Animation for current flow
+            if (isAnimating) {
+                const cx = START_X + currentStep * SPACING;
+                // Animate box from input up
+                ctx.fillStyle = `rgba(247, 183, 49, ${Math.sin(animProgress * Math.PI)})`;
+                ctx.beginPath();
+                ctx.arc(cx, NODE_Y + 50 - (animProgress * 50), 10, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function animate() {
+            if (!isAnimating) return;
+            animProgress += 0.05;
+            if (animProgress >= 1) {
+                isAnimating = false;
+                animProgress = 0;
+            }
+            render();
+            if (isAnimating) requestAnimationFrame(animate);
+        }
+
+        window.stepForward = () => {
+            if (currentStep < sequence.length - 1) {
+                currentStep++;
+                isAnimating = true;
+                animProgress = 0;
+                animate();
+            }
+        };
+
+        window.resetRNN = () => {
+            currentStep = -1;
+            isAnimating = false;
+            render();
+        };
+
+        render();
+
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

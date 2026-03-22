@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bayesian Fundamentals - ML Cheatsheet</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .math-hero {
+            background: #202122;
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-family: 'serif';
+            margin: 20px 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .bayes-term {
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .posterior {
+            color: #feca57;
+            font-weight: bold;
+        }
+
+        .likelihood {
+            color: #54a0ff;
+        }
+
+        .prior {
+            color: #1dd1a1;
+        }
+
+        .evidence {
+            color: #ff9ff3;
+        }
+
+        .bayes-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .bayes-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-top: 4px solid #ccc;
+        }
+
+        .bayes-card.prior-card {
+            border-top-color: #1dd1a1;
+        }
+
+        .bayes-card.likelihood-card {
+            border-top-color: #54a0ff;
+        }
+
+        .bayes-card.posterior-card {
+            border-top-color: #feca57;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Bayesian Fundamentals</h1>
+        <div class="subtitle">Updating Beliefs with Evidence</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>Bayes' Theorem</h2>
+            <p>Frequentist statistics views probability as the long-run frequency of events. Bayesian statistics views
+                probability as a <strong>measure of belief</strong> that updates as new evidence arrives. This is the
+                absolute foundation of probabilistic ML models.</p>
+
+            <div class="math-hero">
+                <span class="posterior">P(A|B)</span> =
+                <span style="display:inline-block; vertical-align:middle; text-align:center;">
+                    <div style="border-bottom: 2px solid white; padding-bottom: 5px;">
+                        <span class="likelihood">P(B|A)</span> × <span class="prior">P(A)</span>
+                    </div>
+                    <div style="padding-top: 5px;">
+                        <span class="evidence">P(B)</span>
+                    </div>
+                </span>
+            </div>
+
+            <div class="bayes-grid">
+                <div class="bayes-card prior-card">
+                    <h3 style="color:#10ac84; margin-top:0;">1. Prior P(A)</h3>
+                    <p>Your initial belief before seeing any data.</p>
+                    <p><em>Example: What's the chance an email is spam overall? Roughly 40%.</em></p>
+                </div>
+                <div class="bayes-card likelihood-card">
+                    <h3 style="color:#0d47a1; margin-top:0;">2. Likelihood P(B|A)</h3>
+                    <p>If the hypothesis is true, how likely is this evidence?</p>
+                    <p><em>Example: If an email IS spam, what's the probability it contains the word "Viagra"?
+                            High.</em></p>
+                </div>
+                <div class="bayes-card posterior-card">
+                    <h3 style="color:#e67e22; margin-top:0;">3. Posterior P(A|B)</h3>
+                    <p>Your updated belief after seeing the evidence.</p>
+                    <p><em>Example: Given the email contains "Viagra", what is the probability it is spam? The final
+                            answer.</em></p>
+                </div>
+            </div>
+            <p><em>Note: The denominator, Evidence P(B), just normalizes the result so probabilities sum to 1.</em></p>
+        </section>
+
+        <section>
+            <h2>Naive Bayes Classifier</h2>
+            <p>One of the earliest and most effective spam filtering algorithms. It calculates the posterior probability
+                that a document belongs to a class (e.g., Spam or Ham) based on the words it contains.</p>
+            <p>Why "Naive"? It assumes that the presence of every feature (word) is <strong>independent</strong> of
+                every other feature. This is mathematically false ("New" and "York" are highly correlated), but in
+                practice, Naive Bayes works incredibly well for text classification because the combined probabilities
+                still push the final classification in the right direction.</p>
+        </section>
+
+        <section>
+            <h2>Connection to LLMs</h2>
+            <p>Modern Large Language Models don't use Naive Bayes, but they are fundamentally <strong>probabilistic
+                    models</strong> deeply connected to Bayesian thinking:</p>
+            <ul>
+                <li>An LLM calculates the Conditional Probability (Likelihood) of the next token given the prompt
+                    context: <code>P(word_N | word_1, word_2 ... word_N-1)</code>.</li>
+                <li><strong>Temperature & Top-p Decoding:</strong> Manipulate this final probability distribution. A
+                    lower temperature sharpens the distribution (favoring high likelihood), while high temperature
+                    flattens it (allowing lower probability paths).</li>
+                <li><strong>Bayesian Neural Networks:</strong> Advanced active research. Instead of having fixed weights
+                    (like GPT-4), a BNN learns a <em>probability distribution</em> for every weight constraint. It can
+                    tell you "I'm 90% sure the answer is X, but my uncertainty is high." Standard LLMs confidently
+                    hallucinate because they lack proper Bayesian uncertainty measurement.</li>
+            </ul>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

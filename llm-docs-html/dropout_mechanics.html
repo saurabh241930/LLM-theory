@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropout Mechanics - Deep Learning Core</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .dropout-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 30px 0;
+            gap: 15px;
+        }
+
+        .layer-node {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #3366cc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .layer-node.dropped {
+            background: #ddd;
+            color: #888;
+            border: 2px dashed #aaa;
+        }
+
+        .code-snippet {
+            background: #202122;
+            color: #f1f3f5;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Dropout Mechanics</h1>
+        <div class="subtitle">Training vs Inference modes and Inverted Dropout Scaling</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Concept (Ensemble Learning in one model)</h2>
+            <p>A massive problem in Deep Learning is <strong>co-adaptation</strong>: neurons memorize specific rare
+                noise in the training data, and other neurons learn to rely entirely on those specific paths.
+                <strong>Dropout</strong> breaks this dependency by randomly shutting off a percentage (<code>p</code>,
+                usually 20-50%) of neurons during every single forward pass of training.</p>
+
+            <div class="dropout-container">
+                <div style="text-align: center;">
+                    <strong>Standard Network</strong><br><br>
+                    <div style="display:flex; gap:10px;">
+                        <div class="layer-node">1</div>
+                        <div class="layer-node">2</div>
+                        <div class="layer-node">3</div>
+                        <div class="layer-node">4</div>
+                    </div>
+                </div>
+
+                <div style="font-size: 2rem; margin: 0 40px;">→</div>
+
+                <div style="text-align: center;">
+                    <strong>With Dropout (p=0.5)</strong><br><br>
+                    <div style="display:flex; gap:10px;">
+                        <div class="layer-node">1</div>
+                        <div class="layer-node dropped">X</div>
+                        <div class="layer-node dropped">X</div>
+                        <div class="layer-node">4</div>
+                    </div>
+                </div>
+            </div>
+
+            <p>Because the network can never know which neurons will be available on any given pass, it is forced to
+                learn redundant, distributed representations. An ear detector neuron might be dropped, so the network is
+                forced to <em>also</em> learn to detect a tail to classify a dog. This makes the model incredibly robust
+                to overfitting.</p>
+        </section>
+
+        <section>
+            <h2>Inherent Scaling (Inverted Dropout)</h2>
+            <p>If you drop 50% of your neurons during training, the next layer is only receiving exactly half of the
+                numeric signal it expects. To fix this, you have two choices:</p>
+            <ul>
+                <li><strong>Old approach:</strong> Halve the weights of the network at test/inference time.</li>
+                <li><strong>Modern approach (Inverted Dropout):</strong> Scale the remaining active neurons UP by
+                    <code>1 / (1 - p)</code> during the <em>training phase</em>. If <code>p=0.5</code>, explicitly
+                    multiply the remaining active numbers by 2.0 to maintain the expected numerical volume.</li>
+            </ul>
+
+            <div class="code-snippet">
+                # PyTorch internally handles Inverted Dropout automatically
+                # During model.train()
+                active_neurons = input_tensor * random_mask(p=0.5)
+                scaled_output = active_neurons * (1.0 / (1.0 - 0.5))
+
+                # During model.eval() (Inference mode)
+                output = input_tensor # No mask, no scaling needed!
+            </div>
+
+            <p>This is why you absolutely must call <code>model.eval()</code> in PyTorch before deploying a model. If
+                you forget, your deployed LLM or vision classifier will randomly turn off half its brain for every user
+                request.</p>
+        </section>
+
+        <section>
+            <div style="background: #fff3cd; padding: 20px; border-left: 5px solid #ffc107; border-radius: 4px;">
+                <h3 style="margin-top:0;">Why standard Transformers often avoid Dropout</h3>
+                <p>If you read the Llama 3 or GPT-4 architectures, standard dense dropout is remarkably scarce compared
+                    to older models. Why? Because the modern datasets are measured in trillions of tokens. You do not
+                    suffer from memorization/overfitting when the training set is larger than the model's capacity to
+                    memorize. The "data itself" acts as the ultimate regularizer.</p>
+                <p>When dropout is used in LLMs, it is usually heavily localized (e.g., dropping some of the attention
+                    matrix probabilities, or dropping the residual paths) rather than blindly blanking out the
+                    feed-forward MLP blocks.</p>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedding Fine-Tuning - RAG</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .loss-block {
+            background: #202122;
+            color: white;
+            padding: 20px;
+            font-family: monospace;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 1.1rem;
+        }
+
+        .triplet-visual {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .embed-node {
+            padding: 15px;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .anchor {
+            background: #3366cc;
+            color: white;
+        }
+
+        .positive {
+            background: #1dd1a1;
+            color: white;
+        }
+
+        .negative {
+            background: #e55039;
+            color: white;
+        }
+
+        .arrow {
+            font-size: 2rem;
+            color: #666;
+        }
+
+        .pull {
+            color: #1dd1a1;
+            font-weight: bold;
+        }
+
+        .push {
+            color: #e55039;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Embedding Model Fine-Tuning</h1>
+        <div class="subtitle">Contrastive Learning, Triplet Loss, and Domain Adaptation</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Limit of Pre-trained Embeddings (MTEB)</h2>
+            <p>The <strong>MTEB (Massive Text Embedding Benchmark)</strong> is the global leaderboard for embedding
+                models (OpenAI, Cohere, BGE, E5). However, these models are trained on general internet text. If you are
+                building Medical RAG or Legal RAG, the exact vocabulary might be indistinguishable to a standard model.
+                <em>"Myocardial Infarction"</em> and <em>"Heart Attack"</em> might land far apart in vector space if the
+                model didn't read medical journals. You must fine-tune.</p>
+        </section>
+
+        <section>
+            <h2>Contrastive Learning & Triplet Loss</h2>
+            <p>You do not fine-tune an embedding model by predicting the next word. You fine-tune it by physically
+                dragging vectors around in multi-dimensional space. The industry standard is <strong>Triplet
+                    Loss</strong>.</p>
+
+            <p>You need a dataset containing three things:</p>
+            <ol>
+                <li><strong>Anchor:</strong> The user's query.</li>
+                <li><strong>Positive:</strong> A document that perfectly answers the query.</li>
+                <li><strong>Negative:</strong> A document that is irrelevant (or dangerously, a "hard negative" that
+                    looks relevant but isn't).</li>
+            </ol>
+
+            <div class="triplet-visual">
+                <div class="embed-node positive">Positive<br>Doc</div>
+                <div class="pull">← PULL</div>
+                <div class="embed-node anchor">Anchor<br>Query</div>
+                <div class="push">PUSH →</div>
+                <div class="embed-node negative">Negative<br>Doc</div>
+            </div>
+
+            <div class="loss-block">
+                Loss = max(0, Distance(Anchor, Positive) - Distance(Anchor, Negative) + Margin)
+            </div>
+
+            <p>During backpropagation, the gradients forcefully update the embedding model's weights to pull the Anchor
+                and Positive vectors closer together, while actively repelling the Negative vector away by at least a
+                specified <code>Margin</code>.</p>
+        </section>
+
+        <section>
+            <div
+                style="background: #eef2ff; padding: 20px; border-left: 5px solid #3366cc; margin: 20px 0; border-radius: 4px;">
+                <h3 style="margin-top:0;">The Secret Sauce: Hard Negatives</h3>
+                <p>Training an embedding model with random negatives (e.g., matching a question about "Taxes" against a
+                    document about "Dogs") is largely useless. The model already knows they are different.</p>
+                <p>State-of-the-art embedding fine-tuning relies entirely on <strong>Hard Negatives</strong>: documents
+                    that rank highly in BM25 (share exact keywords) but are semantically the wrong answer. Forcing the
+                    model to repel hard negatives is what takes an embedding model from 85% accuracy to 95% accuracy.
+                </p>
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

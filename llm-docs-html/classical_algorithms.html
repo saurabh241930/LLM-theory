@@ -101,12 +101,69 @@
 
         <section id="svm">
             <h2>4. Support Vector Machines (SVM)</h2>
-            <p>Finds the "Maximum Margin Hyperplane" that separates two classes. It uses the <strong>Kernel
-                    Trick</strong> to map data into higher dimensions where they become linearly separable.</p>
+            <div class="algo-box">
+                <p>Finds the <strong>Maximum Margin Hyperplane</strong> that separates two classes. It aims to maximize
+                    the distance between the hyperplane and the nearest points of each class (Support Vectors).</p>
+
+                <div class="comparison-card">
+                    <h3>The Kernel Trick</h3>
+                    <div class="one-liner">How to handle non-linear data without high computation.</div>
+                    <p>Instead of explicitly mapping data to a high-dimensional space (which is expensive), the Kernel
+                        Function calculates the <strong>dot product</strong> in that space directly.</p>
+                    <p><strong>Common Kernels:</strong> Linear, Polynomial, RBF (Radial Basis Function).</p>
+                </div>
+
+                <div class="qa-container">
+                    <h3>Q: Why use SVM over Logistic Regression?</h3>
+                    <div class="answer">
+                        <p>SVM is less sensitive to outliers because it only cares about the points near the decision
+                            boundary (Support Vectors). Logistic Regression considers all data points.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="knn">
+            <h2>5. K-Nearest Neighbors (KNN)</h2>
+            <div class="algo-box">
+                <p>A <strong>Non-parametric</strong> and <strong>Lazy Learning</strong> algorithm. It classifies a point
+                    based on the majority vote of its 'k' closest neighbors.</p>
+                <div class="mermaid">
+                    graph TD
+                    A[New Data Point] --> B[Calculate Distance: Euclidean/Manhattan]
+                    B --> C[Find K-Nearest Neighbors]
+                    C --> D[Majority Vote / Average]
+                </div>
+                <div class="qa-container">
+                    <h3>Q: What's the 'Curse of Dimensionality' in KNN?</h3>
+                    <div class="answer">
+                        <p>As the number of features increases, the distance between any two points becomes nearly
+                            constant, making 'nearness' meaningless. KNN requires <strong>Feature Scaling</strong> and
+                            <strong>Dimensionality Reduction</strong> to work effectively.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="naive-bayes">
+            <h2>6. Naive Bayes</h2>
+            <div class="algo-box">
+                <p>Based on <strong>Bayes' Theorem</strong>. It's 'Naive' because it assumes that all features are
+                    <strong>independent</strong> of each other given the class label.</p>
+                <div class="math-block">P(A|B) = [P(B|A) * P(A)] / P(B)</div>
+                <div class="qa-container">
+                    <h3>Q: When is Naive Bayes better than complex models?</h3>
+                    <div class="answer">
+                        <p>When data is small, features are relatively independent, or for <strong>NLP Text
+                                Classification</strong> (Spam filtering). It is extremely fast and handles
+                            high-dimensional categorical data well.</p>
+                    </div>
+                </div>
+            </div>
         </section>
     </div>
 
-    <script src="sidebar.js"></script>
+    <script src="sidebar.js?v=2"></script>
 </body>
 
 </html>

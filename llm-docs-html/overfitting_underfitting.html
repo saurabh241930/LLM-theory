@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overfitting & Underfitting - ML Cheatsheet</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .interactive-widget {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .slider-container {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            accent-color: var(--wp-accent);
+        }
+
+        .slider-value {
+            font-weight: bold;
+            font-size: 1.2rem;
+            min-width: 40px;
+            text-align: center;
+            color: var(--wp-accent);
+        }
+
+        .widget-description {
+            font-size: 0.95rem;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .comparison-card {
+            background: #fff;
+            border-left: 4px solid var(--wp-accent);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .math-block {
+            background: #f1f3f5;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'serif';
+            text-align: center;
+            margin: 15px 0;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Overfitting & Underfitting</h1>
+        <div class="subtitle">The Bias-Variance Tradeoff and Regularization Techniques</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="core-intuition">
+            <h2>Part 1: The Core Intuition</h2>
+            <p>Every ML model faces a fundamental tension called the <strong>bias-variance tradeoff</strong>:</p>
+            <ul>
+                <li><strong>Bias</strong> = error from wrong assumptions. A linear model fitting a curved dataset has
+                    high bias. It underfits.</li>
+                <li><strong>Variance</strong> = sensitivity to small fluctuations in training data. A high-degree
+                    polynomial that passes through every point has high variance. It overfits.</li>
+                <li><strong>Irreducible error</strong> = noise in the data itself. No model eliminates this.</li>
+            </ul>
+            <div class="math-block">
+                Error = Bias² + Variance + Irreducible Noise
+            </div>
+
+            <div class="interactive-widget">
+                <h3>Interactive: Polynomial Fitting</h3>
+                <div class="widget-description">
+                    Drag the slider to change the polynomial degree. At degree 1, the model is too rigid (high
+                    bias/underfitting). At degree 3, it tracks the true function perfectly. At degree 14, it memorizes
+                    every data point (high variance/overfitting), causing catastrophic failure on unseen data.
+                </div>
+                <canvas id="polyChart" height="100"></canvas>
+                <div class="slider-container">
+                    <span>Degree: 1</span>
+                    <input type="range" id="degreeSlider" min="1" max="14" value="1">
+                    <span>14</span>
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                    Current Degree: <span id="degreeValue" class="slider-value">1</span>
+                    <span id="fitStatus" style="margin-left: 15px; font-weight: bold; color: #d9534f;">(High Bias /
+                        Underfitting)</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="learning-curves">
+            <h2>Part 2: The Training vs. Validation Curve</h2>
+            <p>This is the single most important diagnostic plot in all of ML. It shows <em>exactly when</em> your model
+                crosses from learning to memorizing.</p>
+
+            <table class="wikitable">
+                <thead>
+                    <tr>
+                        <th>Signal</th>
+                        <th>Cause</th>
+                        <th>Fix</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Training loss high, Val loss high</td>
+                        <td>Underfitting</td>
+                        <td>More model capacity, more features, train longer</td>
+                    </tr>
+                    <tr>
+                        <td>Training loss low, Val loss high</td>
+                        <td>Overfitting</td>
+                        <td>Regularization, more data, dropout, early stopping</td>
+                    </tr>
+                    <tr>
+                        <td>Both losses low</td>
+                        <td>Good fit</td>
+                        <td>Done</td>
+                    </tr>
+                    <tr>
+                        <td>Val loss spiking</td>
+                        <td>Data issue / LR too high</td>
+                        <td>Check data quality, lower learning rate</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="interactive-widget">
+                <h3>Interactive: Early Stopping Visualization</h3>
+                <div class="widget-description">
+                    Drag the slider to simulate training epochs. Notice how training loss keeps falling forever, but
+                    validation loss hits a floor and climbs back up. The point of divergence is where overfitting
+                    begins.
+                </div>
+                <canvas id="lossChart" height="100"></canvas>
+                <div class="slider-container">
+                    <span>Epoch: 1</span>
+                    <input type="range" id="epochSlider" min="1" max="100" value="1">
+                    <span>100</span>
+                </div>
+                <div style="display: flex; justify-content: space-around; margin-top: 15px; text-align: center;">
+                    <div>
+                        <div style="font-size: 0.9rem; color: #555;">Epochs</div>
+                        <div id="epochValue" class="slider-value">1</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: teal;">Training Loss</div>
+                        <div id="trainLossValue" style="font-weight: bold; font-size: 1.2rem; color: teal;">0.900</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: #d9534f;">Validation Loss</div>
+                        <div id="valLossValue" style="font-weight: bold; font-size: 1.2rem; color: #d9534f;">0.950</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: #555;">Status</div>
+                        <div id="epochStatus" style="font-weight: bold; font-size: 1.1rem; color: #f0ad4e;">
+                            Underfitting...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="regularization">
+            <h2>Part 3: Regularization Techniques</h2>
+            <p>When you detect overfitting, these are the tools to fix it.</p>
+
+            <div class="comparison-card">
+                <h3>L2 Regularization (Ridge)</h3>
+                <p>Adds <code>λ · Σwᵢ²</code> to the loss. Penalizes large weights by pulling them toward zero
+                    proportionally. Weights never reach exactly zero — all features stay in play, just constrained.
+                    Standard in logistic regression and as weight decay in deep learning optimizers
+                    (<code>weight_decay</code> in PyTorch Adam).</p>
+            </div>
+
+            <div class="comparison-card">
+                <h3>L1 Regularization (Lasso)</h3>
+                <p>Adds <code>λ · Σ|wᵢ|</code> to the loss. The absolute value penalty creates a sharp corner at zero,
+                    which causes some weights to become exactly zero. This is automatic feature selection — L1 tells you
+                    which inputs don't matter. Use when you suspect many features are noise.</p>
+                <div style="background: #eef2ff; padding: 10px; border-left: 4px solid #3366cc; margin-top: 10px;">
+                    <strong>💡 The Interview Distinction:</strong> L2 shrinks all weights proportionally. L1 kills
+                    irrelevant features entirely. In high-dimensional embedding spaces (e.g., RAG with many metadata
+                    features), L1 is valuable for sparsity.
+                </div>
+            </div>
+
+            <div class="comparison-card">
+                <h3>Dropout</h3>
+                <p>During each training forward pass, randomly zero <code>p</code> fraction of neurons (typical
+                    <code>p</code> = 0.2–0.5). The network can't rely on any single neuron, so it's forced to learn
+                    distributed, redundant representations.
+                </p>
+                <p>At inference time, all neurons are active but weights are scaled by <code>(1−p)</code> to maintain
+                    expected output magnitude — this is called <em>inverted dropout</em>. PyTorch's
+                    <code>nn.Dropout</code> handles this automatically. Note: standard Transformers (GPT, BERT) use
+                    dropout sparingly, mainly in attention weights and after feed-forward layers.
+                </p>
+            </div>
+
+            <div class="comparison-card">
+                <h3>Early Stopping</h3>
+                <p>Monitor validation loss during training. If it doesn't improve for <code>N</code> consecutive epochs
+                    (the patience), stop and restore the checkpoint from the best epoch.</p>
+                <p>Completely free — no math, no hyperparameters beyond patience. Always combine with model
+                    checkpointing. This is the <strong>most used regularization technique in LLM fine-tuning</strong>
+                    because it requires zero changes to the model architecture.</p>
+            </div>
+
+            <div class="comparison-card">
+                <h3>k-Fold Cross-Validation</h3>
+                <p>Rather than using a single train/val split (which can be lucky or unlucky), k-fold splits the data
+                    into <code>k</code> equal parts. You train <code>k</code> separate times, each time holding out a
+                    different fold for validation. The final score is the average over all <code>k</code> validation
+                    scores.</p>
+                <p><strong>The key insight:</strong> k-fold gives you a much more reliable estimate of how well your
+                    model will generalize. A single validation split might be 5% better or worse than reality just from
+                    random chance. k-fold averages that out.</p>
+                <div style="background: #eef2ff; padding: 10px; border-left: 4px solid #3366cc; margin-top: 10px;">
+                    <strong>💡 For LLMs:</strong> k-fold is expensive since training runs take hours/days. Instead, use
+                    a fixed dev set with multiple random seeds and report mean ± std. For fine-tuning evaluation, use
+                    stratified splits to ensure label balance across splits.
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script>
+        // --- Widget 1: Polynomial Fit ---
+        const ctxPoly = document.getElementById('polyChart').getContext('2d');
+        const xValues = Array.from({ length: 20 }, (_, i) => (i / 19) * 10 - 5);
+        // True function: y = 0.5 * x^3 - 2 * x^2 + x + 10 + noise
+        const trueY = xValues.map(x => 0.5 * Math.pow(x, 3) - 2 * Math.pow(x, 2) + x + 10);
+        const noisyY = trueY.map(y => y + (Math.random() - 0.5) * 25);
+
+        // Pre-computed mock fits for visual effect
+        function generateFit(degree) {
+            if (degree === 1) { // Line
+                return xValues.map(x => 5 * x + 10);
+            } else if (degree <= 3) { // Good fit
+                return trueY.map(y => y + (Math.random() - 0.5) * 5);
+            } else { // Overfit: extreme polynomial wiggle
+                return xValues.map((x, i) => {
+                    const noise = ((i % 2 === 0 ? 1 : -1) * (degree * 5) * Math.sin(x * degree));
+                    return noisyY[i] * 0.8 + trueY[i] * 0.2 + noise;
+                });
+            }
+        }
+
+        const polyChart = new Chart(ctxPoly, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: 'Training Data',
+                        data: xValues.map((x, i) => ({ x, y: noisyY[i] })),
+                        backgroundColor: '#333',
+                        pointRadius: 6
+                    },
+                    {
+                        label: 'Model Fit',
+                        data: xValues.map((x, i) => ({ x, y: generateFit(1)[i] })),
+                        type: 'line',
+                        borderColor: '#d9534f',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                animation: false,
+                scales: {
+                    x: { display: false },
+                    y: { display: false, min: -100, max: 100 }
+                },
+                plugins: { legend: { display: true } }
+            }
+        });
+
+        const degreeSlider = document.getElementById('degreeSlider');
+        const degreeValue = document.getElementById('degreeValue');
+        const fitStatus = document.getElementById('fitStatus');
+
+        degreeSlider.addEventListener('input', (e) => {
+            const d = parseInt(e.target.value);
+            degreeValue.textContent = d;
+            polyChart.data.datasets[1].data = xValues.map((x, i) => ({ x, y: generateFit(d)[i] }));
+
+            if (d < 3) {
+                fitStatus.textContent = '(High Bias / Underfitting)';
+                fitStatus.style.color = '#d9534f';
+                polyChart.data.datasets[1].borderColor = '#d9534f';
+            } else if (d >= 3 && d <= 5) {
+                fitStatus.textContent = '(Good Fit / Sweet Spot)';
+                fitStatus.style.color = '#5cb85c';
+                polyChart.data.datasets[1].borderColor = '#5cb85c';
+                // Make the good fit exactly the true function for visual clarity
+                polyChart.data.datasets[1].data = xValues.map((x, i) => ({ x, y: trueY[i] }));
+            } else {
+                fitStatus.textContent = '(High Variance / Overfitting)';
+                fitStatus.style.color = '#f0ad4e';
+                polyChart.data.datasets[1].borderColor = '#f0ad4e';
+                // Spline tension adds wiggle
+                polyChart.data.datasets[1].tension = 0.4 - (d * 0.02);
+            }
+            polyChart.update();
+        });
+
+        // --- Widget 2: Training vs Val Curve ---
+        const ctxLoss = document.getElementById('lossChart').getContext('2d');
+        const epochs = Array.from({ length: 100 }, (_, i) => i + 1);
+        const trainLoss = epochs.map(e => 0.9 * Math.exp(-e / 25) + 0.05);
+        const valLoss = epochs.map(e => 0.95 * Math.exp(-e / 20) + 0.1 + (e > 35 ? (e - 35) * 0.015 : 0));
+
+        const lossChart = new Chart(ctxLoss, {
+            type: 'line',
+            data: {
+                labels: epochs,
+                datasets: [
+                    {
+                        label: 'Training Loss',
+                        data: [],
+                        borderColor: 'teal',
+                        borderWidth: 3,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Validation Loss',
+                        data: [],
+                        borderColor: '#d9534f',
+                        borderWidth: 3,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                animation: false,
+                scales: {
+                    x: { title: { display: true, text: 'Epochs' } },
+                    y: { title: { display: true, text: 'Loss' }, min: 0, max: 1.2 }
+                },
+                plugins: {
+                    annotation: {
+                        annotations: {
+                            line1: {
+                                type: 'line',
+                                xMin: 35,
+                                xMax: 35,
+                                borderColor: 'green',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                label: {
+                                    content: 'Optimal Early Stop',
+                                    enabled: true,
+                                    position: 'top'
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const epochSlider = document.getElementById('epochSlider');
+        const epochValue = document.getElementById('epochValue');
+        const trainLossValue = document.getElementById('trainLossValue');
+        const valLossValue = document.getElementById('valLossValue');
+        const epochStatus = document.getElementById('epochStatus');
+
+        function updateLossChart() {
+            const currentEpoch = parseInt(epochSlider.value);
+            epochValue.textContent = currentEpoch;
+
+            const currentTrain = trainLoss.slice(0, currentEpoch);
+            const currentVal = valLoss.slice(0, currentEpoch);
+
+            lossChart.data.datasets[0].data = currentTrain;
+            lossChart.data.datasets[1].data = currentVal;
+            lossChart.update();
+
+            const tL = trainLoss[currentEpoch - 1].toFixed(3);
+            const vL = valLoss[currentEpoch - 1].toFixed(3);
+            trainLossValue.textContent = tL;
+            valLossValue.textContent = vL;
+
+            if (currentEpoch < 30) {
+                epochStatus.textContent = 'Learning... (Underfit)';
+                epochStatus.style.color = 'teal';
+            } else if (currentEpoch >= 30 && currentEpoch <= 40) {
+                epochStatus.textContent = 'Optimal Checkpoint!';
+                epochStatus.style.color = 'green';
+            } else {
+                epochStatus.textContent = `Overfitting! (+${(vL - Math.min(...valLoss)).toFixed(3)} gap)`;
+                epochStatus.style.color = '#d9534f';
+            }
+        }
+
+        epochSlider.addEventListener('input', updateLossChart);
+        updateLossChart(); // init
+    </script>
+</body>
+
+</html>

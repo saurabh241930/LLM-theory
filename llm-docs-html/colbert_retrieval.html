@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ColBERT & Multi-Vector - RAG</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .embed-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 30px 0;
+            gap: 20px;
+            border-left: 5px solid #9b59b6;
+        }
+
+        .vs-card {
+            background: #fff;
+            padding: 20px;
+            border-top: 5px solid var(--wp-accent);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .math-block {
+            background: #202122;
+            color: #1dd1a1;
+            padding: 10px;
+            font-family: monospace;
+            display: inline-block;
+            border-radius: 4px;
+        }
+
+        .token-chip {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            background: #dceefc;
+            margin: 2px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>ColBERT & Late Interaction</h1>
+        <div class="subtitle">When single-vector dense retrieval falls short, and the genius of MaxSim</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Flaw of Standard Embeddings (Early Interaction)</h2>
+            <p>In standard RAG, you take a 1,000-word document and run it through OpenAI's
+                <code>text-embedding-3</code>. The model squashes the entire semantic meaning of all 1,000 words into a
+                <strong>single dense vector</strong> (e.g., [0.4, -0.1, 0.9, ...]).</p>
+            <p>This "Early Interaction" is computationally brilliant; you only store 1 vector per document. But it is
+                semantically disastrous for complex queries. The nuance of exactly *how* a specific entity was mentioned
+                in the document is destroyed and blended into the average meaning of the paragraph.</p>
+        </section>
+
+        <section>
+            <h2>ColBERT: Contextualized Late Interaction</h2>
+            <p><strong>ColBERT</strong> (Contextualized Late Interaction over BERT) completely rewrites the rules.
+                Instead of squashing the document into one vector, it saves <em>one vector for every single token</em>
+                in the document.</p>
+
+            <div class="embed-display">
+                <div>
+                    <strong>Query Tokens:</strong><br>
+                    <div class="token-chip">Who</div>
+                    <div class="token-chip">is</div>
+                    <div class="token-chip" style="background: #fcf1dc; font-weight: bold;">Neo?</div>
+                </div>
+                <div style="font-size: 2rem;">→</div>
+                <div style="text-align: center;">
+                    <strong>Document Tokens:</strong><br>
+                    <div class="token-chip">...the</div>
+                    <div class="token-chip">prophecy</div>
+                    <div class="token-chip">names</div>
+                    <div class="token-chip" style="background: #dcfce3; font-weight: bold;">Neo</div>
+                    <div class="token-chip">as</div>
+                    <div class="token-chip">the</div>
+                    <div class="token-chip">One...</div>
+                </div>
+            </div>
+
+            <p>If a document has 500 tokens, ColBERT saves a 500x128 matrix into the database. When the user asks a
+                10-token query, ColBERT creates a 10x128 matrix. The search operation is no longer comparing two single
+                vectors; it is comparing a Matrix vs a Matrix.</p>
+        </section>
+
+        <section>
+            <h2>The MaxSim Scoring Function</h2>
+            <p>How do we compare two matrices efficiently without a massive Neural Network? <strong>MaxSim (Maximum
+                    Similarity).</strong></p>
+
+            <div class="vs-card">
+                <h3>The MaxSim Math</h3>
+                <p>For every token in the Query, we find the <em>single token in the Document that is most
+                        mathematically similar to it</em> (the Maximum Cosine Similarity). We sum those maximums up.</p>
+                <p><code>Score = &Sigma; Max(CosSim(Q<sub>i</sub>, D<sub>j</sub>))</code></p>
+                <p><strong>Why it's genius:</strong> The "Neo" query token instantly latches onto the "Neo" document
+                    token, ignoring the rest of the document. The "Who" token latches onto "the One". By delaying the
+                    interaction between the Query and Document until <em>after</em> they are both embedded into
+                    matrices, ColBERT achieves near Cross-Encoder accuracy at 100x the speed.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>The Massive Drawback</h2>
+            <p>Because ColBERT stores a vector for every single token instead of every chunk, the VRAM and database
+                storage required absolutely explodes. A 100GB text corpus might require 1-2 Terabytes of database
+                storage to hold the ColBERT multi-vectors. This is why it is often heavily compressed (like ColBERTv2's
+                2-bit residual compression) before deployment.</p>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

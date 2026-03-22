@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Rate Schedules - Optimization & Training</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .chart-box {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .concept-card {
+            background: #fff;
+            padding: 20px;
+            border-left: 5px solid var(--wp-accent);
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>Learning Rate Schedules & Warmup</h1>
+        <div class="subtitle">Why Transformers crash on step 1, and the necessity of Cosine Annealing</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of the Warmup Phase</h2>
+            <p>If you take a Convolutional Neural Network (CNN) like ResNet, you can usually start training immediately
+                with your maximum Learning Rate (LR). If you try this with a Transformer, the loss will instantly hit
+                <code>NaN</code> (Not a Number) and the model will permanently break on Step 1. <strong>Transformers
+                    mandate a Warmup Phase.</strong></p>
+
+            <div class="concept-card" style="border-left-color: #e55039;">
+                <h3>Why do Transformers need Warmup?</h3>
+                <p>At initialization, a Transformer is incredibly fragile. The Layer Normalization statistics (mean and
+                    variance) are completely untrained and highly erratic. Furthermore, the <code>Softmax</code>
+                    function inside the Attention layers is violently volatile when fed large random initial weights.
+                </p>
+                <p>If a large gradient (created by a high learning rate) hits this unstable system on step 1, the
+                    LayerNorm/Softmax outputs explode, multiplying into infinity via the Chain Rule.
+                    <strong>Warmup</strong> solves this by starting the Learning Rate at exactly <code>0.0</code> and
+                    linearly increasing it to the maximum value over the first 1,000 to 10,000 steps, allowing the
+                    normalization statistics to safely settle.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Cosine Annealing Decay</h2>
+            <p>Once the model survives the warmup and reaches the maximum Learning Rate, we must gradually lower the LR.
+                If we don't, the model will bounce recklessly around the optimal minimum of the loss landscape, never
+                actually settling into it.</p>
+            <p>The undisputed industry standard for LLM pretraining is <strong>Cosine Annealing</strong>. After warmup,
+                the learning rate drops following the curve of a cosine function, until it reaches about 10% of the
+                maximum value right as the training run finishes.</p>
+
+            <div class="chart-box">
+                <h3>Typical LLM Learning Rate Schedule</h3>
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <canvas id="lrChart"></canvas>
+                </div>
+            </div>
+
+            <p><em>*Note: Knowing the exact number of tokens you plan to train on is critical, because the cosine curve
+                    must be calibrated to hit its minimum exactly at the end of the dataset. This is why you cannot
+                    easily "just keep training" a finished LLM without restarting a new LR schedule.</em></p>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script>
+        const ctx = document.getElementById('lrChart').getContext('2d');
+
+        // Generate simulated Cosine with Warmup Data
+        const totalSteps = 100;
+        const warmupSteps = 10;
+        const maxLr = 3e-4;
+        const minLr = maxLr * 0.1;
+
+        const data = [];
+        const labels = [];
+
+        for (let i = 0; i <= totalSteps; i++) {
+            labels.push(i);
+            if (i < warmupSteps) {
+                // Linear Warmup
+                data.push(maxLr * (i / warmupSteps));
+            } else {
+                // Cosine Decay
+                const progress = (i - warmupSteps) / (totalSteps - warmupSteps);
+                const cosineValue = 0.5 * (1 + Math.cos(progress * Math.PI));
+                const lr = minLr + (maxLr - minLr) * cosineValue;
+                data.push(lr);
+            }
+        }
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Learning Rate',
+                    data: data,
+                    borderColor: '#3366cc',
+                    backgroundColor: 'rgba(51, 102, 204, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                interaction: { intersect: false, mode: 'index' },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Training Steps (% of Total)' },
+                        ticks: { display: false }
+                    },
+                    y: {
+                        title: { display: true, text: 'Learning Rate Value' },
+                        grid: { color: '#eee' }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    </script>
+</body>
+
+</html>

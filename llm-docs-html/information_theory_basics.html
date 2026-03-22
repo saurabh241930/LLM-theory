@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Information Theory Basics</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .math-concept {
+            background: #fff;
+            padding: 20px;
+            border-left: 5px solid #3366cc;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+
+        .code-math {
+            background: #202122;
+            color: #1dd1a1;
+            padding: 15px;
+            font-family: monospace;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #e55039;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Information Theory in LLMs</h1>
+        <div class="subtitle">Entropy, Cross-Entropy, and KL Divergence</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of Surprise</h2>
+            <p>Every Large Language Model is ultimately a probability engine. To train them, we rely entirely on the
+                foundations of Information Theory, pioneered by Claude Shannon in 1948.</p>
+
+            <div class="math-concept">
+                <h3>1. Entropy (H)</h3>
+                <p>Entropy is the mathematical measure of <strong>unpredictability</strong> or "surprise" in a
+                    probability distribution.</p>
+                <div class="code-math">H(P) = - &Sigma; P(x) * log<sub>2</sub>(P(x))</div>
+                <p>If a coin is perfectly weighted to land on Heads 100% of the time, the Entropy is 0. There is no
+                    surprise. If a coin is perfectly fair (50/50), the Entropy is exactly 1 bit. In LLMs, a high entropy
+                    output distribution means the model is deeply confused about what word comes next.</p>
+            </div>
+
+            <div class="math-concept" style="border-left-color: #e55039;">
+                <h3>2. Cross-Entropy Loss</h3>
+                <p>This is the literal Loss Function used to train every single LLM on Earth including GPT-4.</p>
+                <p>Let <strong>P</strong> be the True Distribution (the actual word that appears next in the training
+                    data, e.g., 100% probability on "Apple").<br>
+                    Let <strong>Q</strong> be the Estimated Distribution (what the LLM generated, e.g., 40% "Apple", 60%
+                    "Banana").</p>
+                <div class="code-math">CrossEntropy(P, Q) = - &Sigma; P(x) * log(Q(x))</div>
+                <p>Cross-Entropy measures the total cost of predicting Q when the truth is P. Because P is essentially
+                    "1" for the correct word and "0" for everything else, this algorithm ruthlessly penalizes the model
+                    for assigning a low probability to the correct word.</p>
+            </div>
+
+            <div class="math-concept" style="border-left-color: #feca57;">
+                <h3>3. KL Divergence (Kullback-Leibler)</h3>
+                <p>How <em>different</em> are two distributions? KL Divergence calculates exactly how much extra
+                    information (or penalty) you pay by using distribution Q to approximate distribution P.</p>
+                <div class="code-math">D<sub>KL</sub>(P || Q) = CrossEntropy(P, Q) - Entropy(P)</div>
+                <p>In Deep Learning, we usually cannot measure KL Divergence directly because we don't know the absolute
+                    true entropy of human language. But because <code>Entropy(P)</code> is a fixed constant (the dataset
+                    doesn't change), <strong>minimizing Cross-Entropy Loss is mathematically identical to minimizing KL
+                        Divergence.</strong> This is why we use Cross-Entropy to train models.</p>
+                <p><em>Note: KL Divergence is heavily used in Proximal Policy Optimization (PPO / RLHF) to prevent the
+                        fine-tuned model from drifting too far away from the original base model.</em></p>
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

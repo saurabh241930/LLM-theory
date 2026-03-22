@@ -146,9 +146,126 @@
                 style A fill:#f9f,stroke:#333
             </div>
         </section>
+
+        <section id="regularization">
+            <h2>5. Regularization: Taming Variance (L1 & L2)</h2>
+            <p>Regularization adds a penalty term to the loss function to prevent the model from learning noise
+                (overfitting).</p>
+
+            <div class="comparison-card">
+                <h3>L1 Regularization (Lasso)</h3>
+                <div class="one-liner">Adds the <strong>absolute value</strong> of weights to the loss.</div>
+                <div class="math-block">Loss = Error + λ Σ|w|</div>
+                <p><strong>Property:</strong> Can shrink some coefficients to <strong>exactly zero</strong>. Useful for
+                    <strong>feature selection</strong> when data has many redundant features.</p>
+            </div>
+
+            <div class="comparison-card">
+                <h3>L2 Regularization (Ridge)</h3>
+                <div class="one-liner">Adds the <strong>squared value</strong> of weights to the loss.</div>
+                <div class="math-block">Loss = Error + λ Σw²</div>
+                <p><strong>Property:</strong> Shrinks weights to be small but <strong>never exactly zero</strong>.
+                    Prevents any single feature from dominating the prediction (weight decay).</p>
+            </div>
+
+            <div class="comparison-card">
+                <h3>ElasticNet</h3>
+                <p>A hybrid approach that combines both L1 and L2 penalties. Useful when there are multiple correlated
+                    features.</p>
+                <div class="math-block">Loss = Error + λ₁ Σ|w| + λ₂ Σw²</div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>L1 (Lasso)</th>
+                        <th>L2 (Ridge)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Penalty</td>
+                        <td>|w| (L1 Norm)</td>
+                        <td>w² (L2 Norm)</td>
+                    </tr>
+                    <tr>
+                        <td>Weight Zeroing</td>
+                        <td>Yes (Sparse models)</td>
+                        <td>No (Small weights)</td>
+                    </tr>
+                    <tr>
+                        <td>Best for...</td>
+                        <td>Feature Selection</td>
+                        <td>Preventing Overfitting</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="metrics">
+            <h2>6. How do we know it works? (Evaluation Metrics)</h2>
+            <p>Accuracy is often misleading (e.g., in imbalanced datasets like fraud detection). We need better
+                measurements.</p>
+
+            <div class="comparison-card">
+                <h3>The Confusion Matrix</h3>
+                <p>Fundamental tool for binary classification:</p>
+                <ul>
+                    <li><strong>TP / TN:</strong> Correct predictions.</li>
+                    <li><strong>FP (Type I Error):</strong> False Alarm.</li>
+                    <li><strong>FN (Type II Error):</strong> Failure to detect.</li>
+                </ul>
+            </div>
+
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Formula</th>
+                    <th>When to prioritize?</th>
+                </tr>
+                <tr>
+                    <td><strong>Precision</strong></td>
+                    <td>TP / (TP + FP)</td>
+                    <td>When cost of FP is high (e.g., spam detection).</td>
+                </tr>
+                <tr>
+                    <td><strong>Recall</strong></td>
+                    <td>TP / (TP + FN)</td>
+                    <td>When cost of FN is high (e.g., cancer detection).</td>
+                </tr>
+                <tr>
+                    <td><strong>F1 Score</strong></td>
+                    <td>2 * (P * R) / (P + R)</td>
+                    <td>Harmonic mean—best for imbalanced datasets.</td>
+                </tr>
+                <tr>
+                    <td><strong>ROC-AUC</strong></td>
+                    <td>Area under Curve</td>
+                    <td>Measures model's ability to distinguish between classes.</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="cross-validation">
+            <h2>7. Cross-Validation (K-Fold)</h2>
+            <p>Instead of a single train/test split, we split the data into <strong>K folds</strong>. We train the model
+                K times, each time using a different fold as the validation set.</p>
+            <div class="mermaid">
+                graph LR
+                subgraph Iteration 1
+                V1[Val] --- T1[Train] --- T2[Train] --- T3[Train]
+                end
+                subgraph Iteration 2
+                T4[Train] --- V2[Val] --- T5[Train] --- T6[Train]
+                end
+            </div>
+            <p><strong>Benefit:</strong> Provides a more robust estimate of model performance and ensures we use our
+                entire dataset for verification.</p>
+        </section>
     </div>
 
-    <script src="sidebar.js"></script>
+    <script src="sidebar.js?v=2"></script>
 </body>
 
 </html>

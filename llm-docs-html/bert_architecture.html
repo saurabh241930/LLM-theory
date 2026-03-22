@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3B1B BERT Architecture</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .bert-panel {
+            background: #202122;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            color: #ecf0f1;
+            position: relative;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            background: #111;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .toggle-btn {
+            background: #34495e;
+            color: white;
+            border: 2px solid #7f8c8d;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: 0.3s;
+        }
+
+        .toggle-btn.active {
+            background: #2ecc71;
+            border-color: #2ecc71;
+            box-shadow: 0 0 15px #2ecc71;
+            transform: scale(1.05);
+        }
+
+        .tokens-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 50px;
+            position: relative;
+        }
+
+        .token {
+            background: #34495e;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2em;
+            border: 2px solid #7f8c8d;
+            position: relative;
+            z-index: 10;
+        }
+
+        .token.masked {
+            background: #e74c3c;
+            border-color: #e74c3c;
+            color: #fff;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+            }
+        }
+
+        canvas {
+            position: absolute;
+            top: 100px;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .prediction-box {
+            margin-top: 60px;
+            font-size: 1.5em;
+            color: #f1c40f;
+            font-weight: bold;
+            height: 40px;
+        }
+
+        .math-blurb {
+            text-align: left;
+            padding: 20px;
+            background: #2c3e50;
+            border-left: 4px solid #f1c40f;
+            margin-top: 30px;
+            line-height: 1.6;
+            font-size: 1.1em;
+        }
+
+        .highlight {
+            color: #f1c40f;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>BERT: Bidirectional Encoder Representations</h1>
+        <div class="subtitle">Why generation needs masks, but understanding needs the future</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of Blindness</h2>
+            <p>Generative models like GPT (Decoder-only) are mathematically forced to be blind to the future. During
+                training, their Attention matrices are strictly masked so that Token #4 can only look at Tokens 1, 2,
+                and 3. You cannot train an AI to predict the next word if you let it peek at the answer key.</p>
+            <p><strong>But what if you aren't trying to generate text?</strong> What if you just want to classify if an
+                email is Spam, or perform Named Entity Recognition? By mathematically unmasking the matrix and allowing
+                <strong>Bidirectional Attention</strong>, BERT achieved state-of-the-art context understanding.</p>
+        </section>
+
+        <section class="bert-panel">
+            <div class="controls">
+                <button class="toggle-btn" id="gptBtn" onclick="setMode('gpt')">GPT Mode (Causal /
+                    Unidirectional)</button>
+                <button class="toggle-btn active" id="bertBtn" onclick="setMode('bert')">BERT Mode (Masked /
+                    Bidirectional)</button>
+            </div>
+
+            <div class="tokens-container" id="tokenRow">
+                <div class="token" id="t0">I</div>
+                <div class="token" id="t1">went</div>
+                <div class="token" id="t2">to</div>
+                <div class="token" id="t3">the</div>
+                <div class="token masked" id="t4">[MASK]</div>
+                <div class="token" id="t5">to</div>
+                <div class="token" id="t6">deposit</div>
+                <div class="token" id="t7">cash</div>
+            </div>
+
+            <canvas id="attnCanvas" width="800" height="150"></canvas>
+
+            <div class="prediction-box" id="predOut">Predicting...</div>
+
+            <div class="math-blurb" id="blurbText">
+                <p><strong>BERT (Bidirectional):</strong> The [MASK] token geometrically pulls attention vectors from
+                    both the left ("went to the") AND the right ("to deposit cash"). Because it has access to the word
+                    "deposit" in the future, it perfectly predicts that the missing word is "bank".</p>
+                <p>This is called <strong>Masked Language Modeling (MLM)</strong>. We randomly hide 15% of the words and
+                    force the network to use global context to fill the holes.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        let mode = 'bert';
+        const canvas = document.getElementById('attnCanvas');
+        const ctx = canvas.getContext('2d');
+        const maskIndex = 4;
+        const totalTokens = 8;
+
+        let animOffset = 0;
+
+        function setMode(newMode) {
+            mode = newMode;
+            document.getElementById('gptBtn').classList.remove('active');
+            document.getElementById('bertBtn').classList.remove('active');
+
+            if (mode === 'gpt') {
+                document.getElementById('gptBtn').classList.add('active');
+                document.getElementById('predOut').innerHTML = `Prediction: <span style="color:#e74c3c;">"store"</span>, <span style="color:#e74c3c;">"park"</span>... (Blind guess)`;
+                document.getElementById('blurbText').innerHTML = `
+                    <p><strong>GPT (Unidirectional):</strong> The [MASK] token geometrically pulls attention vectors ONLY from the left ("I went to the"). It is mathematically blocked from seeing the words "deposit cash".</p>
+                    <p>Without the future context, the model just hallucinates generic places. It has no idea you are depositing cash.</p>`;
+            } else {
+                document.getElementById('bertBtn').classList.add('active');
+                document.getElementById('predOut').innerHTML = `Prediction: <span style="color:#2ecc71;">"bank"</span> (99.9% certainty)`;
+                document.getElementById('blurbText').innerHTML = `
+                    <p><strong>BERT (Bidirectional):</strong> The [MASK] token geometrically pulls attention vectors from both the left ("went to the") AND the right ("to deposit cash"). Because it has access to the word "deposit" in the future, it perfectly predicts that the missing word is "bank".</p>
+                    <p>This is called <strong>Masked Language Modeling (MLM)</strong>. We randomly hide 15% of the words and force the network to use global context to fill the holes.</p>`;
+            }
+        }
+
+        function drawBezierArrow(startX, startY, endX, endY, color) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+
+            // Dashed line animation
+            ctx.setLineDash([10, 10]);
+            ctx.lineDashOffset = -animOffset;
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            // Control point for arc
+            const cpY = startY + 80;
+            ctx.quadraticCurveTo((startX + endX) / 2, cpY, endX, endY);
+            ctx.stroke();
+
+            // Draw head (animated with offset math roughly)
+            ctx.setLineDash([]);
+            const angle = Math.atan2(endY - cpY, endX - ((startX + endX) / 2));
+            const headlen = 10;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - headlen * Math.cos(angle - Math.PI / 6), endY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(endX - headlen * Math.cos(angle + Math.PI / 6), endY - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.fill();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Get positions of tokens dynamically
+            const maskDiv = document.getElementById('t4');
+            const rowDiv = document.getElementById('tokenRow');
+
+            if (!maskDiv || !rowDiv) {
+                requestAnimationFrame(render);
+                return;
+            }
+
+            const targetX = maskDiv.offsetLeft + (maskDiv.offsetWidth / 2);
+
+            for (let i = 0; i < totalTokens; i++) {
+                if (i === maskIndex) continue;
+
+                const tokDiv = document.getElementById(`t${i}`);
+                const startX = tokDiv.offsetLeft + (tokDiv.offsetWidth / 2);
+
+                // If GPT mode, block arrows from the future
+                if (mode === 'gpt' && i > maskIndex) {
+                    continue; // Skip
+                }
+
+                const color = (i > maskIndex) ? '#2ecc71' : '#3498db';
+                drawBezierArrow(startX, 0, targetX, 20, color);
+            }
+
+            animOffset += 1;
+            requestAnimationFrame(render);
+        }
+
+        // Initialize
+        setMode('bert');
+        render();
+
+        // Handle resize properly
+        window.addEventListener('resize', () => {
+            canvas.width = document.getElementById('tokenRow').offsetWidth;
+        });
+        setTimeout(() => { canvas.width = document.getElementById('tokenRow').offsetWidth; }, 100);
+
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

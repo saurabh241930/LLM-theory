@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Decoding & Generation Strategies</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .strategy-box {
+            border: 1px solid var(--wp-border);
+            padding: 15px;
+            margin: 15px 0;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .formula-block {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'serif';
+            text-align: center;
+            margin: 15px 0;
+            border-left: 4px solid var(--wp-accent);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>LLM Decoding & Generation Strategies</h1>
+        <div class="subtitle">How LLMs pick the next token: Temperature, Sampling, and Search</div>
+    </header>
+
+    <aside class="infobox">
+        <div class="infobox-title">Decoding Primitives</div>
+        <div class="infobox-data">
+            <div class="infobox-row">
+                <div class="infobox-label">Goal</div>
+                <div class="infobox-value">Token Selection</div>
+            </div>
+            <div class="infobox-row">
+                <div class="infobox-label">Inputs</div>
+                <div class="infobox-value">Logits (Raw Scores)</div>
+            </div>
+            <div class="infobox-row">
+                <div class="infobox-label">Output</div>
+                <div class="infobox-value">Probability Dist.</div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="content-wrapper">
+        <section id="temperature">
+            <h2>1. Temperature (T)</h2>
+            <p>Temperature controls the "randomness" or "creativity" of the output by scaling the logits before the
+                Softmax function is applied.</p>
+
+            <div class="formula-block">
+                P(xᵢ) = exp(zᵢ / T) / Σⱼ exp(zⱼ / T)
+            </div>
+
+            <div class="comparison-card">
+                <ul>
+                    <li><strong>Low Temperature (T → 0):</strong> Makes the distribution "sharper." The highest-scoring
+                        token becomes much more likely. Used for <strong>factual/code</strong> tasks.</li>
+                    <li><strong>High Temperature (T → 1+):</strong> Flattens the distribution. Makes lower-probability
+                        tokens more likely, increasing <strong>creativity/variety</strong>.</li>
+                    <li><strong>T = 1:</strong> Standard Softmax.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="sampling">
+            <h2>2. Sampling Strategies</h2>
+            <p>Once we have a probability distribution, we need to pick a token. Pure randomness often leads to
+                gibberish, so we use filters.</p>
+
+            <div class="strategy-box">
+                <h3>Top-K Sampling</h3>
+                <p>The model sorts tokens by probability and keeps only the <strong>top K</strong> most likely tokens.
+                    It then redistributes the probability among them and picks one.</p>
+                <p><strong>Use Case:</strong> Prevents the model from picking extremely low-probability "junk" tokens.
+                </p>
+            </div>
+
+            <div class="strategy-box">
+                <h3>Top-P (Nucleus) Sampling</h3>
+                <p>Instead of a fixed count (K), the model picks a <strong>cumulative probability threshold P</strong>
+                    (e.g., 0.9). It keeps the smallest set of tokens whose probabilities sum up to P.</p>
+                <p><strong>Dynamic:</strong> If only one token is very likely, only one is kept. If many are equally
+                    likely, it keeps many. This is generally preferred over Top-K.</p>
+            </div>
+        </section>
+
+        <section id="search-algorithms">
+            <h2>3. Search Algorithms</h2>
+            <p>Decoding can be done one-by-one (Greedy) or by looking ahead (Beam Search).</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Algorithm</th>
+                        <th>Mechanism</th>
+                        <th>Pros/Cons</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Greedy Decoding</strong></td>
+                        <td>Always picks the token with the absolute highest probability.</td>
+                        <td>Fast, but can get stuck in repetitive loops.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Beam Search</strong></td>
+                        <td>Keeps <strong>N candidates</strong> (beams) at each step and picks the sequence with the
+                            highest total probability.</td>
+                        <td>Better quality for <strong>Translation/summarization</strong>, but computationally
+                            expensive.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="penalties">
+            <h2>4. Repetition & Frequency Penalties</h2>
+            <p>These techniques penalize tokens that have already appeared in the text to prevent the model from
+                repeating itself ("The quick brown fox, the quick brown fox...").</p>
+        </section>
+
+        <section id="interview-recap">
+            <h2>Senior Interview Deep-Dive</h2>
+            <div class="qa-container">
+                <h3>Q: Why would you set Temperature to 0 in a production RAG system?</h3>
+                <div class="answer">
+                    <p>Setting T=0 (Greedy decoding) ensures <strong>Determinism</strong>. For a RAG system answering
+                        from technical docs, you want the same factual answer every time, not a creative variation. It
+                        also makes debugging and unit testing easier.</p>
+                </div>
+            </div>
+    </div>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

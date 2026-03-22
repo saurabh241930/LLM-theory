@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG vs Long Context - RAG</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .timeline-box {
+            background: #fff;
+            padding: 20px;
+            border-left: 5px solid #2ecc71;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .graph-sim {
+            height: 100px;
+            width: 100%;
+            background: linear-gradient(90deg, #1dd1a1 0%, #e55039 40%, #e55039 60%, #1dd1a1 100%);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            font-weight: bold;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .vs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .vs-table th,
+        .vs-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .vs-table th {
+            background: #eef2ff;
+        }
+
+        .highlight {
+            font-weight: bold;
+            background: #fff3cd;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>RAG vs Massive Context Windows</h1>
+        <div class="subtitle">Lost-in-the-Middle, Needle in a Haystack, and the Gemini 1M era</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Threat to RAG</h2>
+            <p>For years, RAG existed purely because LLMs physically could not read more than 4,000 tokens (8 pages) at
+                a time. The release of Google's Gemini 1.5 Pro (which natively supports 1,000,000+ tokens natively, or
+                roughly 3,000 pages of text) fundamentally disrupted the industry. If you can just paste your entire
+                company's codebase or textbook into the prompt... why build a complex RAG pipeline?</p>
+        </section>
+
+        <section>
+            <div class="timeline-box" style="border-left-color: #e55039;">
+                <h3>The "Lost in the Middle" Phenomenon</h3>
+                <p>Stanford research mathematically proved that standard Transformers suffer from massive "U-Shaped"
+                    attention patterns. They perfectly remember the very beginning of a long prompt, and perfectly
+                    remember the very end of a long prompt. If a critical fact is buried in page 40 of a 100-page
+                    document, earlier models completely glossed over it.</p>
+                <div class="graph-sim">
+                    <span>High Recall (Start)</span>
+                    <span style="color:#ffd32a;">Zero Recall (Middle)</span>
+                    <span>High Recall (End)</span>
+                </div>
+            </div>
+
+            <div class="timeline-box" style="border-left-color: #feca57;">
+                <h3>Needle In A Haystack (NIAH) Eval</h3>
+                <p>To test this, researchers created the NIAH benchmark: they bury a single isolated fact (the Needle)
+                    at random depths inside thousands of pages of garbled text (the Haystack). Before 2024, almost every
+                    100k+ model failed NIAH terribly in the deep middle.</p>
+                <p><strong>The Breakthrough:</strong> Models like Gemini 1.5 and Claude 3 Opus started scoring
+                    <em>100%</em> on NIAH evals up to literally millions of tokens. The Lost in the Middle problem is
+                    arguably solved for frontier models.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>If 1M Context works, when do we still need RAG?</h2>
+
+            <table class="vs-table">
+                <tr>
+                    <th>Capability</th>
+                    <th>Massive Context Window</th>
+                    <th>Vector Search RAG</th>
+                </tr>
+                <tr>
+                    <td><strong>Latency</strong></td>
+                    <td><span style="color:#e55039;">Terrible.</span> Taking 1 million tokens and running them through
+                        the Attention matrix can take 10-30 seconds of pure computation before the first word is typed
+                        out.</td>
+                    <td class="highlight"><span style="color:#1dd1a1;">Instant.</span> Filtering 1 million tokens down
+                        to 1,000 relevant tokens via HNSW takes 10 milliseconds. Generating the answer takes 1 second.
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Cost per Query</strong></td>
+                    <td><span style="color:#e55039;">Expensive.</span> $7.00 per standard prompt for 1M tokens. If 1,000
+                        users ask a question, you pay $7,000.</td>
+                    <td class="highlight"><span style="color:#1dd1a1;">Cheap.</span> You only pay API costs for the
+                        1,000 tokens you actually inject. Costs fractions of a penny.</td>
+                </tr>
+                <tr>
+                    <td><strong>Dynamic Updates</strong></td>
+                    <td><strong>Good.</strong> Just paste the newest document version into the prompt.</td>
+                    <td class="highlight"><span style="color:#1dd1a1;">Perfect.</span> Vector DBs update instantly. The
+                        LLM never needs retraining.</td>
+                </tr>
+                <tr>
+                    <td><strong>Cross-Document Synthesis</strong></td>
+                    <td class="highlight"><span style="color:#1dd1a1;">Unbeatable.</span> If analyzing 40 contracts to
+                        find subtle contradictions between them, you must feed all 40 to the model simultaneously. RAG
+                        fails completely here (chunking destroys the broad context).</td>
+                    <td><span style="color:#e55039;">Terrible.</span> RAG only fetches tiny chunks. It cannot synthesize
+                        global high-level themes.</td>
+                </tr>
+            </table>
+
+            <p style="margin-top:20px;"><strong>The Conclusion:</strong> RAG is mandatory for high-volume, low-latency,
+                "Q&A" applications or massive corpuses (terabytes) that exceed even 1M tokens. Long Context Windows are
+                mandatory for "Agentic" workflows, deep synthesis, and coding tasks where the agent must reason over an
+                entire unchunked repository at once.</p>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

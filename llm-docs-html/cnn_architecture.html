@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3B1B CNN Architecture</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .cnn-panel {
+            background: #202122;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            color: #ecf0f1;
+            position: relative;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button {
+            background: #c0392b;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #e74c3c;
+        }
+
+        .math-blurb {
+            background: #2c3e50;
+            padding: 20px;
+            border-left: 4px solid #c0392b;
+            text-align: left;
+            margin-top: 30px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .grids-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 50px;
+            margin-top: 30px;
+        }
+
+        .matrix {
+            display: grid;
+            gap: 2px;
+            background: #111;
+            border: 2px solid #333;
+            padding: 2px;
+            position: relative;
+        }
+
+        .matrix-5x5 {
+            grid-template-columns: repeat(5, 40px);
+            grid-template-rows: repeat(5, 40px);
+        }
+
+        .matrix-3x3 {
+            grid-template-columns: repeat(3, 40px);
+            grid-template-rows: repeat(3, 40px);
+        }
+
+        .cell {
+            background: #34495e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: white;
+            transition: all 0.3s;
+        }
+
+        /* The sliding window overlay purely for UI */
+        #sliderWindow {
+            position: absolute;
+            width: 124px;
+            /* 3 cells + gaps */
+            height: 124px;
+            border: 4px solid #f1c40f;
+            box-sizing: border-box;
+            box-shadow: 0 0 15px #f1c40f;
+            transition: top 0.4s ease-in-out, left 0.4s ease-in-out;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .label {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #bdc3c7;
+        }
+
+        .active-cell {
+            background: #e67e22 !important;
+            color: #fff;
+            transform: scale(1.1);
+            z-index: 5;
+        }
+
+        .target-cell {
+            background: #2ecc71 !important;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px #2ecc71;
+            z-index: 5;
+        }
+
+        /* Pulse math explosion */
+        #mathTick {
+            font-size: 2em;
+            color: #f1c40f;
+            font-weight: bold;
+            height: 40px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Convolutional Neural Networks (CNN)</h1>
+        <div class="subtitle">Extracting spatial features via sliding matrix windows</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of Vision</h2>
+            <p>If you feed a 1000x1000 pixel image into a standard Feed-Forward Network, the first layer would need 1
+                Million inputs. The weights would instantly explode to billions, and the model would completely fail to
+                understand that a "cat ear" in the top-left is the same thing as a "cat ear" in the bottom-right.</p>
+            <p><strong>Convolutions solve both problems.</strong> Instead of looking at every pixel at once, CNNs drag
+                tiny (e.g., 3x3) mathematical filters (kernels) across the image. The filter multiplies overlapping
+                pixels and sums them into a single number.</p>
+        </section>
+
+        <section class="cnn-panel">
+            <h3>Interactive Convolution Feature Extraction</h3>
+
+            <div class="grids-container">
+                <div>
+                    <div class="label">Input Image (5x5)</div>
+                    <div class="matrix matrix-5x5" id="inputGrid">
+                        <!-- Sliding window box will live here -->
+                        <div id="sliderWindow" style="top: 2px; left: 2px;"></div>
+                    </div>
+                </div>
+
+                <div style="font-size: 2em; color: #e74c3c;">&otimes;</div>
+
+                <div>
+                    <div class="label">Kernel Filter (3x3)</div>
+                    <p style="font-size: 0.8em; color:#aaa; margin:0 0 5px 0;">(Edge Detector)</p>
+                    <div class="matrix matrix-3x3" id="filterGrid"></div>
+                </div>
+
+                <div style="font-size: 2em; color: #2ecc71;">=&gt;</div>
+
+                <div>
+                    <div class="label">Feature Map (3x3)</div>
+                    <div class="matrix matrix-3x3" id="outputGrid"></div>
+                </div>
+            </div>
+
+            <div id="mathTick">Waiting to slide...</div>
+
+            <div class="controls">
+                <button onclick="nextStep()">Slide Kernel (Stride 1)</button>
+                <button onclick="resetConv()" style="background:#555;">Reset</button>
+            </div>
+
+            <div class="math-blurb">
+                <p><strong>Step-by-step feature extraction:</strong></p>
+                <p>1. The <span style="color:#f1c40f;font-weight:bold;">Yellow Box</span> (3x3) sits over the input
+                    grid.</p>
+                <p>2. We multiply the 9 pixels inside the box by the exactly 9 corresponding weights in the Kernel
+                    Filter.</p>
+                <p>3. We instantly sum up those 9 multiplications into a single number: the <span
+                        style="color:#2ecc71;font-weight:bold;">Green output feature</span>. By dragging this same exact
+                    3x3 filter across the whole image, we achieve <strong>Translation Invariance</strong>—if the filter
+                    detects a vertical line, it will detect it no matter where it is on the grid!</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Data
+        const inputData = [
+            [1, 1, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1],
+            [0, 0, 1, 1, 0],
+            [0, 1, 1, 0, 0]
+        ];
+
+        // Vertical Edge Detector
+        const kernelData = [
+            [1, 0, -1],
+            [1, 0, -1],
+            [1, 0, -1]
+        ];
+
+        let outData = [
+            [null, null, null],
+            [null, null, null],
+            [null, null, null]
+        ];
+
+        let curX = 0; let curY = 0; // Top-left of 3x3 window in 5x5
+        let isDone = false;
+
+        function buildGrids() {
+            // Input
+            const ig = document.getElementById('inputGrid');
+            // preserve slider
+            const slider = document.getElementById('sliderWindow');
+            ig.innerHTML = '';
+            ig.appendChild(slider);
+
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `in_${r}_${c}`;
+                    // visually tint black/white based on 1/0
+                    cell.style.backgroundColor = inputData[r][c] === 1 ? '#bdc3c7' : '#2c3e50';
+                    cell.style.color = inputData[r][c] === 1 ? '#000' : '#fff';
+                    cell.innerText = inputData[r][c];
+                    ig.appendChild(cell);
+                }
+            }
+
+            // Kernel
+            const kg = document.getElementById('filterGrid');
+            kg.innerHTML = '';
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.style.backgroundColor = '#c0392b';
+                    cell.innerText = kernelData[r][c];
+                    kg.appendChild(cell);
+                }
+            }
+
+            // Output
+            const og = document.getElementById('outputGrid');
+            og.innerHTML = '';
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `out_${r}_${c}`;
+                    cell.innerText = "";
+                    og.appendChild(cell);
+                }
+            }
+        }
+
+        function highlightCurrent() {
+            // Un-highlight all
+            document.querySelectorAll('.cell').forEach(c => {
+                c.classList.remove('active-cell');
+                c.classList.remove('target-cell');
+            });
+
+            if (isDone) return;
+
+            // Move Slider Window box
+            // Cell: 40px + 2px gap = 42px per cell
+            const slider = document.getElementById('sliderWindow');
+            slider.style.left = `${2 + curX * 42}px`;
+            slider.style.top = `${2 + curY * 42}px`;
+
+            // Highlight sub-grid
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    document.getElementById(`in_${curY + r}_${curX + c}`).classList.add('active-cell');
+                }
+            }
+        }
+
+        window.nextStep = () => {
+            if (isDone) return;
+
+            // Compute convolution sum for current window
+            let sum = 0;
+            let mathString = "";
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    let iv = inputData[curY + r][curX + c];
+                    let kv = kernelData[r][c];
+                    sum += (iv * kv);
+                }
+            }
+
+            // Write to output feature map
+            outData[curY][curX] = sum;
+            const target = document.getElementById(`out_${curY}_${curX}`);
+            target.innerText = sum;
+            target.classList.add('target-cell');
+
+            document.getElementById('mathTick').innerHTML = `Local Sum: <span style="color:#2ecc71">${sum}</span>`;
+
+            // Step window (Stride 1)
+            curX++;
+            if (curX > 2) {
+                curX = 0;
+                curY++;
+            }
+            if (curY > 2) {
+                isDone = true;
+                document.getElementById('sliderWindow').style.display = 'none';
+                document.getElementById('mathTick').innerHTML = `Feature Map Extracted!`;
+            } else {
+                setTimeout(highlightCurrent, 400); // highlight next after brief delay
+            }
+        };
+
+        window.resetConv = () => {
+            curX = 0; curY = 0; isDone = false;
+            document.getElementById('mathTick').innerText = "Waiting to slide...";
+            document.getElementById('sliderWindow').style.display = 'block';
+            buildGrids();
+            highlightCurrent();
+        };
+
+        // Init
+        buildGrids();
+        highlightCurrent();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

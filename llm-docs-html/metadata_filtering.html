@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metadata Filtering - RAG</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .filter-card {
+            background: #fff;
+            padding: 20px;
+            border-top: 5px solid #ccc;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+
+        .graph-layer {
+            background: #202122;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Metadata Filtering in Vector DBs</h1>
+        <div class="subtitle">Pre-filter, Post-filter, and modifying HNSW for Hybrid Queries</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Challenge of "Where" and "When"</h2>
+            <p>Vector search is incredible at finding concepts ("How do taxes work?"), but terrible at strict
+                constraints ("Show me documents from 2023 where Author=Alice"). A vector database doesn't understand
+                boolean logic. To fix this, we attach JSON <strong>Payloads / Metadata</strong> to the vectors, and use
+                filtering.</p>
+            <p>However, running a metadata filter alongside a vector search creates a massive algorithmic headache. Do
+                you filter first, or search first?</p>
+        </section>
+
+        <section>
+            <div class="filter-grid">
+                <div class="filter-card" style="border-top-color: #e55039;">
+                    <h3>Post-Filtering (The Naive Way)</h3>
+                    <p><strong>1.</strong> Run the vector search first (e.g., fetch the Top 100 closest vectors).<br>
+                        <strong>2.</strong> Discard the ones that don't match the metadata (e.g., not from 2023).
+                    </p>
+                    <p><strong>Fatal Flaw:</strong> If only 1% of your database is from 2023, fetching the Top 100
+                        vectors might yield exactly 0 vectors from 2023. You completely destroy your Recall. The
+                        database returns an empty array, even though the data exists.</p>
+                </div>
+
+                <div class="filter-card" style="border-top-color: #feca57;">
+                    <h3>Pre-Filtering (The Slow Way)</h3>
+                    <p><strong>1.</strong> Scan the entire database for metadata matches (e.g., find all 1 million
+                        documents from 2023).<br>
+                        <strong>2.</strong> Run the vector search <em>only</em> on that subset.
+                    </p>
+                    <p><strong>Fatal Flaw:</strong> You completely lose the speed of the HNSW (Hierarchical Navigable
+                        Small World) graph. You are forced to do a "brute-force" KNN calculate across 1 million
+                        documents, destroying latency.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>The Soltuion: Intelligent HNSW Payload Filtering</h2>
+            <p>Modern Vector Databases (like Qdrant, Milvus, and Pinecone) solve this by modifying the HNSW index
+                structure itself at build time.</p>
+
+            <div class="graph-layer">Layer 3 (Top): Broad navigation</div>
+            <div class="graph-layer">Layer 2: Finer navigation</div>
+            <div class="graph-layer" style="background:#3366cc;">Layer 1: Payload-Aware Connections</div>
+            <div class="graph-layer">Layer 0 (Base): Actual Vectors</div>
+
+            <p>When the database builds the navigational graph, it ensures that nodes with different metadata categories
+                maintain separate navigational pathways. During inference, it uses <strong>Single-Stage
+                    Filtering</strong>: as the algorithm hops from node to node through the graph looking for your
+                answer, it simply refuses to step onto any node that violates your metadata filter.</p>
+            <p>This retains the 10-millisecond speed of HNSW while guaranteeing 100% accuracy on the boolean
+                constraints, completely solving the Recall problem associated with post-filtering.</p>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

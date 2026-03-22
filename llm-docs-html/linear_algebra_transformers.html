@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3B1B Linear Algebra for Transformers</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .b1b-panel {
+            background: #111;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            color: #ecf0f1;
+        }
+
+        canvas {
+            background: #000;
+            border-radius: 4px;
+            border: 1px solid #333;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button {
+            background: #2980b9;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #3498db;
+        }
+
+        .math-blurb {
+            background: #202122;
+            padding: 20px;
+            border-left: 4px solid #f39c12;
+            text-align: left;
+            margin-top: 20px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            color: #f1c40f;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Linear Algebra in Transformers</h1>
+        <div class="subtitle">Matrix multiplication as physical space transformation</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The "3Blue1Brown" Perspective of Attention Matrices</h2>
+            <p>In standard tutorials, you are told that multiplying an Embedding Vector by a Weight Matrix ($W_q$)
+                creates a Query Vector. But what does that <em>physically mean</em>?</p>
+            <p>Every Weight Matrix in a neural network is a <strong>Linear Transformation</strong>. It physically grabs
+                the entire geometric grid of space and stretches, shears, and rotates it. The vector representing our
+                token (e.g., "Apple") is just caught in the fabric of this space and moves along with it into a new
+                "Query Space".</p>
+        </section>
+
+        <section class="b1b-panel">
+            <h3>Visualizing the W<sub>q</sub> Projection</h3>
+
+            <canvas id="mathCanvas" width="600" height="400"></canvas>
+
+            <div class="controls">
+                <button onclick="playTransformation()">Apply Transformation W<sub>q</sub></button>
+                <button onclick="resetSpace()" style="background:#555;">Reset Space</button>
+            </div>
+
+            <div class="math-blurb">
+                <p><strong>Watch the grid.</strong> The yellow arrow represents a 2D Token Embedding. The <span
+                        style="color:#2ecc71">Green (i-hat)</span> and <span style="color:#e74c3c">Red (j-hat)</span>
+                    arrows are our basis vectors.</p>
+                <p>When you click "Apply", we multiply the space by the Query Matrix
+                    <code>W_q = [[1.5, -0.5], [0.8, 1.2]]</code>.</p>
+                <p>Notice how the grid lines remain parallel and evenly spaced (the definition of a linear
+                    transformation). The Token Embedding geometrically moves to a completely new coordinate—it has been
+                    successfully projected into the <strong>Query Space</strong>, ready to be dot-producted against
+                    Keys.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mathCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        const ORIGIN = { x: W / 2, y: H / 2 };
+        const SCALE = 40; // Pixels per math unit
+
+        // Animation state
+        let progress = 0; // 0 to 1
+        let isAnimating = false;
+
+        // Matrices
+        const Ident = { a: 1, b: 0, c: 0, d: 1 }; // Identity [[1,0], [0,1]]
+        const Target = { a: 1.5, b: 0.8, c: -0.5, d: 1.2 }; // W_q [[1.5, -0.5], [0.8, 1.2]]
+        let Current = { ...Ident };
+
+        // Token Vector (Starts at x=2, y=1)
+        const Token = { x: 2, y: 1 };
+
+        function lerp(start, end, t) {
+            // Smooth step for 3b1b feel
+            const smoothT = t * t * (3 - 2 * t);
+            return start + (end - start) * smoothT;
+        }
+
+        function drawGridLayer(transform, color, lineWidth, opacity) {
+            ctx.save();
+            ctx.translate(ORIGIN.x, ORIGIN.y);
+            // Apply linear transformation: scale X, skew Y, skew X, scale Y, trans X, trans Y
+            ctx.transform(transform.a, transform.b, transform.c, transform.d, 0, 0);
+            ctx.scale(SCALE, -SCALE); // Y goes up
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth / SCALE;
+            ctx.globalAlpha = opacity;
+
+            ctx.beginPath();
+            // Draw grid lines
+            for (let i = -20; i <= 20; i++) {
+                ctx.moveTo(i, -20); ctx.lineTo(i, 20);
+                ctx.moveTo(-20, i); ctx.lineTo(20, i);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawArrow(x, y, color, label) {
+            const headlen = 10;
+            const endX = ORIGIN.x + x * SCALE;
+            const endY = ORIGIN.y - y * SCALE;
+            const angle = Math.atan2(-y * SCALE, x * SCALE);
+
+            ctx.beginPath();
+            ctx.moveTo(ORIGIN.x, ORIGIN.y);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Arrowhead
+            ctx.beginPath();
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - headlen * Math.cos(angle - Math.PI / 6), endY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(endX - headlen * Math.cos(angle + Math.PI / 6), endY - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.lineTo(endX, endY);
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+
+            // 1. Draw Static Background Grid (Faint)
+            drawGridLayer(Ident, '#333', 1, 0.5);
+
+            // 2. Draw Transformed Grid (Cyan/Blue tint)
+            drawGridLayer(Current, '#3498db', 1.5, 0.8);
+
+            // 3. Calculate transformed positions
+            const ihat_x = Current.a; const ihat_y = Current.b;
+            const jhat_x = Current.c; const jhat_y = Current.d;
+
+            const tok_x = Current.a * Token.x + Current.c * Token.y;
+            const tok_y = Current.b * Token.x + Current.d * Token.y;
+
+            // 4. Draw Vectors
+            drawArrow(ihat_x, ihat_y, '#2ecc71'); // i-hat (Green)
+            drawArrow(jhat_x, jhat_y, '#e74c3c'); // j-hat (Red)
+            drawArrow(tok_x, tok_y, '#f1c40f');   // Token (Yellow)
+        }
+
+        function animate() {
+            if (!isAnimating) return;
+            progress += 0.01; // Animation speed
+            if (progress > 1) {
+                progress = 1;
+                isAnimating = false;
+            }
+
+            // Interpolate matrix
+            Current.a = lerp(Ident.a, Target.a, progress);
+            Current.b = lerp(Ident.b, Target.b, progress);
+            Current.c = lerp(Ident.c, Target.c, progress);
+            Current.d = lerp(Ident.d, Target.d, progress);
+
+            render();
+            if (isAnimating) requestAnimationFrame(animate);
+        }
+
+        window.playTransformation = () => {
+            progress = 0;
+            isAnimating = true;
+            animate();
+        };
+
+        window.resetSpace = () => {
+            progress = 0;
+            isAnimating = false;
+            Current = { ...Ident };
+            render();
+        };
+
+        // Initial render
+        render();
+
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

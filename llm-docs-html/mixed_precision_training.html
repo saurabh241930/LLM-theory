@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mixed Precision Training - Optimization & Training</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .datatype-card {
+            background: #fff;
+            border-top: 5px solid #ccc;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+
+        .bits-visual {
+            display: flex;
+            height: 30px;
+            margin: 15px 0;
+            border: 1px solid #333;
+        }
+
+        .sign-bit {
+            background: #e55039;
+            width: 3.125%;
+        }
+
+        /* 1/32 */
+        .exp-bit {
+            background: #feca57;
+        }
+
+        .frac-bit {
+            background: #3366cc;
+        }
+
+        .code-snippet {
+            background: #202122;
+            color: #f1f3f5;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Mixed Precision Training</h1>
+        <div class="subtitle">FP16, BF16, Loss Scaling, and PyTorch AMP</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Need for Speed (and VRAM)</h2>
+            <p>Traditionally, neural networks were trained using standard 32-bit floating-point numbers (FP32). For
+                modern LLMs with billions of parameters, calculating math in FP32 takes too long and takes exactly
+                double the GPU memory compared to 16-bit formats. <strong>Mixed Precision Training</strong> is the
+                standard practice of doing the heavy matrix multiplications in 16-bit, while keeping a "Master Copy" of
+                the weights in 32-bit for safe updating.</p>
+        </section>
+
+        <section>
+            <h2>The War of 16-Bit Formats: FP16 vs BF16</h2>
+            <p>Not all 16 bits are created equal. A float is made of a Sign (positive/negative), an Exponent (how large
+                the number is), and a Mantissa/Fraction (the decimal precision).</p>
+
+            <div class="grid-2">
+                <div class="datatype-card" style="border-top-color: #3366cc;">
+                    <h3>Standard FP16</h3>
+                    <div class="bits-visual">
+                        <div class="sign-bit" title="1 Sign bit"></div>
+                        <div class="exp-bit" style="width: 15.625%;" title="5 Exponent bits"></div>
+                        <div class="frac-bit" style="flex-grow: 1;" title="10 Fraction bits"></div>
+                    </div>
+                    <p><strong>Range:</strong> max ~65,504.</p>
+                    <p>It has massive precision (10 fraction bits) but a tiny exponent (5 bits). Because neural networks
+                        don't care about extreme decimal precision, but <em>do</em> care about gradients vanishing to 0
+                        or exploding past 65,000, FP16 is notoriously unstable and prone to overflowing (resulting in
+                        NaNs).</p>
+                </div>
+
+                <div class="datatype-card" style="border-top-color: #1dd1a1;">
+                    <h3>BF16 (Brain Float 16) 👑</h3>
+                    <div class="bits-visual">
+                        <div class="sign-bit" title="1 Sign bit"></div>
+                        <div class="exp-bit" style="width: 25%;" title="8 Exponent bits"></div>
+                        <div class="frac-bit" style="flex-grow: 1;" title="7 Fraction bits"></div>
+                    </div>
+                    <p><strong>Range:</strong> max ~3.4 x 10<sup>38</sup> (Same as FP32).</p>
+                    <p>Invented by Google Brain specifically for Deep Learning. It brutally sacrifices decimal precision
+                        (only 7 fraction bits) to maintain the exact same massive 8-bit exponent as FP32.
+                        <strong>Result:</strong> It never overflows. You can train masssive LLMs in BF16 without any of
+                        the headache of FP16.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Loss Scaling (The FP16 Hack)</h2>
+            <p>If your GPU doesn't support BF16 (e.g., older Ampere or Turing cards) and you are forced to use FP16, you
+                must use <strong>Loss Scaling</strong> to prevent gradients from underflowing to exactly
+                <code>0.0</code> because of FP16's lack of precision for tiny decimal numbers.</p>
+            <ol>
+                <li>Compute the forward pass in FP16.</li>
+                <li>Calculate the Loss.</li>
+                <li><strong style="color: #e55039;">Multiply the Loss by a massive constant (e.g., 1024).</strong></li>
+                <li>Run Backpropagation. The heavily multiplied gradients are now large enough to fit inside FP16
+                    without rounding down to 0!</li>
+                <li><strong style="color: #1dd1a1;">Divide the gradients by 1024</strong> before updating the FP32
+                    Master Weights.</li>
+            </ol>
+            <p><em>Dynamic Loss Scaling</em> handles this automatically, increasing the multiplier until an overflow is
+                detected, scaling it back down, and trying again.</p>
+        </section>
+
+        <section>
+            <h2>Implementation: PyTorch AMP</h2>
+            <p>PyTorch handles all of this invisibly using Automatic Mixed Precision (AMP). It knows exactly which
+                PyTorch ops should be cast to 16-bit (like Linear Matrix Multiplications) and which must safely remain
+                in 32-bit (like LayerNorm and Softmax).</p>
+
+            <div class="code-snippet">
+                scaler = torch.cuda.amp.GradScaler() # Handles Loss Scaling for FP16
+
+                for data, target in dataloader:
+                optimizer.zero_grad()
+
+                # Autocast automatically downcasts valid ops to fp16/bf16
+                with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
+                output = model(data)
+                loss = loss_fn(output, target)
+
+                # Scaler handles the backwards pass gracefully
+                scaler.scale(loss).backward()
+
+                # Unscales the gradients and updates weights safely in FP32
+                scaler.step(optimizer)
+                scaler.update()
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -59,8 +59,19 @@
             <div class="year">2014: Seq2Seq & Encoder-Decoders</div>
             <p>The architecture that powered Google Translate. An <strong>Encoder</strong> reads the input sentence into
                 a "Context Vector," and a <strong>Decoder</strong> generates the translation.</p>
-            <p><strong>Failure:</strong> The "Bottleneck Problem"—compressing a 100-word sentence into one vector loses
-                detail.</p>
+
+            <div class="comparison-card">
+                <h3>The "Encoder-Decoder Bridge" (Cross-Attention)</h3>
+                <p>In modern Transformers, the Decoder doesn't just receive one vector. It uses
+                    <strong>Cross-Attention</strong> to "look back" at the Encoder's hidden states at every step of
+                    generation.</p>
+                <ul>
+                    <li><strong>Query (Q):</strong> Comes from the Decoder's previous layer.</li>
+                    <li><strong>Keys (K) & Values (V):</strong> Come from the Encoder's final output.</li>
+                </ul>
+                <p><strong>Teacher Forcing:</strong> During training, we feed the <em>correct</em> previous token into
+                    the decoder instead of its own (potentially wrong) prediction to speed up convergence.</p>
+            </div>
         </div>
 
         <div class="timeline-item">
@@ -79,13 +90,61 @@
         </div>
 
         <div class="timeline-item">
-            <div class="year">2018-Present: The Era of Pre-trained LLMs</div>
-            <p>The birth of <strong>BERT</strong> (Encoder-only) and <strong>GPT-1/2/3/4</strong> (Decoder-only),
-                leading to the current Generative AI revolution.</p>
+            <div class="year">2018: BERT (Encoder-only)</div>
+            <p><strong>Bidirectional Encoder Representations from Transformers.</strong> Unlike GPT, BERT looks at both
+                the left and right context simultaneously.</p>
+
+            <div class="comparison-card">
+                <h3>BERT Training Objectives</h3>
+                <ul>
+                    <li><strong>Masked Language Modeling (MLM):</strong> Hiding 15% of tokens and asking the model to
+                        predict them. This forces deep contextual understanding.</li>
+                    <li><strong>Next Sentence Prediction (NSP):</strong> Predicting if Sentence B follows Sentence A.
+                    </li>
+                    <li><strong>[CLS] Token:</strong> A special token at the start used for classification tasks (e.g.,
+                        sentiment analysis).</li>
+                </ul>
+            </div>
+            <div class="one-liner"><strong>Limitation:</strong> BERT cannot generate text well because it "sees" the
+                future during training. It is for <strong>Understanding</strong>, not Generation.</div>
         </div>
+
+        <section id="model-comparison">
+            <h2>Model Architecture Comparison</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Mechanism</th>
+                        <th>Examples</th>
+                        <th>Primary Use</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Encoder-only</strong></td>
+                        <td>Bidirectional self-attention.</td>
+                        <td>BERT, RoBERTa</td>
+                        <td>Classification, NER, Logic.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Decoder-only</strong></td>
+                        <td>Causal (Masked) self-attention.</td>
+                        <td>GPT-3, GPT-4, Llama</td>
+                        <td><strong>Text Generation</strong>, Chat.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Encoder-Decoder</strong></td>
+                        <td>Cross-attention between both.</td>
+                        <td>T5, BART</td>
+                        <td>Translation, Summarization.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
     </div>
 
-    <script src="sidebar.js"></script>
+    <script src="sidebar.js?v=2"></script>
 </body>
 
 </html>

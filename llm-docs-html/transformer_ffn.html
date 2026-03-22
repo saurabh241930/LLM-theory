@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transformer FFN - Transformer Internals</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .ffn-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 15px;
+            margin: 40px 0;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 5px solid #feca57;
+        }
+
+        .layer-box {
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-box {
+            background: #dceefc;
+            border: 2px solid #54a0ff;
+            width: 200px;
+        }
+
+        .hidden-box {
+            background: #dcfce3;
+            border: 2px solid #1dd1a1;
+            width: 600px;
+        }
+
+        .output-box {
+            background: #fcf1dc;
+            border: 2px solid #feca57;
+            width: 200px;
+        }
+
+        .arrow {
+            font-size: 1.5rem;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .fact-card {
+            background: #fff;
+            padding: 20px;
+            border-left: 4px solid var(--wp-accent);
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Feed-Forward Network (FFN)</h1>
+        <div class="subtitle">The factual memory bank of the Transformer</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Unsung Hero of the Transformer</h2>
+            <p>While the Attention Mechanism gets all the glory (it figures out <em>"who is talking to whom"</em> in a
+                sentence), standard Transformers spend 2/3 of their parameters in the Feed-Forward Network (FFN). If
+                Attention is the routing system, the FFN is the <strong>database</strong> where the model stores its
+                knowledge about the real world.</p>
+
+            <div class="ffn-diagram">
+                <div class="layer-box input-box">Input Dimension (d_model)<br><span
+                        style="font-weight:normal;font-size:0.9em;">e.g., 4096</span></div>
+                <div class="arrow">↓ (Linear Projection W1)</div>
+                <div class="layer-box hidden-box">Hidden Dimension (4x Expansion)<br><span
+                        style="font-weight:normal;font-size:0.9em;">e.g., 16384 neurons</span></div>
+                <div class="arrow">↓ (Non-Linear Activation)</div>
+                <div class="arrow">↓ (Linear Projection W2)</div>
+                <div class="layer-box output-box">Output Dimension (d_model)<br><span
+                        style="font-weight:normal;font-size:0.9em;">e.g., 4096</span></div>
+            </div>
+
+            <p>Every single token passes through its own identical FFN independently. The math is simple: a linear
+                up-projection, an activation function, and a linear down-projection.</p>
+        </section>
+
+        <section>
+            <h2>The Mathematics of the FFN</h2>
+
+            <div class="fact-card">
+                <h3>1. The 4x Expansion Ratio</h3>
+                <p>The standard Transformer FFN projects the embedding dimension (say, 4096) into a massive hidden space
+                    (16384 dimensions) before squeezing it back down to 4096. </p>
+                <p>Why? <strong>Capacity.</strong> The network learns billions of specific combinations of concepts in
+                    this massive intermediate space. Research suggests that the intermediate neurons in the FFN act as
+                    "key-value memories." The first layer acts as a pattern matcher (Key), and the second layer outputs
+                    the associated concept (Value).</p>
+            </div>
+
+            <div class="fact-card" style="border-left-color: #3366cc;">
+                <h3>2. The Activation Function (GeLU / SwiGLU)</h3>
+                <p>The original Transformer used a simple ReLU activation. Modern LLMs (like LLaMA 3) use
+                    <strong>SwiGLU</strong> (Swish-Gated Linear Unit).</p>
+                <p>Unlike ReLU which simply kills negative numbers, SwiGLU uses a smooth curve that allows tiny negative
+                    values to pass through. More importantly, it uses a <em>gating mechanism</em>: one fully connected
+                    layer acts as the standard data vector, while a second parallel layer acts as a "gate" (0 to 1)
+                    deciding exactly how much of that data vector should be allowed to progress.</p>
+                <div
+                    style="background:#f1f3f5; padding:10px; text-align:center; font-family:monospace; margin-top:10px;">
+                    SwiGLU(x) = (xW1) ⊗ Swish(xW2)
+                </div>
+            </div>
+
+            <div class="fact-card" style="border-left-color: #e55039;">
+                <h3>3. Storing Factual Knowledge</h3>
+                <p>Recent research ("Transformer Feed-Forward Layers Are Key-Value Memories") proved that FFNs memorize
+                    facts. If you prompt GPT with <em>"The capital of France is"</em>, the Attention mechanism attends
+                    to "capital" and "France". The combined embedding is then shoved into the FFN.</p>
+                <p>The FFN's first layer recognizes the pattern for <em>[Country_Capital_Query: France]</em>. This
+                    perfectly activates neuron #12044. The second layer projects neuron #12044 outwards into the exact
+                    vector representation of <em>"Paris"</em>.</p>
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

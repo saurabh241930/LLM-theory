@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Tracing & Observability</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .trace-card {
+            background: #202122;
+            color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .trace-step {
+            border-left: 2px solid #54a0ff;
+            padding-left: 15px;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .trace-step::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            background: #54a0ff;
+            border-radius: 50%;
+        }
+
+        .meta-tag {
+            background: #333;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            color: #1dd1a1;
+            margin-left: 10px;
+        }
+
+        .error-tag {
+            color: #e55039;
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .tool-box {
+            background: #fff;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-top: 4px solid #3366cc;
+            border-radius: 4px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>LLM Tracing & Observability Stack</h1>
+        <div class="subtitle">Why Datadog isn't enough, and how to instrument Agentic chains</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Blind Spot of Traditional APM</h2>
+            <p>In standard software engineering, tools like Datadog or New Relic track Latency and HTTP 500 errors. If
+                an endpoint takes 200ms and returns a 200 OK, the APM reports total system health.</p>
+            <p><strong>This fails catastrophically for GenAI.</strong> An LLM endpoint can return a 200 OK with perfect
+                latency, but the actual text payload might be a hallucinated disaster that tells a user to drink bleach.
+                Furthermore, in an Agentic system, a single user request might trigger 8 different LLM API calls and 4
+                database queries behind the scenes. You must track the <em>exact prompts</em>, <em>retrieved
+                    chunks</em>, and <em>token counts</em> of every intermediate step.</p>
+        </section>
+
+        <section>
+            <h2>The Anatomy of an LLM Trace</h2>
+            <p>Modern observability tools (like LangSmith or Langfuse) capture nested hierarchical traces. Every
+                execution is assigned a UUID (Trace ID), and every sub-step (Span) is attached to it.</p>
+
+            <div class="trace-card">
+                <div><strong>[TRACE] User Query: "What is my account balance?"</strong> <span class="meta-tag">Total:
+                        $0.04 | 2.5s</span></div>
+
+                <div class="trace-step">
+                    <strong>[SPAN] Vector Search (Pinecone)</strong> <span class="meta-tag">150ms</span>
+                    <div style="color: #aaa; margin-top:5px;">Retrieved 3 chunks: ["Account requires API key...", ...]
+                    </div>
+                </div>
+
+                <div class="trace-step">
+                    <strong>[SPAN] LLM Call (GPT-4o) - Router Logic</strong> <span class="meta-tag">800ms | 150
+                        tokens</span>
+                    <div style="color: #aaa; margin-top:5px;">System: "Determine next action." | Output:
+                        "CALL_TOOL(get_balance)"</div>
+                </div>
+
+                <div class="trace-step">
+                    <strong>[SPAN] API Tool Execution</strong> <span class="error-tag meta-tag">ERROR 403 | 120ms</span>
+                    <div style="color: #e55039; margin-top:5px;">"Invalid API Key for User ID 992"</div>
+                </div>
+
+                <div class="trace-step">
+                    <strong>[SPAN] LLM Call (Claude 3.5 Sonnet) - Final Answer</strong> <span class="meta-tag">1.2s |
+                        400 tokens</span>
+                    <div style="color: #aaa; margin-top:5px;">Output: "I cannot retrieve your balance because your API
+                        key is invalid."</div>
+                </div>
+            </div>
+
+            <p>If the user clicks "Thumbs Down" on the UI, that feedback rating is immediately piped back and bound to
+                this <em>exact Trace ID</em>. A developer can later pull up all "Thumbs Down" traces and see exactly
+                which step in the chain failed.</p>
+        </section>
+
+        <section>
+            <h2>The Modern Observability Stack</h2>
+            <div class="tool-grid">
+                <div class="tool-box">
+                    <strong>LangSmith</strong><br>
+                    <p style="font-size:0.9em; color:#555;">Built by LangChain. The absolute industry standard for deep
+                        tracing and dataset creation.</p>
+                </div>
+                <div class="tool-box">
+                    <strong>Langfuse</strong><br>
+                    <p style="font-size:0.9em; color:#555;">Open-source alternative. Incredible UI for tracing and
+                        attaching user feedback scores.</p>
+                </div>
+                <div class="tool-box" style="border-top-color: #1dd1a1;">
+                    <strong>Helicone</strong><br>
+                    <p style="font-size:0.9em; color:#555;">Acts as a proxy gateway. You just change the OpenAI base
+                        URL, and it logs everything instantly.</p>
+                </div>
+                <div class="tool-box" style="border-top-color: #9b59b6;">
+                    <strong>OpenTelemetry (OTel)</strong><br>
+                    <p style="font-size:0.9em; color:#555;">The vendor-neutral standard. Standardizing spans so they can
+                        be exported to standard Datadog.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

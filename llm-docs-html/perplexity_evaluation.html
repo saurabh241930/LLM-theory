@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perplexity as an Evaluation Metric</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .ppl-box {
+            background: #f1f3f5;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            border: 2px solid #ddd;
+        }
+
+        .math-huge {
+            font-size: 2.5rem;
+            font-family: monospace;
+            color: #3366cc;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .warning-card {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Perplexity (PPL)</h1>
+        <div class="subtitle">The mathematically beautiful (but practically flawed) LLM evaluation metric</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>What is Perplexity?</h2>
+            <p>If Cross-Entropy Loss gives us an abstract mathematical score of how bad a model is,
+                <strong>Perplexity</strong> gives us a tangible, human-readable number that we can actually understand.
+            </p>
+
+            <div class="ppl-box">
+                <div>Perplexity is simply the mathematical exponential of the Cross-Entropy Loss:</div>
+                <div class="math-huge">PPL = e<sup> Loss</sup></div>
+                <div style="color: #666;">(Or <code>2<sup>Loss</sup></code> if using base-2 entropy)</div>
+            </div>
+
+            <p><strong>The "Branching Factor" Intuition:</strong><br>
+                If an LLM has a Perplexity of <strong>10</strong> on a given sentence, it means that at every single
+                word in the sentence, the model was (on average) completely guessing between 10 equally likely words.
+                <br>
+                If a model has a Perplexity of <strong>1.0</strong>, it means the model is absolutely certain of the
+                next word every single time (which usually only happens if it memorized the training data perfectly).
+            </p>
+        </section>
+
+        <section>
+            <div class="warning-card">
+                <h3>Why Perplexity is NOT a Quality Metric</h3>
+                <p>During the early days of NLP (e.g., GPT-2), researchers proudly claimed "Our model has lower
+                    perplexity than yours!" to prove they built a smarter AI. The industry has entirely abandoned this
+                    for <em>evaluating</em> models, using it strictly for debugging the training loop.</p>
+                <ul>
+                    <li><strong>Grammar over Logic:</strong> An LLM can achieve an incredibly low (good) Perplexity
+                        simply by perfectly memorizing the grammatical structure of the English language ("The dog
+                        barked at the... mailman"). It will look amazing on the graph, but might have zero ability to
+                        solve a basic logic puzzle or write Python code.</li>
+                    <li><strong>Dependence on Vocabulary:</strong> You cannot compare the Perplexity of LLaMA against
+                        GPT-4. They use different Tokenizers. If GPT-4 has a larger vocabulary (100k tokens), its
+                        inherent branching factor is mathematically forced to be higher than a model with a 32k
+                        vocabulary, making its Perplexity artificially worse even if the model is infinitely smarter.
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

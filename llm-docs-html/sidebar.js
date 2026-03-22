@@ -4,11 +4,69 @@ document.addEventListener('DOMContentLoaded', () => {
             category: 'TRADITIONAL ML',
             links: [
                 { id: 'ml_fundamentals.html', title: '1. ML Foundations' },
-                { id: 'classical_algorithms.html', title: '2. Classical Algorithms' },
-                { id: 'optimization_math.html', title: '3. Optimization Math' },
-                { id: 'feature_engineering.html', title: '4. Feature Engineering' },
-                { id: 'deep_learning_origins.html', title: '5. Deep Learning Origins' },
-                { id: 'nlp_evolution.html', title: '6. Evolution of GPT' }
+                { id: 'overfitting_underfitting.html', title: '2. Overfitting & Underfitting' },
+                { id: 'super_unsuper_semi.html', title: '3. Supervised vs Unsupervised' },
+                { id: 'cross_validation.html', title: '4. Cross-Validation & Splits' },
+                { id: 'eval_metrics.html', title: '5. Evaluation Metrics' },
+                { id: 'bayesian_fundamentals.html', title: '6. Bayesian Fundamentals' },
+                { id: 'classical_algorithms.html', title: '7. Classical Algorithms' },
+                { id: 'curse_of_dimensionality.html', title: '8. Curse of Dimensionality' },
+                { id: 'optimization_math.html', title: '9. Optimization Math' },
+                { id: 'feature_engineering.html', title: '10. Feature Engineering' },
+                { id: 'deep_learning_origins.html', title: '11. Deep Learning Origins' },
+                { id: 'nlp_evolution.html', title: '12. Evolution of GPT' }
+            ]
+        },
+        {
+            category: 'PROBABILITY & MATH FOUNDATIONS',
+            links: [
+                { id: 'information_theory_basics.html', title: '1. Information Theory' },
+                { id: 'perplexity_evaluation.html', title: '2. Perplexity Rating' },
+                { id: 'linear_algebra_transformers.html', title: '3. Linear Algebra Math' }
+            ]
+        },
+        {
+            category: 'DEEP LEARNING CORE',
+            links: [
+                { id: 'softmax_temperature.html', title: '1. Softmax & Temperature' },
+                { id: 'perceptron_math.html', title: '2. Perceptron Math & XOR' },
+                { id: 'backpropagation_math.html', title: '3. Backpropagation & Chain Rule' },
+                { id: 'cnn_architecture.html', title: '4. CNNs & Inductive Biases' },
+                { id: 'rnn_architecture.html', title: '5. RNN & Vanishing Gradients' },
+                { id: 'lstm_architecture.html', title: '6. LSTM & Cell State' },
+                { id: 'weight_initialization.html', title: '7. Weight Initialization' },
+                { id: 'dropout_mechanics.html', title: '8. Dropout Mechanics' }
+            ]
+        },
+        {
+            category: 'TRANSFORMER INTERNALS',
+            links: [
+                { id: 'attention_math.html', title: '1. Attention Math' },
+                { id: 'positional_encoding.html', title: '2. Positional Encoding' },
+                { id: 'transformer_ffn.html', title: '3. Feed-Forward Network' },
+                { id: 'encoder_decoder.html', title: '4. Encoder vs Decoder' },
+                { id: 'bert_architecture.html', title: '5. BERT Masked Language Model' },
+                { id: 'gpt_pretraining.html', title: '6. Pretraining & Scaling' },
+                { id: 'moe_architecture.html', title: '7. Mixture of Experts' },
+                { id: 'layer_normalization.html', title: '8. Layer Norm & Residuals' },
+                { id: 'kv_cache_efficiency.html', title: '9. KV Cache Efficiency' },
+                { id: 'transformer_walkthrough.html', title: '10. The Full Pipeline Walkthrough' },
+                { id: 'transformer_animation.html', title: '11. 3B1B Transformer Animation' },
+                { id: 'encoder_animation.html', title: '12. Encoder Layer Animation' },
+                { id: 'decoder_animation.html', title: '13. Decoder Layer Animation' },
+                { id: 'deepseek_animation.html', title: '14. DeepSeek v2 MoE & MLA' },
+                { id: 'bert_vs_gpt_animation.html', title: '15. BERT vs GPT Animation' },
+                { id: 'cross_attention.html', title: '16. Self vs Cross Attention' },
+                { id: 'transformer_math_story.html', title: '17. Micro-Math Matrix Story' }
+            ]
+        },
+        {
+            category: 'OPTIMIZATION & TRAINING',
+            links: [
+                { id: 'lr_schedules_warmup.html', title: '1. Learning Rate & Warmup' },
+                { id: 'mixed_precision_training.html', title: '2. Mixed Precision (FP16/BF16)' },
+                { id: 'gradient_clipping.html', title: '3. Gradient Clipping' },
+                { id: 'distributed_training.html', title: '4. Distributed Training Hub' }
             ]
         },
         {
@@ -17,36 +75,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'index.html', title: 'Contents Hub' },
                 { id: 'embeddings_vector_search.html', title: '1. Embeddings & Vector Search' },
                 { id: 'tokenization_context_windows.html', title: '2. Tokenization & Context' },
-                { id: 'prompt_engineering.html', title: '3. Prompt Engineering' },
-                { id: 'genai_memory.html', title: '4. Memory in Gen AI' },
-                { id: 'genai_frameworks.html', title: '5. Frameworks & Libraries' },
-                { id: 'rag_types.html', title: '6. RAG Types' },
-                { id: 'chunking_strategies.html', title: '7. Better chunking' },
-                { id: 'naive_rag.html', title: '8. Naive RAG Foundations' },
-                { id: 'hybrid_search.html', title: '9. Hybrid Search' },
-                { id: 'advanced_rag.html', title: '10. Advanced RAG' },
-                { id: 'reranking.html', title: '11. Re-ranking' },
-                { id: 'query_rewriting.html', title: '12. Query Rewriting' },
-                { id: 'rag_evaluation.html', title: '13. Evaluation Hub' },
-                { id: 'function_calling.html', title: '14. Function Calling' },
-                { id: 'nl_to_sql.html', title: '15. Text-to-SQL' },
-                { id: 'improving_nl_to_sql.html', title: '16. Schema Retrieval' },
-                { id: 'graph_rag.html', title: '17. Graph RAG' },
-                { id: 'agentic_rag.html', title: '18. Agentic RAG' },
-                { id: 'fine_tuning_intro.html', title: '19. Fine-Tuning Intro' },
-                { id: 'lora_peft.html', title: '20. LoRA & PEFT' },
-                { id: 'alignment_rlhf_dpo.html', title: '21. Model Alignment' },
-                { id: 'inference_optimization.html', title: '22. Inference Optimization' },
-                { id: 'react_pattern.html', title: '23. ReAct Pattern' },
-                { id: 'multi_agent_systems.html', title: '24. Multi-Agent Systems' },
-                { id: 'agent_failure_recovery.html', title: '25. Failure Recovery' },
-                { id: 'scaling_rag_millions.html', title: '26. Scaling RAG' },
-                { id: 'high_efficiency_indexing.html', title: '27. CRAG / Self-RAG' },
-                { id: 'evaluation_ragas_langsmith.html', title: '28. Evaluation Hub' },
-                { id: '20_interview_questions.html', title: '29. Interview Recap' },
-                { id: '21_real_world_questions.html', title: '30. Real World Production' },
-                { id: 'llm_serving.html', title: '31. LLM Serving' },
-                { id: 'mcp_protocol.html', title: '32. MCP Protocol' }
+                { id: 'llm_decoding.html', title: '3. Decoding Strategies' },
+                { id: 'prompt_engineering.html', title: '4. Prompt Engineering' },
+                { id: 'genai_memory.html', title: '5. Memory in Gen AI' },
+                { id: 'genai_frameworks.html', title: '6. Frameworks & Libraries' },
+                { id: 'rag_types.html', title: '7. RAG Types' },
+                { id: 'chunking_strategies.html', title: '8. Better chunking' },
+                { id: 'naive_rag.html', title: '9. Naive RAG Foundations' },
+                { id: 'hybrid_search.html', title: '10. Hybrid Search' },
+                { id: 'advanced_rag.html', title: '11. Advanced RAG' },
+                { id: 'reranking.html', title: '12. Re-ranking' },
+                { id: 'query_rewriting.html', title: '13. Query Rewriting' },
+                { id: 'rag_evaluation.html', title: '14. Evaluation Hub' },
+                { id: 'function_calling.html', title: '15. Function Calling' },
+                { id: 'nl_to_sql.html', title: '16. Text-to-SQL' },
+                { id: 'improving_nl_to_sql.html', title: '17. Schema Retrieval' },
+                { id: 'graph_rag.html', title: '18. Graph RAG' },
+                { id: 'agentic_rag.html', title: '19. Agentic RAG' },
+                { id: 'fine_tuning_intro.html', title: '20. Fine-Tuning Intro' },
+                { id: 'lora_peft.html', title: '21. LoRA & PEFT' },
+                { id: 'alignment_rlhf_dpo.html', title: '22. Model Alignment' },
+                { id: 'inference_optimization.html', title: '23. Inference Optimization' },
+                { id: 'react_pattern.html', title: '24. ReAct Pattern' },
+                { id: 'multi_agent_systems.html', title: '25. Multi-Agent Systems' },
+                { id: 'agent_failure_recovery.html', title: '26. Failure Recovery' },
+                { id: 'scaling_rag_millions.html', title: '27. Scaling RAG' },
+                { id: 'high_efficiency_indexing.html', title: '28. CRAG / Self-RAG' },
+                { id: 'evaluation_ragas_langsmith.html', title: '29. Evaluation Hub' },
+                { id: '20_interview_questions.html', title: '30. Interview Recap' },
+                { id: '21_real_world_questions.html', title: '31. Real World Production' },
+                { id: 'llm_serving.html', title: '32. LLM Serving' },
+                { id: 'mcp_protocol.html', title: '33. MCP Protocol' }
+            ]
+        },
+        {
+            category: 'ADVANCED RAG DEEP DIVES',
+            links: [
+                { id: 'rag_query_expansion.html', title: '1. Query Expansion' },
+                { id: 'embedding_finetuning.html', title: '2. Embedding Fine-Tuning' },
+                { id: 'metadata_filtering.html', title: '3. Metadata Filtering' },
+                { id: 'colbert_retrieval.html', title: '4. ColBERT & Multi-Vector' },
+                { id: 'rag_vs_long_context.html', title: '5. RAG vs Long Context' },
+                { id: 'parent_document_retrieval.html', title: '6. Parent Document Retrieval' }
+            ]
+        },
+        {
+            category: 'LLMOps & PRODUCTION',
+            links: [
+                { id: 'llm_tracing_observability.html', title: '1. Tracing & Observability' },
+                { id: 'llm_cost_caching.html', title: '2. Cost & Caching' },
+                { id: 'hallucination_detection.html', title: '3. Hallucination Detection' },
+                { id: 'llm_deployment_safety.html', title: '4. Deployment Safety' }
             ]
         },
         {
@@ -99,8 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             category: 'API & Security',
             links: [
-                { id: 'api_design.html', title: 'API Design' },
-                { id: 'api_security_auth.html', title: 'API Security' }
+                { id: 'api_design.html', title: 'A1. API Design' },
+                { id: 'api_security_auth.html', title: 'A2. API Security' },
+                { id: 'llm_security.html', title: 'A3. LLM & Prompt Security' }
             ]
         }
     ];

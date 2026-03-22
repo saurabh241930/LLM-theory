@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3B1B Softmax & Temperature</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .b1b-panel {
+            background: #1e1e24;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            color: #ecf0f1;
+            position: relative;
+        }
+
+        canvas {
+            background: #111;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+
+        .controls {
+            margin-top: 20px;
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+
+        .slider-label {
+            font-size: 1.2rem;
+            display: block;
+            margin-bottom: 10px;
+            color: #f1c40f;
+            font-weight: bold;
+        }
+
+        input[type=range] {
+            width: 80%;
+            cursor: pointer;
+        }
+
+        .math-blurb {
+            text-align: left;
+            padding: 20px;
+            background: #2c3e50;
+            border-left: 4px solid #1dd1a1;
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+
+        .color-x {
+            color: #f1c40f;
+            font-weight: bold;
+        }
+
+        .color-exp {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Softmax & Temperature (3Blue1Brown Geometric Edition)</h1>
+        <div class="subtitle">Visualizing the Exponential Curve y = e^(x/T) flattening</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section>
+            <h2>The Mathematics of Exponentials</h2>
+            <p>We say Temperature "squishes" or "flattens" the logits, but what does that look like geometrically?</p>
+            <p>The raw logits from the neural network are fixed locations on the X-axis. The Softmax function is an
+                <strong>exponential curve</strong>. By dividing the X value by Temperature (T) before taking the
+                exponential, you physically change how steep the curve is.</p>
+        </section>
+
+        <section class="b1b-panel">
+            <div class="controls">
+                <label class="slider-label">Temperature (T): <span id="tempOut" style="color:white;">1.0</span></label>
+                <input type="range" id="tempSlider" min="0.1" max="5.0" step="0.1" value="1.0">
+                <div style="margin-top:10px; color:#aaa; font-size: 0.9em;">At T &lt; 1, the curve becomes infinitely
+                    steep (Greedy). At T &gt; 1, the curve flattens completely.</div>
+            </div>
+
+            <canvas id="expCanvas" width="800" height="400"></canvas>
+
+            <div class="math-blurb">
+                <p><strong>Watch the Curve:</strong> The <span class="color-x">Yellow Dots</span> are fixed logits (x=2,
+                    x=3.5, x=4). Their horizontal positions never shift, because the neural network output hasn't
+                    changed.</p>
+                <p>However, as you increase the Temperature, the <span class="color-exp">Red Exponential Curve</span>
+                    physically flattens out to y=1. The mathematical result is that the "tallest" dot loses its absolute
+                    exponential advantage over the lower dots, bringing their Y values infinitely closer together.</p>
+                <p>When you normalize these closer Y values (divide by the sum to get 100%), they become a flat,
+                    creative, and random probability distribution.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('expCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        const ORIGIN = { x: W / 3, y: H - 50 }; // X-axis at bottom, Y-axis offset left
+        const SCALE_X = 50;
+        const SCALE_Y = 15; // Vertical scale is sensitive for exponentials
+
+        // Fixed Logit Values (X coordinates)
+        const logits = [
+            { v: 1.0, color: '#3498db', label: '"Salad"' },
+            { v: 2.5, color: '#2ecc71', label: '"Burger"' },
+            { v: 4.0, color: '#f1c40f', label: '"Pizza"' }
+        ];
+
+        let T = 1.0;
+
+        function drawAxes() {
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            // X-axis
+            ctx.moveTo(0, ORIGIN.y); ctx.lineTo(W, ORIGIN.y);
+            // Y-axis
+            ctx.moveTo(ORIGIN.x, 0); ctx.lineTo(ORIGIN.x, H);
+
+            ctx.stroke();
+
+            // Grid
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -5; i < 10; i++) {
+                let px = ORIGIN.x + i * SCALE_X;
+                ctx.moveTo(px, 0); ctx.lineTo(px, H);
+            }
+            for (let i = 0; i < 30; i += 5) {
+                let py = ORIGIN.y - i * SCALE_Y;
+                ctx.moveTo(0, py); ctx.lineTo(W, py);
+            }
+            ctx.stroke();
+        }
+
+        function drawCurve() {
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+
+            let started = false;
+            for (let px = 0; px < W; px += 2) {
+                // translate pixel coordinate to logical math coordinate
+                let mathX = (px - ORIGIN.x) / SCALE_X;
+                let mathY = Math.exp(mathX / T);
+
+                // translate logical math to pixel Y
+                let py = ORIGIN.y - mathY * SCALE_Y;
+
+                if (!started) {
+                    ctx.moveTo(px, py);
+                    started = true;
+                } else {
+                    ctx.lineTo(px, py);
+                }
+            }
+            ctx.stroke();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+            drawAxes();
+            drawCurve();
+
+            // Calculate sums for percentage display
+            let sumExp = 0;
+            logits.forEach(l => { sumExp += Math.exp(l.v / T); });
+
+            // Draw Logit projection lines & dots
+            logits.forEach(l => {
+                let px = ORIGIN.x + l.v * SCALE_X;
+                let mathY = Math.exp(l.v / T);
+                let py = ORIGIN.y - mathY * SCALE_Y;
+
+                // Value on axis
+                ctx.beginPath();
+                ctx.arc(px, ORIGIN.y, 6, 0, Math.PI * 2);
+                ctx.fillStyle = l.color;
+                ctx.fill();
+
+                // Dotted vertical line to curve
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = '#95a5a6';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(px, ORIGIN.y);
+                ctx.lineTo(px, py);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Dot on curve
+                ctx.beginPath();
+                ctx.arc(px, py, 8, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = l.color;
+                ctx.stroke();
+
+                // Label prob %
+                let prob = (mathY / sumExp) * 100;
+                ctx.fillStyle = '#fff';
+                ctx.font = "bold 16px Arial";
+                ctx.fillText(`${prob.toFixed(1)}%`, px - 20, py - 15);
+
+                // Word Label
+                ctx.fillStyle = l.color;
+                ctx.font = "14px monospace";
+                ctx.fillText(l.label, px - 20, ORIGIN.y + 25);
+            });
+        }
+
+        document.getElementById('tempSlider').addEventListener('input', (e) => {
+            T = parseFloat(e.target.value);
+            document.getElementById('tempOut').innerText = T.toFixed(1);
+            render();
+        });
+
+        render();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>
