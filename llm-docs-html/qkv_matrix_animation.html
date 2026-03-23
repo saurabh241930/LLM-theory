@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QKV Matrix Projecton Math</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0c10;
+            --bg2: #0f1117;
+            --bg3: #151820;
+            --border: rgba(255, 255, 255, 0.07);
+            --border2: rgba(255, 255, 255, 0.13);
+            --text: #e8eaf0;
+            --muted: #6b7280;
+            --dim: #3a3f4a;
+            --blue: #4f9eff;
+            --blue-l: #a8d0ff;
+            --green: #2dd9a0;
+            --orange: #ff7b35;
+            --purple: #9f7fff;
+            --amber: #ffbe3d;
+            --red: #ff5252;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, system-ui, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .animation-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #app {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px 20px 40px;
+        }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .title-block h1 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 22px;
+            letter-spacing: -0.5px;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .title-block .sub {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 3px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 500;
+            border: 0.5px solid;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-blue {
+            border-color: var(--blue);
+            color: var(--blue-l);
+            background: rgba(79, 158, 255, 0.08);
+        }
+
+        /* ── Phase strip ── */
+        .phase-strip {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 2px;
+        }
+
+        .phase-strip::-webkit-scrollbar {
+            display: none;
+        }
+
+        .phase-node {
+            flex-shrink: 0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1.5px solid var(--dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .phase-node.done {
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .phase-node.active {
+            border-color: var(--blue);
+            color: #fff;
+            background: var(--blue);
+            box-shadow: 0 0 12px rgba(79, 158, 255, 0.4);
+        }
+
+        .phase-node:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            width: 4px;
+            height: 1px;
+            background: var(--dim);
+            transform: translateY(-50%);
+        }
+
+        /* ── Main stage ── */
+        #stage {
+            position: relative;
+            width: 100%;
+            min-height: 700px;
+            background: var(--bg2);
+            border: 0.5px solid var(--border2);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        #stage-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* ── Animated text overlay ── */
+        #text-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 20px 18px;
+            background: linear-gradient(transparent, rgba(10, 12, 16, 0.97) 30%);
+            pointer-events: none;
+            z-index: 20;
+            min-height: 90px;
+        }
+
+        .phase-tag {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--blue);
+            font-weight: 700;
+            margin-bottom: 5px;
+            opacity: 0;
+            transform: translateY(6px);
+            transition: all 0.4s;
+        }
+
+        .phase-tag.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .typewriter-text {
+            font-size: 12px;
+            color: var(--text);
+            line-height: 1.7;
+            min-height: 40px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .typewriter-text .cursor {
+            display: inline-block;
+            width: 7px;
+            height: 13px;
+            background: var(--blue);
+            margin-left: 2px;
+            vertical-align: middle;
+            animation: blink 0.8s steps(1) infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            49% {
+                opacity: 1
+            }
+
+            50%,
+            100% {
+                opacity: 0
+            }
+        }
+
+        .highlight-key {
+            color: var(--amber);
+            font-weight: 700;
+        }
+
+        .highlight-formula {
+            color: var(--green);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .highlight-token {
+            color: var(--orange);
+            font-weight: 700;
+        }
+
+        /* ── Controls ── */
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .ctrl-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 0.5px solid var(--border2);
+            background: var(--bg3);
+            color: var(--text);
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .ctrl-btn:hover {
+            background: var(--bg2);
+            border-color: var(--blue);
+            color: var(--blue-l);
+        }
+
+        .ctrl-btn:disabled {
+            opacity: 0.3;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .ctrl-btn.primary {
+            background: var(--blue);
+            border-color: var(--blue);
+            color: #000;
+            font-weight: 700;
+        }
+
+        .ctrl-btn.primary:hover {
+            background: #6aaaff;
+        }
+
+        .ctrl-btn.danger {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .speed-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+        }
+
+        .speed-label {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .speed-select {
+            background: var(--bg3);
+            border: 0.5px solid var(--border2);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+
+        /* ── Progress bar ── */
+        .prog-wrap {
+            margin: 12px 0 4px;
+        }
+
+        .prog-track {
+            height: 3px;
+            background: var(--bg3);
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .prog-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--blue), var(--teal));
+            border-radius: 2px;
+            transition: width 0.1s linear;
+            position: relative;
+        }
+
+        .info-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .phase-count {
+            color: var(--blue-l);
+            font-weight: 700;
+        }
+
+        .formula-overlay {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--green);
+            z-index: 50;
+            padding: 6px 14px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--border2);
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .formula-overlay.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="content-wrapper animation-wrapper">
+        <div id="app">
+            <div class="header">
+                <div class="title-block">
+                    <h1>Q, K, V Projections</h1>
+                    <div class="sub">Animated Math: E × W_Q = Q</div>
+                </div>
+                <span class="badge badge-blue">
+                    <span>●</span> Matrix Multiplication
+                </span>
+            </div>
+
+            <div class="phase-strip" id="phaseStrip"></div>
+
+            <div class="info-bar">
+                <span id="phaseName" style="color:var(--text);font-size:11px;font-weight:500">—</span>
+                <span class="phase-count" id="phaseCount">1 / 5</span>
+            </div>
+
+            <div id="stage">
+                <canvas id="stage-canvas"></canvas>
+                <div class="formula-overlay" id="formulaOverlay">E × W_Q = Q</div>
+                <div id="domLayer"></div>
+                <div id="text-overlay">
+                    <div class="phase-tag" id="phaseTag"></div>
+                    <div class="typewriter-text" id="typewriterEl"></div>
+                </div>
+            </div>
+
+            <div class="prog-wrap">
+                <div class="prog-track">
+                    <div class="prog-fill" id="progFill" style="width:0%"></div>
+                </div>
+            </div>
+
+            <div class="controls" style="margin-top:14px">
+                <button class="ctrl-btn" id="btnPrev" onclick="prevPhase()">← prev</button>
+                <button class="ctrl-btn primary" id="btnPlayPause" onclick="togglePlay()">⏸ pause</button>
+                <button class="ctrl-btn" id="btnNext" onclick="nextPhase()">next →</button>
+                <button class="ctrl-btn danger" onclick="restartAll()">↺ restart</button>
+                <div class="speed-wrap">
+                    <span class="speed-label">speed</span>
+                    <select class="speed-select" id="speedSel" onchange="setSpeed(this.value)">
+                        <option value="0.4">0.5×</option>
+                        <option value="0.8" selected>1×</option>
+                        <option value="1.6">2×</option>
+                        <option value="2.5">3×</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script>
+        // ─── Constants & Math ───────────────────────────────────────────
+        const E = [1.2, -0.8, 0.4, 1.5]; // 1x4 
+        const W_Q = [
+            [0.1, 0.5, -0.2],
+            [-0.3, 0.8, 0.1],
+            [0.9, -0.1, 0.4],
+            [0.2, -0.4, 0.6]
+        ]; // 4x3
+
+        const W_K = [
+            [-0.2, 0.3, 0.8],
+            [0.5, -0.1, 0.4],
+            [-0.4, 0.6, -0.2],
+            [0.7, -0.5, 0.1]
+        ];
+
+        const W_V = [
+            [0.4, 0.1, -0.5],
+            [0.2, -0.2, 0.8],
+            [-0.6, 0.5, 0.3],
+            [0.1, 0.4, -0.2]
+        ];
+
+        // Q = E * W_Q
+        const Q = [0, 0, 0];
+        for (let j = 0; j < 3; j++) {
+            let s = 0; for (let i = 0; i < 4; i++) s += E[i] * W_Q[i][j]; Q[j] = s;
+        }
+
+        const PHASES = [
+            {
+                id: 0,
+                name: "The Token Embedding (E)",
+                tag: "Phase 1: Input Vector",
+                formula: "E = [1.2, -0.8, 0.4, 1.5]",
+                text: [
+                    { t: 0, s: "We start with a single word block: <tok>\"cat\"</tok>.", hi: ["tok"] },
+                    { t: 1500, s: "It has already been converted into a <key>1x4 Embedding Vector (E)</key>.", hi: ["key"] },
+                    { t: 3000, s: "This holds all grammatical, positional, and semantic meaning about \"cat\".", hi: [] }
+                ],
+                duration: 5000
+            },
+            {
+                id: 1,
+                name: "The Learned Weight Matrices (W)",
+                tag: "Phase 2: Training Parameters",
+                formula: "W_Q, W_K, W_V (4x3 matrices)",
+                text: [
+                    { t: 0, s: "Here are the intelligence cores: <key>W_Q, W_K, W_V</key> weight matrices.", hi: ["key"] },
+                    { t: 2000, s: "These numbers were perfected through billions of steps of backpropagation.", hi: ["key"] },
+                    { t: 4000, s: "We will multiply <tok>E</tok> against these to project it into smaller 1x3 features.", hi: ["tok"] }
+                ],
+                duration: 6500
+            },
+            {
+                id: 2,
+                name: "Generating the Query (E × W_Q = Q)",
+                tag: "Phase 3: Matrix Mult Animation",
+                formula: "E × W_Q = Q",
+                text: [
+                    { t: 0, s: "Let's multiply! The row vector <tok>E</tok> dot-products with the columns of <key>W_Q</key>.", hi: ["tok", "key"] },
+                    { t: 2500, s: "Cell by cell: <key>row × column</key>. The results sum to generate the <tok>Query (Q)</tok>.", hi: ["key", "tok"] },
+                    { t: 6000, s: "The Query determines what 'cat' is looking for (e.g., adjectives describing it).", hi: [] }
+                ],
+                duration: 12000
+            },
+            {
+                id: 3,
+                name: "Keys and Values (K, V)",
+                tag: "Phase 4: Extraction",
+                formula: "E × W_K = K ,  E × W_V = V",
+                text: [
+                    { t: 0, s: "The exact same math repeats for <key>W_K</key> and <key>W_V</key>.", hi: ["key"] },
+                    { t: 2200, s: "Keys store 'what cat offers', Values store 'the core meaning of cat'.", hi: ["key"] },
+                    { t: 4500, s: "One single token has now branched into 3 distinct functional roles.", hi: ["tok"] }
+                ],
+                duration: 7000
+            },
+            {
+                id: 4,
+                name: "Massively Parallel",
+                tag: "Phase 5: Sequence Scale",
+                formula: "X × W_Q = Q_seq",
+                text: [
+                    { t: 0, s: "Wait... we only did this for <tok>\"cat\"</tok>.", hi: ["tok"] },
+                    { t: 1500, s: "In reality, the entire sentence is an N×4 matrix (X).", hi: ["key"] },
+                    { t: 3000, s: "GPUs compute the entire block <key>X × W_Q</key> simultaneously in a single flash!", hi: ["key"] }
+                ],
+                duration: 6000
+            }
+        ];
+
+        // ─── State ────────────────────────────────────────────────
+        let curPhase = 0;
+        let phaseT = 0;
+        let playing = true;
+        let speed = 0.8;
+        let rafId = null;
+        let lastTs = null;
+        let typeIdx = 0; let typePos = 0; let typeLast = null; let typeSegDone = false;
+
+        const canvas = document.getElementById('stage-canvas');
+        const ctx = canvas.getContext('2d');
+        let SW = 0, SH = 0;
+
+        function resizeCanvas() {
+            const rect = document.getElementById('stage').getBoundingClientRect();
+            SW = rect.width; SH = rect.height;
+            canvas.width = SW * devicePixelRatio;
+            canvas.height = SH * devicePixelRatio;
+            canvas.style.width = SW + 'px';
+            canvas.style.height = SH + 'px';
+            ctx.scale(devicePixelRatio, devicePixelRatio);
+        }
+
+        // ─── Phase Strip ───
+        function buildStrip() {
+            const strip = document.getElementById('phaseStrip');
+            strip.innerHTML = '';
+            PHASES.forEach((p, i) => {
+                const n = document.createElement('div');
+                n.className = 'phase-node';
+                n.textContent = i + 1;
+                n.title = p.name;
+                n.onclick = () => jumpToPhase(i);
+                strip.appendChild(n);
+                if (i < PHASES.length - 1) {
+                    const line = document.createElement('div');
+                    line.style.cssText = 'flex-shrink:0;width:16px;height:1px;background:var(--dim);align-self:center;margin:0 -2px';
+                    strip.appendChild(line);
+                }
+            });
+        }
+        function updateStrip() {
+            const nodes = document.querySelectorAll('.phase-node');
+            nodes.forEach((n, i) => {
+                n.className = 'phase-node' + (i < curPhase ? ' done' : i === curPhase ? ' active' : '');
+            });
+        }
+
+        // ─── Render Pipeline ───
+        function clearCanvas() { ctx.clearRect(0, 0, SW, SH); }
+
+        function drawGrid(x, y, matrix, label, color, alpha = 1) {
+            ctx.globalAlpha = alpha;
+            const rows = matrix.length;
+            const cols = matrix[0].length;
+            const cw = 45; const ch = 25;
+
+            // Title
+            ctx.fillStyle = color;
+            ctx.font = 'bold 13px JetBrains Mono';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, x + (cols * cw) / 2, y - 10);
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    ctx.beginPath();
+                    ctx.rect(x + c * cw, y + r * ch, cw - 2, ch - 2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#fff';
+                    if (typeof matrix[r][c] === 'number') {
+                        const val = matrix[r][c];
+                        ctx.fillStyle = val > 0 ? '#2dd9a0' : (val < 0 ? '#ff5252' : '#fff');
+                        ctx.font = '11px JetBrains Mono';
+                        ctx.fillText(val.toFixed(1), x + c * cw + cw / 2, y + r * ch + 16);
+                    }
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function drawVector(x, y, vec, label, color, alpha = 1, direction = 'horiz') {
+            ctx.globalAlpha = alpha;
+            const len = vec.length;
+            const cw = 45; const ch = 25;
+
+            ctx.fillStyle = color;
+            ctx.font = 'bold 13px JetBrains Mono';
+            ctx.textAlign = 'center';
+
+            if (direction === 'horiz') {
+                ctx.fillText(label, x - 20, y + 16);
+                for (let i = 0; i < len; i++) {
+                    ctx.beginPath();
+                    ctx.rect(x + i * cw, y, cw - 2, ch - 2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                    ctx.fill();
+                    ctx.strokeStyle = color;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '12px JetBrains Mono';
+                    ctx.fillText(vec[i].toFixed(1), x + i * cw + cw / 2, y + 16);
+                }
+            } else {
+                ctx.fillText(label, x + cw / 2, y - 10);
+                for (let i = 0; i < len; i++) {
+                    // vert logic if needed
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // Draw the dot product animation E x W_Q
+        function drawDotProduct(progress) {
+            const cw = 45, ch = 25;
+            const eX = 50, eY = 100;
+            const wX = 250, wY = 100;
+            const qX = 420, qY = 100;
+
+            // Draw bases
+            drawVector(eX, eY, E, "E", "var(--blue)", 1);
+            drawGrid(wX, wY, W_Q, "W_Q", "var(--purple)", 1);
+
+            // Q vector background
+            ctx.fillStyle = "var(--orange)";
+            ctx.font = 'bold 13px JetBrains Mono';
+            ctx.fillText("Q", qX - 15, qY + 16);
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.rect(qX + i * cw, qY, cw - 2, ch - 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.stroke();
+            }
+
+            // Animation logic: 0..0.33 for col 0, 0.33..0.66 for col 1, 0.66..1 for col 2
+            const colIdx = Math.min(2, Math.floor(progress * 3));
+            const subProg = (progress * 3) - colIdx; // 0..1 within the column
+
+            // Show completed Q cells
+            for (let c = 0; c <= colIdx; c++) {
+                if (c < colIdx || (c === colIdx && subProg > 0.95)) {
+                    ctx.beginPath();
+                    ctx.rect(qX + c * cw, qY, cw - 2, ch - 2);
+                    ctx.fillStyle = 'rgba(255,123,53,0.3)';
+                    ctx.fill();
+                    ctx.strokeStyle = 'var(--orange)';
+                    ctx.stroke();
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText(Q[c].toFixed(2), qX + c * cw + cw / 2, qY + 16);
+                }
+            }
+
+            // Highlight current column in W_Q
+            if (subProg < 0.95) {
+                // highlight the W_Q column
+                for (let r = 0; r < 4; r++) {
+                    ctx.beginPath();
+                    ctx.rect(wX + colIdx * cw, wY + r * ch, cw - 2, ch - 2);
+                    ctx.fillStyle = 'rgba(159,127,255,0.4)';
+                    ctx.fill();
+                }
+
+                // We will show the multiplications summing up visually below
+                let currentElementIdx = Math.min(3, Math.floor(subProg * 4));
+
+                // highlight E element
+                ctx.beginPath();
+                ctx.rect(eX + currentElementIdx * cw, eY, cw - 2, ch - 2);
+                ctx.fillStyle = 'rgba(79,158,255,0.4)';
+                ctx.fill();
+
+                // highlight W_Q specific element
+                ctx.beginPath();
+                ctx.rect(wX + colIdx * cw, wY + currentElementIdx * ch, cw - 2, ch - 2);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.lineWidth = 1;
+
+                // Draw flying math string
+                ctx.fillStyle = '#ffbe3d';
+                ctx.font = '14px JetBrains Mono';
+                let mathStr = `${E[currentElementIdx]} × ${W_Q[currentElementIdx][colIdx]}`;
+                ctx.fillText(mathStr, qX + colIdx * cw + cw / 2, qY + 45);
+
+                // Show sum so far
+                let sum = 0;
+                for (let i = 0; i <= currentElementIdx; i++) {
+                    sum += E[i] * W_Q[i][colIdx];
+                }
+                ctx.fillStyle = '#2dd9a0';
+                ctx.fillText(`Σ = ${sum.toFixed(2)}`, qX + colIdx * cw + cw / 2, qY + 65);
+
+                // connection lines
+                ctx.beginPath();
+                ctx.moveTo(eX + currentElementIdx * cw + cw / 2, eY + ch);
+                ctx.lineTo(wX + colIdx * cw + cw / 2, wY + currentElementIdx * ch + ch / 2);
+                ctx.strokeStyle = 'var(--dim)';
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        function renderPhase(phT, phaseId) {
+            clearCanvas();
+            let fOver = document.getElementById('formulaOverlay');
+            fOver.textContent = PHASES[phaseId].formula;
+            fOver.classList.add('visible');
+
+            if (phaseId === 0) {
+                // Show E vector alone centered
+                const yE = SH / 2 - 20;
+                drawVector(SW / 2 - 90, yE, E, "E(\"cat\")", "var(--blue)");
+
+                // Draw a box resembling the word
+                ctx.fillStyle = 'rgba(79,158,255,0.1)';
+                ctx.fillRect(SW / 2 - 140, yE, 40, 23);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px ' + ctx.font;
+                ctx.fillText("cat", SW / 2 - 120, yE + 16);
+
+            } else if (phaseId === 1) {
+                drawVector(SW / 2 - 90, 50, E, "E(\"cat\")", "var(--blue)", 1);
+
+                // Fade in W_Q, W_K, W_V
+                const mY = 150;
+                const t = Math.min(1, phT * 1.5);
+                drawGrid(SW / 2 - 230, mY, W_Q, "W_Q", "var(--purple)", t);
+                drawGrid(SW / 2 - 50, mY, W_K, "var(--amber)", "var(--amber)", t);
+                drawGrid(SW / 2 + 130, mY, W_V, "W_V", "var(--green)", t);
+            } else if (phaseId === 2) {
+                // The grand dot product animation
+                drawDotProduct(phT);
+            } else if (phaseId === 3) {
+                drawGrid(50, 60, W_K, "W_K", "var(--amber)", 1);
+                drawGrid(250, 60, W_V, "W_V", "var(--green)", 1);
+
+                // Show fake keys and values appearing
+                ctx.fillStyle = '#fff';
+                ctx.fillText("E × W_K  => Key", 120, 180);
+                ctx.fillText("E × W_V  => Value", 320, 180);
+            } else if (phaseId === 4) {
+                // Parallel execution visualization (multiple Es)
+                ctx.fillStyle = '#fff';
+                ctx.fillText("Batch Matrix Multiply", SW / 2, 50);
+                for (let r = 0; r < 5; r++) {
+                    drawVector(80, 80 + r * 26, E, `"w${r}"`, "var(--blue)", 0.8);
+                }
+                ctx.fillText("×", 300, 130);
+                drawGrid(330, 80, W_Q, "W_Q", "var(--purple)", 1);
+
+                ctx.fillText("=", 510, 130);
+
+                for (let r = 0; r < 5; r++) {
+                    drawVector(540, 80 + r * 26, [0, 0, 0], `"Q${r}"`, "var(--orange)", phT);
+                }
+            }
+        }
+
+        // ─── Typewriter ───
+        function parseSegment(raw) {
+            return raw
+                .replace(/<key>(.*?)<\/key>/g, '<span class="highlight-key">$1</span>')
+                .replace(/<tok>(.*?)<\/tok>/g, '<span class="highlight-token">$1</span>');
+        }
+
+        function renderTypewriter() {
+            const ph = PHASES[curPhase];
+            if (!ph) return;
+            const seg = ph.text[typeIdx];
+            if (!seg) return;
+            const plain = seg.s.replace(/<[^>]+>/g, '');
+            const partial = plain.slice(0, typePos);
+            let display = partial;
+            if (typePos >= plain.length) {
+                display = parseSegment(seg.s);
+            }
+            const el = document.getElementById('typewriterEl');
+            el.innerHTML = display + (typePos < plain.length ? '<span class="cursor"></span>' : '');
+        }
+
+        function tickTypewriter(ts) {
+            if (!typeLast) { typeLast = ts; return; }
+            const ph = PHASES[curPhase];
+            if (!ph) return;
+            const seg = ph.text[typeIdx];
+            if (!seg) return;
+            const plain = seg.s.replace(/<[^>]+>/g, '');
+            const dt = ts - typeLast;
+            typeLast = ts;
+            if (typePos < plain.length) {
+                typePos += Math.ceil(dt / 28 * speed);
+                typePos = Math.min(typePos, plain.length);
+                renderTypewriter();
+            } else if (!typeSegDone) {
+                typeSegDone = true;
+                renderTypewriter();
+            }
+        }
+
+        function advanceTypewriterSegment(pt) {
+            const ph = PHASES[curPhase];
+            if (!ph) return;
+            const dur = ph.duration;
+            ph.text.forEach((seg, i) => {
+                const segT = seg.t / dur;
+                if (pt >= segT && i > typeIdx) {
+                    typeIdx = i; typePos = 0; typeSegDone = false;
+                }
+            });
+        }
+
+        function startTypewriter(phaseIdx) {
+            typeIdx = 0; typePos = 0; typeLast = null; typeSegDone = false;
+            const tag = document.getElementById('phaseTag');
+            tag.textContent = PHASES[phaseIdx].tag;
+            tag.classList.add('show');
+            renderTypewriter();
+        }
+
+        // ─── Core Loop ───
+        function setPhaseState(i) {
+            curPhase = i;
+            phaseT = 0;
+            updateStrip();
+            document.getElementById('phaseName').textContent = PHASES[i].name;
+            document.getElementById('phaseCount').textContent = `${i + 1} / ${PHASES.length}`;
+            startTypewriter(i);
+            document.getElementById('progFill').style.width = '0%';
+            document.getElementById('btnPrev').disabled = (i === 0);
+            document.getElementById('btnNext').disabled = (i === PHASES.length - 1);
+            if (playing) { lastTs = null; }
+            else { renderPhase(0, i); }
+        }
+
+        function jumpToPhase(i) { setPhaseState(i); }
+        function nextPhase() { if (curPhase < PHASES.length - 1) setPhaseState(curPhase + 1); }
+        function prevPhase() { if (curPhase > 0) setPhaseState(curPhase - 1); }
+
+        function togglePlay() {
+            playing = !playing;
+            const btn = document.getElementById('btnPlayPause');
+            btn.textContent = playing ? "⏸ pause" : "▶ play";
+            if (playing) { lastTs = performance.now(); rafId = requestAnimationFrame(loop); }
+            else { cancelAnimationFrame(rafId); }
+        }
+
+        function restartAll() {
+            playing = true;
+            document.getElementById('btnPlayPause').textContent = "⏸ pause";
+            setPhaseState(0);
+            if (!rafId) rafId = requestAnimationFrame(loop);
+        }
+
+        function setSpeed(val) { speed = parseFloat(val); }
+
+        function loop(ts) {
+            if (!playing) return;
+            if (!lastTs) lastTs = ts;
+            const dt = ts - lastTs;
+            lastTs = ts;
+
+            const ph = PHASES[curPhase];
+            const dur = ph.duration / speed;
+            phaseT += dt / dur;
+
+            if (phaseT >= 1) {
+                phaseT = 1;
+                document.getElementById('progFill').style.width = '100%';
+                renderPhase(1, curPhase);
+                advanceTypewriterSegment(1);
+                tickTypewriter(ts);
+
+                if (curPhase < PHASES.length - 1) {
+                    setTimeout(() => { if (playing) setPhaseState(curPhase + 1); }, 1200 / speed);
+                }
+                lastTs = null;
+                return;
+            }
+
+            document.getElementById('progFill').style.width = (phaseT * 100) + '%';
+            advanceTypewriterSegment(phaseT);
+            tickTypewriter(ts);
+            renderPhase(phaseT, curPhase);
+
+            rafId = requestAnimationFrame(loop);
+        }
+
+        // ─── Init ───
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            buildStrip();
+            setPhaseState(0);
+            rafId = requestAnimationFrame(loop);
+        });
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (!playing) renderPhase(phaseT, curPhase);
+        });
+    </script>
+</body>
+
+</html>

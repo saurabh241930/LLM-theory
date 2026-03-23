@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feed-Forward Networks</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0c10;
+            --bg-box: #14171f;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --border: #334155;
+
+            --c-input: #8b5cf6;
+            /* Purple */
+            --c-hidden: #10b981;
+            /* Green */
+            --c-output: #f59e0b;
+            /* Orange */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .animation-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #app {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 40px 20px;
+        }
+
+        header h1 {
+            color: #fff;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        header .subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .desc-text {
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto 30px;
+        }
+
+        .playground {
+            background: var(--bg-box);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            min-height: 700px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .btn:disabled {
+            background: #334155;
+            color: var(--muted);
+            cursor: not-allowed;
+        }
+
+        /* SCENE SYSTEM */
+        .scene {
+            display: none;
+            flex: 1;
+            position: relative;
+            animation: fadeIn 0.5s ease-out forwards;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .scene.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .instruction-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 12px 20px;
+            color: #93c5fd;
+            text-align: center;
+            max-width: 600px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+            z-index: 10;
+        }
+
+        /* NEURAL NETWORK LAYOUT */
+        .network-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            width: 100%;
+            flex: 1;
+            position: relative;
+            padding: 0 40px;
+        }
+
+        .layer {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .layer-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--muted);
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .layer-label.show {
+            opacity: 1;
+        }
+
+        .node {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid;
+            background: var(--bg-box);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .node.show {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .node.input {
+            border-color: var(--c-input);
+            color: var(--c-input);
+        }
+
+        .node.hidden {
+            border-color: var(--c-hidden);
+            color: var(--c-hidden);
+        }
+
+        .node.output {
+            border-color: var(--c-output);
+            color: var(--c-output);
+        }
+
+        /* ReLU State */
+        .node.hidden.relu-dead {
+            border-color: #475569;
+            color: #475569;
+            background: #1e293b;
+            box-shadow: none;
+        }
+
+        .node.hidden.relu-active {
+            border-color: #34d399;
+            color: #34d399;
+            box-shadow: 0 0 15px #34d399;
+        }
+
+        /* SVG CONNECTORS */
+        #svg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .link-line {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.08);
+            stroke-width: 1.5;
+            opacity: 0;
+            transition: opacity 0.8s;
+        }
+
+        .link-line.show {
+            opacity: 1;
+        }
+
+        .link-line.highlight {
+            stroke: var(--c-input);
+            opacity: 0.6;
+        }
+
+        .link-line.highlight-out {
+            stroke: var(--c-hidden);
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="content-wrapper animation-wrapper">
+        <div id="app">
+            <header>
+                <h1>Feed-Forward Networks</h1>
+                <div class="subtitle">Expanding and Compressing Semantic Space</div>
+            </header>
+
+            <p class="desc-text">
+                After Attention figures out <em>how words relate to each other</em>, the Feed-Forward Network (FFN)
+                processes <em>each word individually</em>. It projects the vector into a massive hidden dimensional
+                space to "memorize" concepts and untangle complex boundaries, then compresses it back down.
+            </p>
+
+            <div class="playground" id="pg">
+                <div class="pg-header">
+                    <h3 id="phase-title" style="margin:0; color:#38bdf8;">Phase 1: The Context Embedding</h3>
+                    <div class="controls">
+                        <button class="btn" id="btn-back" onclick="prevStep()" disabled>← Back</button>
+                        <button class="btn" id="btn-next" onclick="nextStep()">Next →</button>
+                    </div>
+                </div>
+
+                <div class="scene active" id="scene-main">
+                    <div class="instruction-box" id="instruction">
+                        This is a single token's Context-Aware Embedding (e.g., $d_{model} = 4$). It arrives from the
+                        Attention layer.
+                    </div>
+
+                    <svg id="svg-layer"></svg>
+
+                    <div class="network-container" id="net-container">
+
+                        <!-- Input Layer (4 nodes) -->
+                        <div class="layer" id="layer-in">
+                            <div class="layer-label" id="label-in">Input Space (4)</div>
+                            <div class="layer-nodes" style="display:flex;flex-direction:column;gap:35px">
+                                <div class="node input" id="in-0"></div>
+                                <div class="node input" id="in-1"></div>
+                                <div class="node input" id="in-2"></div>
+                                <div class="node input" id="in-3"></div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden Layer (16 nodes, typically 4x expansion) -->
+                        <div class="layer" id="layer-hid">
+                            <div class="layer-label" id="label-hid">Hidden Space (16)</div>
+                            <div class="layer-nodes" style="display:flex;flex-direction:column;gap:5px">
+                                <!-- Generate via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Output Layer (4 nodes) -->
+                        <div class="layer" id="layer-out">
+                            <div class="layer-label" id="label-out">Output Space (4)</div>
+                            <div class="layer-nodes" style="display:flex;flex-direction:column;gap:35px">
+                                <div class="node output" id="out-0"></div>
+                                <div class="node output" id="out-1"></div>
+                                <div class="node output" id="out-2"></div>
+                                <div class="node output" id="out-3"></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script>
+        const svg = document.getElementById('svg-layer');
+        const hidContainer = document.querySelector('#layer-hid .layer-nodes');
+
+        // Create 16 Hidden Nodes
+        for (let i = 0; i < 16; i++) {
+            let div = document.createElement('div');
+            div.className = 'node hidden';
+            div.id = `hid-${i}`;
+            hidContainer.appendChild(div);
+        }
+
+        // Draw lines function
+        function setupLinks() {
+            svg.innerHTML = '';
+            const pg = document.getElementById('net-container').getBoundingClientRect();
+
+            // In -> Hid
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 16; j++) {
+                    drawLine(`in-${i}`, `hid-${j}`, 'link-w1', pg);
+                }
+            }
+            // Hid -> Out
+            for (let j = 0; j < 16; j++) {
+                for (let k = 0; k < 4; k++) {
+                    drawLine(`hid-${j}`, `out-${k}`, 'link-w2', pg);
+                }
+            }
+        }
+
+        function drawLine(id1, id2, groupClass, pgRect) {
+            const e1 = document.getElementById(id1);
+            const e2 = document.getElementById(id2);
+            const r1 = e1.getBoundingClientRect();
+            const r2 = e2.getBoundingClientRect();
+
+            const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+            const strX = r1.right - pgRect.left;
+            const strY = r1.top - pgRect.top + r1.height / 2;
+            const endX = r2.left - pgRect.left;
+            const endY = r2.top - pgRect.top + r2.height / 2;
+
+            const cpX = strX + (endX - strX) / 2;
+
+            p.setAttribute("d", `M ${strX} ${strY} C ${cpX} ${strY}, ${cpX} ${endY}, ${endX} ${endY}`);
+            p.setAttribute("class", `link-line ${groupClass}`);
+            svg.appendChild(p);
+        }
+
+        window.addEventListener('resize', () => { if (currentStep > 0) setupLinks(); });
+
+        const steps = [
+            {
+                title: "Phase 1: The Input Space",
+                action: () => {
+                    setupLinks();
+                    document.getElementById('instruction').innerHTML = `This is a single token's Context-Aware Embedding representing a vector in a 4-dimensional semantic space.`;
+                    document.getElementById('label-in').classList.add('show');
+                    for (let i = 0; i < 4; i++) document.getElementById(`in-${i}`).classList.add('show');
+
+                    document.getElementById('label-hid').classList.remove('show');
+                    for (let j = 0; j < 16; j++) document.getElementById(`hid-${j}`).classList.remove('show', 'relu-dead', 'relu-active');
+                    document.querySelectorAll('.link-line').forEach(el => el.classList.remove('show', 'highlight', 'highlight-out'));
+                }
+            },
+            {
+                title: "Phase 2: Dimensional Expansion (Linear)",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `The layer multiplies the input by a massive weight matrix ($W_1$), projecting the vector into a mathematically huge space (16-D). This massive width allows the network to "untangle" densely packed concepts.`;
+
+                    document.getElementById('label-hid').classList.add('show');
+                    for (let j = 0; j < 16; j++) {
+                        document.getElementById(`hid-${j}`).classList.add('show');
+                        document.getElementById(`hid-${j}`).classList.remove('relu-dead', 'relu-active');
+                    }
+                    document.querySelectorAll('.link-w1').forEach(el => {
+                        el.classList.add('show', 'highlight');
+                    });
+                    document.querySelectorAll('.link-w2').forEach(el => el.classList.remove('show'));
+                }
+            },
+            {
+                title: "Phase 3: The Non-Linearity (ReLU Activation)",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `Crucially, we apply a Non-Linearity like <strong>ReLU</strong>  <code>f(x) = max(0, x)</code>. It cuts off all negative values to exactly zero. Watch half the neurons "die". This physically curves and breaks straight lines, allowing the network to wrap around complex ideas.`;
+
+                    document.querySelectorAll('.link-w1').forEach(el => el.classList.remove('highlight'));
+
+                    // Randomly "kill" about half the neurons to simulate ReLU dropping negatives
+                    const seededRandoms = [true, false, false, true, true, false, true, false, false, false, true, true, false, true, false, false];
+
+                    for (let j = 0; j < 16; j++) {
+                        if (seededRandoms[j]) {
+                            document.getElementById(`hid-${j}`).classList.add('relu-active');
+                        } else {
+                            document.getElementById(`hid-${j}`).classList.add('relu-dead');
+                        }
+                    }
+
+                    document.getElementById('label-out').classList.remove('show');
+                    for (let k = 0; k < 4; k++) document.getElementById(`out-${k}`).classList.remove('show');
+                    document.querySelectorAll('.link-w2').forEach(el => el.classList.remove('show', 'highlight-out'));
+                }
+            },
+            {
+                title: "Phase 4: Dimensional Compression",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `Finally, the network multiplies the surviving activated neurons by a second matrix ($W_2$). This compresses the rich, high-dimensional findings back down into the original 4D space, ready for the next layer perfectly digested.`;
+
+                    document.getElementById('label-out').classList.add('show');
+                    for (let k = 0; k < 4; k++) document.getElementById(`out-${k}`).classList.add('show');
+
+                    document.querySelectorAll('.link-w2').forEach(el => el.classList.add('show', 'highlight-out'));
+                }
+            }
+        ];
+
+        let currentStep = 0;
+        function applyStep() {
+            document.getElementById('phase-title').innerText = steps[currentStep].title;
+            document.getElementById('btn-back').disabled = currentStep === 0;
+            document.getElementById('btn-next').disabled = currentStep === steps.length - 1;
+            steps[currentStep].action();
+        }
+        function nextStep() { if (currentStep < steps.length - 1) { currentStep++; applyStep(); } }
+        function prevStep() { if (currentStep > 0) { currentStep--; applyStep(); } }
+
+        // Need a tiny delay for boundingClientBoxes to compute correctly initially if fonts load
+        window.addEventListener('load', () => setTimeout(() => applyStep(), 100));
+
+    </script>
+</body>
+
+</html>

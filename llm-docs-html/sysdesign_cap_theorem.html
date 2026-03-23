@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAP Theorem: The Practical Guide</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>CAP Theorem — The Practical Version</h1>
+        <div class="subtitle">Consistency, Availability, and the Inevitability of Partitions</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="concept">
+            <h2>1. Core Concept</h2>
+            <p>The CAP Theorem states that a distributed data store can only simultaneously provide two out of the
+                following three guarantees:</p>
+            <ul>
+                <li><strong>Consistency (C):</strong> Every read receives the most recent write or an error. (All nodes
+                    see the exact same data at the same time).</li>
+                <li><strong>Availability (A):</strong> Every request receives a non-error response, without guaranteed
+                    that it contains the most recent write.</li>
+                <li><strong>Partition Tolerance (P):</strong> The system continues to operate despite an arbitrary
+                    number of messages being dropped or delayed by the network between nodes.</li>
+            </ul>
+        </section>
+
+        <section id="architecture">
+            <h2>2. The Practical Reality: 'P' is NOT a Choice</h2>
+            <div class="qa-container">
+                <h3>Why CA Systems Don't Exist over the WAN</h3>
+                <div class="answer">
+                    <p>In the real world, networks fail. Switches reboot, fiber cables get cut, routers experience
+                        congestion. Because <strong>Partition Tolerance (P) is inevitable</strong> in distributed
+                        systems, the true choice during a network failure is strictly between <strong>CP</strong> and
+                        <strong>AP</strong>.</p>
+                </div>
+            </div>
+
+            <div class="mermaid">
+                graph LR
+                subgraph Data Center 1
+                N1[Node 1]
+                end
+                subgraph Data Center 2
+                N2[Node 2]
+                end
+                N1 -- Network Partition (CUT) -.-x N2
+                Client((Client)) --> N1
+                Client2((Client)) --> N2
+            </div>
+
+            <p>When the network link between Node 1 and Node 2 crashes:</p>
+            <ul>
+                <li>If Node 1 accepts a write, Node 2 cannot receive it.</li>
+                <li>To maintain <strong>Consistency (CP)</strong>: Node 2 must <em>refuse</em> to serve reads to Client
+                    2 because it knows its data is stale. It sacrifices Availability.</li>
+                <li>To maintain <strong>Availability (AP)</strong>: Node 2 must <em>serve</em> Client 2 with stale data.
+                    It sacrifices Consistency.</li>
+            </ul>
+        </section>
+
+        <section id="flow">
+            <h2>3. Architecting for CP vs AP</h2>
+
+            <table border="1" cellpadding="8" cellspacing="0"
+                style="width:100%; border-collapse:collapse; margin-bottom: 20px;">
+                <tr>
+                    <th>Type</th>
+                    <th>Database Examples</th>
+                    <th>Use Case</th>
+                    <th>Resolution during a Network Tie</th>
+                </tr>
+                <tr>
+                    <td><strong>CP (Consistency/Partition)</strong></td>
+                    <td>MongoDB, HBase, Redis, PostgreSQL (strict sync)</td>
+                    <td>Financial transactions, Inventory management, Billing</td>
+                    <td>The system locks down. It returns errors rather than serving inaccurate data. (E.g. A MongoDB
+                        replica set loses its primary and blocks writes until a new one is elected).</td>
+                </tr>
+                <tr>
+                    <td><strong>AP (Availability/Partition)</strong></td>
+                    <td>Cassandra, DynamoDB, CouchDB, Riak</td>
+                    <td>Social media timelines, Shopping cart items, Product reviews</td>
+                    <td>The system keeps serving traffic on both sides of the partitioned network. Uses "Eventual
+                        Consistency" to heal the data discrepancy once the network is restored.</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="edge-cases">
+            <h2>4. Edge Cases: PACELC Theorem</h2>
+            <p>CAP only describes what happens <em>during</em> a network partition. But what happens during normal
+                operation when the network is perfectly fine? The <strong>PACELC Theorem</strong> expands on CAP:</p>
+            <div class="depth"><strong>PACELC:</strong> If <strong>P</strong>artitioned, choose
+                <strong>A</strong>vailability or <strong>C</strong>onsistency. <strong>E</strong>lse (normal operation),
+                choose <strong>L</strong>atency or <strong>C</strong>onsistency.</div>
+
+            <ul>
+                <li><strong>DynamoDB / Cassandra (PA/EL):</strong> When partitioned, choose Availability. Else, choose
+                    Latency (serve reads from the closest node immediately, even if slightly stale).</li>
+                <li><strong>MongoDB (PC/EC):</strong> When partitioned, choose Consistency (blocks writes). Else, choose
+                    Consistency (reads happen from the Primary node by default, incurring higher latency).</li>
+            </ul>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

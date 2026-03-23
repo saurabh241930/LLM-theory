@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced MongoDB & NoSQL Patterns</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+
+        pre {
+            background-color: #272822;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Advanced MongoDB Mastery</h1>
+        <div class="subtitle">Aggregations, Sharding, Transactions & Advanced Schema Patterns</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="aggregation-pipeline">
+            <h2>1. Aggregation Pipeline Deep Dive</h2>
+            <p>The Aggregation framework processes data records and returns computed results sequentially via stages.
+            </p>
+
+            <div class="qa-container">
+                <h3>Interview Q: Explain $match, $group, $unwind, and $lookup</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>$match:</strong> Filters documents (like SQL <code>WHERE</code>). Always place this
+                            early in the pipeline to utilize indexes.</li>
+                        <li><strong>$unwind:</strong> Deconstructs an array field from the input document to output a
+                            document for each element (like SQL <code>UNNEST</code> or <code>JOIN</code>ing a
+                            one-to-many array).</li>
+                        <li><strong>$group:</strong> Groups input documents by a specified <code>_id</code> expression
+                            and applies accumulator expressions (like SQL <code>GROUP BY</code> and <code>SUM()</code>).
+                        </li>
+                        <li><strong>$lookup:</strong> Performs a left outer join to a collection in the same database.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>The Power of $facet</h3>
+                <div class="answer">
+                    <p><code>$facet</code> processes multiple aggregation pipelines within a single stage on the same
+                        set of input documents. It is heavily utilized for <strong>Pagination</strong>—where you need
+                        both the sliced data (<code>$skip</code>, <code>$limit</code>) and the total document count
+                        (<code>$count</code>) returned in exactly one database query roundtrip.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="index-types">
+            <h2>2. Index Types & The ESR Rule</h2>
+
+            <ul>
+                <li><strong>Compound Index:</strong> Indexes multiple fields. Relies heavily on the <strong>ESR
+                        Rule</strong> (Equality, Sort, Range) for order efficiency. Equality first, then Sort fields,
+                    leaving Range bounds last.</li>
+                <li><strong>Multikey Index:</strong> Automatically created when indexing an array field, indexing every
+                    element in the array.</li>
+                <li><strong>TTL (Time-To-Live) Index:</strong> Automatically deletes documents after a certain timeframe
+                    or at a specific clock time. Ideal for sessions and expiring logs.</li>
+                <li><strong>Sparse vs Partial Indexes:</strong> A <i>Sparse</i> index only contains entries for
+                    documents that have the indexed field. A <i>Partial</i> index filters based on a specific condition
+                    (e.g., <code>{ "status": "active" }</code>). Partial is generally preferred over Sparse as it is
+                    more expressive.</li>
+                <li><strong>Geospatial Index:</strong> Returns coordinate data (e.g., <code>2dsphere</code>).</li>
+            </ul>
+        </section>
+
+        <section id="embedding-vs-referencing">
+            <h2>3. $lookup vs Embedding Tradeoff</h2>
+
+            <div class="qa-container">
+                <h3>The 16MB Implications</h3>
+                <div class="answer">
+                    <p>MongoDB enforces a strict <strong>16MB Document Size Limit</strong>. This single constraint
+                        dictates MongoDB schema design entirely.</p>
+                    <ul>
+                        <li><strong>1-to-Few:</strong> Embed the data natively (e.g., a User document containing an
+                            array of a few Addresses).</li>
+                        <li><strong>1-to-Many:</strong> Reference (e.g., a Product has 1,000 Reviews). Store the
+                            <code>product_id</code> on the Review document. You construct the relationship back using
+                            <code>$lookup</code>. If you embed 1,000 growing reviews inside the Product document, you
+                            will eventually throw a 16MB out-of-bounds error.</li>
+                        <li><strong>1-to-Squillions:</strong> (E.g., Event logs for a Server). Parent referencing only.
+                            The event holds the <code>server_id</code>. The server document never tracks the events.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="write-concern">
+            <h2>4. Write Concern & Read Preference</h2>
+            <p>In a MongoDB Replica Set (Primary + Secondaries), you configure exactly how strictly data safety and
+                latency are handled.</p>
+
+            <div class="mermaid">
+                graph LR
+                Primary[Primary Node]
+                Sec1[Secondary 1]
+                Sec2[Secondary 2]
+
+                Client -- "Write (w:majority)" --> Primary
+                Primary -- replicates --> Sec1
+                Primary -- replicates --> Sec2
+                Sec1 -. Ack .-> Primary
+                Primary -- Ack to Client --> Client
+            </div>
+
+            <div class="qa-container">
+                <h3>w:majority & j:true</h3>
+                <div class="answer">
+                    <p><strong>w:majority:</strong> The insert/update is not acknowledged back to the client as
+                        "successful" until a majority of the replica set members have written it to memory.</p>
+                    <p><strong>j:true (Journaling):</strong> Requires the Primary to write the data to the on-disk
+                        journal before acknowledging it, guaranteeing safety from sudden power failures.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Secondary Preferred Reads</h3>
+                <div class="answer">
+                    <p><code>readPreference: secondaryPreferred</code> tells the driver to read from a read-only
+                        secondary node if possible, routing analytics or heavy reads away from the Primary node to
+                        heavily limit impact on write-latency. The tradeoff is <strong>Eventual Consistency</strong>
+                        (reading slightly stale data).</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="transactions">
+            <h2>5. Multi-Document ACID Transactions (4.0+)</h2>
+            <p>By default, MongoDB provides ACID guarantees strictly at the <strong>single-document level</strong>. In
+                4.0+, multi-document transactions were introduced utilizing the WiredTiger storage engine.</p>
+
+            <div class="depth"><strong>Performance Cost & When to Avoid:</strong> Transactions in MongoDB hold locks
+                indefinitely until committed or aborted. Additionally, you cannot modify more than 16MB of total data
+                within a single transaction envelope. Relying heavily on SQL-like transactions usually means your schema
+                is over-normalized for a Document Database. Transactions should be an exception (e.g., moving money
+                between accounts), not the rule.</div>
+        </section>
+
+        <section id="change-streams">
+            <h2>6. Change Streams</h2>
+            <p>Change streams allow applications to access real-time data changes natively, skipping polling.</p>
+
+            <div class="qa-container">
+                <h3>Oplog Tailing & Resume Tokens</h3>
+                <div class="answer">
+                    <p>Change streams tap directly into MongoDB's <strong>Oplog</strong> (the operations log replicated
+                        to secondary nodes). They utilize a <strong>Resume Token</strong>—a marker provided in every
+                        event. If the Node.js subscriber crashes, it can submit the Resume Token upon restart to replay
+                        the exact events missed while offline, guaranteeing zero dropped webhooks.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="schema-patterns">
+            <h2>7. Advanced Schema Design Patterns</h2>
+
+            <ul>
+                <li><strong>Bucket Pattern:</strong> For IoT/Time-Series data. Instead of grouping 1 document per second
+                    (resulting in billions of small documents), group readings into chronological arrays within 1
+                    document per device-hour or device-day. Saves index size and storage overhead.</li>
+                <li><strong>Outlier Pattern:</strong> Handling exceptions seamlessly. Most users have 100 followers
+                    (embedded), but "Justin Bieber" has 100M. The 100M accounts have an <code>has_extra: true</code>
+                    flag requiring a secondary query, saving the 99% of normal documents from structural bloated
+                    overhead.</li>
+                <li><strong>Computed Pattern:</strong> If reads outnumber writes 1000:1, don't aggregate on the fly.
+                    Compute the average rating on Write, and save it directly in the document.</li>
+                <li><strong>Subset Pattern:</strong> A Product has 5,000 reviews. Instead of $lookup for every
+                    rendering, embed the <strong>top 5 recent reviews</strong> natively inside the Product document for
+                    instant page loads. Fetch the rest via pagination from a separate <code>Reviews</code> collection
+                    only when "View More" is clicked.</li>
+            </ul>
+        </section>
+
+        <section id="sharding">
+            <h2>8. Sharding Deep Dive</h2>
+            <p>Sharding scales out storage and throughput horizontally across clusters.</p>
+
+            <div class="mermaid">
+                graph TD
+                R[Mongos Router]
+                R -- Hash(Key) --> S1[Shard 1]
+                R -- Hash(Key) --> S2[Shard 2]
+                R -- Hash(Key) --> S3[Shard 3]
+            </div>
+
+            <div class="qa-container">
+                <h3>Ranged vs Hashed & Hot Shard Problem</h3>
+                <div class="answer">
+                    <p><strong>Ranged Shard Key:</strong> (e.g., Sharding by <code>created_at</code> Date). Causes the
+                        <strong>Hot Shard Problem</strong>. Because current dates are strictly sequential, ALL new
+                        inserts will forcefully route to the exact same shard, bottlenecking the cluster while other
+                        shards sit idle.</p>
+                    <p><strong>Hashed Shard Key:</strong> Hashes the shard key (e.g., <code>user_id</code>). This
+                        guarantees perfectly uniform distribution of inserts, reads, and memory load across all shards
+                        in the cluster.</p>
+                </div>
+            </div>
+
+            <p><strong>Chunk Migration:</strong> The balancer process automatically migrates chunks of data between
+                shards seamlessly in the background to ensure data volume parity across physical nodes.</p>
+        </section>
+
+        <section id="mongoose-patterns">
+            <h2>9. Mongoose Deep Patterns</h2>
+            <p>Mongoose is the predominant ODM wrapping MongoDB drivers for Node.js.</p>
+            <ul>
+                <li><strong>Virtuals:</strong> Computed properties not stored in MongoDB. (e.g.,
+                    <code>firstName + lastName = fullName</code>). Useful for stripping passwords out via
+                    <code>toJSON</code> transformations.</li>
+                <li><strong>Middleware Hooks:</strong> <code>pre('save')</code> intercepts the write to hash passwords
+                    with bcrypt. <code>post('remove')</code> cleans up cascading relationships automatically.</li>
+                <li><strong>Discriminators:</strong> Inheritance for MongoDB. Saving different schemas within a single
+                    collection (e.g., A <code>Payment</code> collection storing <code>CreditCardPayment</code> and
+                    <code>CryptoPayment</code> objects using the exact same underlying base model but different required
+                    sub-fields).</li>
+                <li><strong>Populate vs Aggregate:</strong> <code>populate()</code> runs multiple queries under the hood
+                    in Node.js to mock joins. <code>aggregate()</code> ($lookup) runs the join exclusively on the
+                    Database Engine in C++. Aggregation is strictly faster but sacrifices Mongoose Document wrapper
+                    functionality.</li>
+            </ul>
+        </section>
+
+        <section id="atlas-search">
+            <h2>10. Atlas Search ($search)</h2>
+            <p>Standard MongoDB text indexes are inherently limited (no fuzziness, language nuances). <strong>Atlas
+                    Search</strong> is a native, synchronized deployment of <strong>Apache Lucene</strong> directly
+                tethered to your cluster.</p>
+
+            <div class="qa-container">
+                <h3>Capabilities & Scoring</h3>
+                <div class="answer">
+                    <div class="one-liner">Introduces the <code>$search</code> stage which must be the FIRST stage in
+                        the aggregation pipeline.</div>
+                    <p>Handles fuzzy matching, autocomplete functionality, synonym mapping, and BM25 relevance scoring.
+                        It completely bypasses the need to sync MongoDB with an external Elasticsearch cluster.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

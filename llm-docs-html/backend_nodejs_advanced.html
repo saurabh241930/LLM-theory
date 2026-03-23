@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Node.js & Architecture</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Advanced Node.js & System Architecture</h1>
+        <div class="subtitle">Express Internals, Auth Flows, ORMs, and Job Queues</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="express-middleware">
+            <h2>1. Express Middleware Chain</h2>
+            <p>Express relies on a strict sequential execution of functions called middleware. The order in which
+                middleware is registered directly dictates the order of execution.</p>
+            <div class="mermaid">
+                graph LR
+                Req[HTTP Request] --> M1[Logger Middleware]
+                M1 -- next() --> M2[Auth Middleware]
+                M2 -- next() --> R[Route Handler]
+                R -- response --> Res[HTTP Response]
+                M2 -. next(err) .-> E[Error Middleware]
+                R -. next(err) .-> E
+                E --> Res
+            </div>
+
+            <div class="qa-container">
+                <h3>The 4-Argument Error Middleware</h3>
+                <div class="answer">
+                    <p>Error-handling middleware is defined just like regular middleware functions, except it MUST have
+                        <strong>four arguments</strong> instead of three: <code>(err, req, res, next)</code>. If you
+                        only provide three arguments, Express interprets it as regular middleware, meaning it won't
+                        catch errors.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Trust Proxy</h3>
+                <div class="answer">
+                    <p>When running Express behind a reverse proxy (like Nginx or an AWS Load Balancer), Express will
+                        consider the connection's source IP to be the proxy's IP, not the client's. Setting
+                        <code>app.set('trust proxy', 1)</code> tells Express to trust the <code>X-Forwarded-For</code>
+                        header sent by the proxy, correctly populating <code>req.ip</code> and
+                        <code>req.protocol</code>.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="jwt-rotation">
+            <h2>2. JWT Refresh Token Rotation</h2>
+            <p>Storing Access Tokens (AT) in LocalStorage exposes them to XSS attacks. A secure standard involves using
+                two tokens: a short-lived Access Token kept in memory, and a long-lived Refresh Token (RT) explicitly
+                stored in an <code>httpOnly</code> cookie.</p>
+
+            <div class="mermaid">
+                sequenceDiagram
+                participant Client
+                participant API
+
+                Client->>API: 1. Login (Credentials)
+                API-->>Client: 2. Set-Cookie: RT (httpOnly), Body: AT (15m)
+                Note over Client: Stores AT in JS memory variables
+
+                Client->>API: 3. Request + Header: Bearer AT
+                API-->>Client: 4. Data
+
+                Note over Client, API: ...15 minutes later (AT expires)...
+
+                Client->>API: 5. Request + Header: Bearer AT
+                API-->>Client: 6. 401 Unauthorized
+
+                Client->>API: 7. POST /refresh (Cookie RT automatically sent)
+                Note over API: Validates RT, Revokes old RT, generates new Pair
+                API-->>Client: 8. Set-Cookie: NEW RT (httpOnly), Body: NEW AT
+            </div>
+
+            <div class="qa-container">
+                <h3>Refresh Token Revocation & Rotation</h3>
+                <div class="answer">
+                    <p><strong>Rotation:</strong> Every time the `/refresh` endpoint is hit, the old RT is invalidated
+                        and a completely new RT is issued. If a stolen RT is used, the system detects RT reuse (as the
+                        legitimate user already rotated it, or vice versa) and invalidates the entire token family,
+                        forcing re-authentication.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="passportjs">
+            <h2>3. Passport.js Internals & OAuth2</h2>
+            <p>Passport.js abstracts authentication strategies (Local, Google, GitHub). It relies heavily on session
+                management using serializers.</p>
+
+            <div class="qa-container">
+                <h3>Serialize / Deserialize User</h3>
+                <div class="answer">
+                    <div class="one-liner"><code>serializeUser</code> decides what data goes into the session cookie,
+                        while <code>deserializeUser</code> reconstructs the user object from that data.</div>
+                    <p>Typically, you only serialize the <code>user.id</code> to keep the session payload small. On
+                        every subsequent request, <code>deserializeUser</code> takes that ID, fetches the fresh user
+                        record from the database, and attaches it to <code>req.user</code>.</p>
+                </div>
+            </div>
+
+            <div class="mermaid">
+                sequenceDiagram
+                participant User
+                participant Server
+                participant Google
+
+                User->>Server: Click "Login with Google"
+                Server->>Google: Redirect to /auth/google (Client ID)
+                Google-->>User: Google Consent Screen
+                User->>Google: Approves Access
+                Google->>Server: Redirect to /callback?code=123
+                Server->>Google: Exchange code=123 + Secret for Access Token
+                Google-->>Server: Access Token + Profile Data
+                Server->>Server: Find or Create User by Profile.id
+                Server->>Server: passport.serializeUser(user.id)
+                Server-->>User: Set-Cookie: session (contains user.id), Redirect Home
+            </div>
+        </section>
+
+        <section id="orms">
+            <h2>4. Prisma vs TypeORM vs Mongoose</h2>
+            <p>Choosing the right database interaction layer affects developer velocity and application performance.</p>
+
+            <ul>
+                <li><strong>Prisma:</strong> Next-generation Node.js and TypeScript ORM. Generates a fully type-safe
+                    client based on a unified <code>schema.prisma</code> file. Excellent developer experience. Uses a
+                    Rust engine under the hood.</li>
+                <li><strong>TypeORM:</strong> Traditional Active Record and Data Mapper ORM influenced by Hibernate.
+                    Relies heavily on TypeScript decorators (<code>@Entity</code>, <code>@Column</code>). Better for
+                    complex legacy relational schemas but can be verbose.</li>
+                <li><strong>Mongoose:</strong> The de-facto ODM (Object Data Modeling) library for MongoDB. Enforces
+                    schema validation at the application layer on top of a schemaless database.</li>
+            </ul>
+
+            <div class="qa-container">
+                <h3>The N+1 Problem & Eager vs Lazy Loading</h3>
+                <div class="answer">
+                    <div class="one-liner">The N+1 problem occurs when an ORM executes 1 query to fetch a list of N
+                        records, and then N additional queries to fetch a related entity for each record.</div>
+                    <p><strong>Solution (Eager Loading):</strong> Fetch all necessary associated data in the initial
+                        database query using JOINs. In Prisma, this is done using the <code>include</code> keyword. In
+                        TypeORM, this is done using <code>relations</code>. Alternatively, use GraphQL's DataLoader to
+                        batch and deduplicate queries.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="job-queues">
+            <h2>5. Bull & BullMQ Job Queues</h2>
+            <p>For operations that are too slow (e.g., sending emails, video processing) to reside in the HTTP
+                request-response cycle, Node.js offloads tasks to Job Queues backed by Redis.</p>
+
+            <div class="mermaid">
+                graph LR
+                Producer[API Server] -- Adds Job --> Redis[(Redis Queue)]
+                Redis -- Pulls Job --> W1[Worker Process 1]
+                Redis -- Pulls Job --> W2[Worker Process 2]
+                W1 -- Success/Fail --> Redis
+            </div>
+
+            <div class="qa-container">
+                <h3>Key Queue Concepts</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>Concurrency:</strong> The number of jobs a single worker process will concurrently
+                            execute. If a worker has concurrency 5, it will pull up to 5 jobs simultaneously from Redis.
+                        </li>
+                        <li><strong>Retries & Backoff:</strong> Automatically retry a failed job. Backoff strategies
+                            (like exponential backoff) ensure the system waits increasingly longer between retries,
+                            avoiding hammering a failing downstream service.</li>
+                        <li><strong>Priority:</strong> Assigning weights to jobs. E.g., 'Password Reset Email' (Priority
+                            1) executes before 'Weekly Newsletter' (Priority 10).</li>
+                        <li><strong>Delayed Jobs:</strong> Jobs queued to be processed at a specific timestamp or
+                            timeframe in the future.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="websockets">
+            <h2>6. WebSockets & Socket.io Scale-Out</h2>
+            <p>WebSockets provide full-duplex, bidirectional communication over a single TCP connection.
+                <strong>Socket.io</strong> is a wrapper that provides auto-reconnection, fallback to HTTP long-polling,
+                namespaces, and rooms.</p>
+
+            <div class="qa-container">
+                <h3>Rooms & Namespaces</h3>
+                <div class="answer">
+                    <p><strong>Namespaces:</strong> Act like different endpoints or paths (e.g., <code>/chat</code> vs
+                        <code>/notifications</code>), isolating connections entirely.</p>
+                    <p><strong>Rooms:</strong> Arbitrary channels within a namespace that sockets can
+                        <code>join()</code> and <code>leave()</code>. Useful for group chats or broadcasting to a
+                        specific tenant subset (e.g., <code>io.to('room1').emit(...)</code>).</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>The Redis Adapter Scale-Out Problem</h3>
+                <div class="answer">
+                    <p>When you scale a Node.js WebSocket server to multiple instances behind a load balancer, standard
+                        Socket.io breaks. A user connected to Instance A won't receive a broadcast emitted by Instance
+                        B.</p>
+                    <p><strong>The Fix:</strong> The <strong>Socket.io Redis Adapter</strong>. It uses Redis Pub/Sub as
+                        a backplane. When Instance B emits a message to a room, it publishes it to Redis. Instance A is
+                        subscribed to Redis, receives the message, and forwards it to its locally connected users.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="opentelemetry">
+            <h2>7. OpenTelemetry in Node.js</h2>
+            <p>OpenTelemetry (OTel) is the industry standard for generating and collecting telemetry data (Metrics,
+                Logs, and Traces).</p>
+
+            <div class="qa-container">
+                <h3>Auto-Instrumentation</h3>
+                <div class="answer">
+                    <p>OTel Node.js provides modules that dynamically monkey-patch standard libraries (like
+                        <code>http</code>, <code>express</code>, <code>pg</code>, <code>redis</code>). Without modifying
+                        your application business logic, OTel automatically wraps functions to intercept requests and
+                        database calls, generating spans with execution times.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Trace Context Propagation</h3>
+                <div class="answer">
+                    <p>To link a request passing through multiple microservices, the Trace ID must be propagated. In
+                        synchronous languages like Java, context is tied to the Thread. In Node.js, asynchronous context
+                        is notoriously difficult to track across callbacks and promises.</p>
+                    <div class="depth"><strong>Senior Signal:</strong> OTel in Node uses the <code>async_hooks</code>
+                        API (specifically <code>AsyncLocalStorage</code>) to maintain Trace Context implicitly across
+                        asynchronous barriers, ensuring every database call knows which HTTP request triggered it.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="dependency-injection">
+            <h2>8. Dependency Injection (tsyringe / InversifyJS)</h2>
+            <p>Unlike standard CommonJS modules where dependencies are hardcoded via <code>require()</code>, Dependency
+                Injection (DI) passes dependencies into a class, usually via its constructor. This enables loose
+                coupling and drastically simplifies unit testing (via mocking).</p>
+
+            <div class="mermaid">
+                graph TD
+                DI[DI Container (InversifyJS/tsyringe)]
+                DI -- Injects --> U[UserController]
+                DI -- Injects --> M[EmailService]
+                DI -- Injects --> D[DatabaseRepository]
+                U -. Depends on .-> M
+                U -. Depends on .-> D
+            </div>
+
+            <div class="qa-container">
+                <h3>Decorators and DI Containers</h3>
+                <div class="answer">
+                    <p>Modern TS/Node DI relies heavily on Decorators. Classes are marked with
+                        <code>@injectable()</code>. The framework's <strong>DI Container</strong> registers all
+                        implementations.</p>
+                    <p><strong>Singleton vs Transient:</strong> The Container manages instance lifecycles. A Singleton
+                        dependency is created once and shared across the entire app (e.g., DB Connection Pool). A
+                        Transient dependency gets instantiated freshly every time it is injected.</p>
+                    <p><strong>DI vs Factory:</strong> A Factory manually instantiates objects and their dependencies
+                        hierarchically. A DI Container automates this resolution tree entirely via reflection metadata.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

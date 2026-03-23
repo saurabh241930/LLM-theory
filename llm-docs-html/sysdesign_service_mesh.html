@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Mesh & API Gateway</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Service Mesh vs API Gateway</h1>
+        <div class="subtitle">North-South vs East-West Traffic Management</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="api-gateway">
+            <h2>1. API Gateway (Nginx, Kong, AWS API Gateway)</h2>
+            <p>An API Gateway is explicitly an Edge component. It sits exclusively between your external clients (Web
+                Browsers, Mobile Apps) and your internal microservices (<strong>North-South Traffic</strong>).</p>
+
+            <div class="qa-container">
+                <h3>Primary Responsibilities</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>Edge Router:</strong> Single entry point blocking direct access to internal IPs.
+                            Handles path routing (<code>/api/users -> User Service</code>).</li>
+                        <li><strong>Auth Termination:</strong> Validates JWTs globally before traffic even hits your
+                            internal systems.</li>
+                        <li><strong>Rate Limiting:</strong> Denies basic DDoS vectors and limits customer API tiers
+                            globally.</li>
+                        <li><strong>SSL Termination:</strong> Handles HTTPS handshakes, forwarding plain HTTP internally
+                            to save CPU cycles on microservice pods.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mermaid">
+                graph TD
+                U1[Mobile App] --> G[API Gateway Nginx/Kong]
+                U2[Web App] --> G
+
+                G -- /users --> S1[User Service]
+                G -- /orders --> S2[Order Service]
+                G -- /pay --> S3[Payment Service]
+            </div>
+        </section>
+
+        <section id="service-mesh">
+            <h2>2. Service Mesh (Istio, Linkerd)</h2>
+            <p>A Service Mesh is explicitly an internal infrastructure layer. Once a request bypasses the API Gateway
+                and enters the internal cluster, the Service Mesh manages how the internal microservices securely talk
+                to each other (<strong>East-West Traffic</strong>).</p>
+
+            <div class="qa-container">
+                <h3>The Sidecar Proxy Pattern</h3>
+                <div class="answer">
+                    <div class="one-liner">A Service Mesh achieves its goal by attaching a microscopic 'Sidecar Proxy'
+                        (e.g., Envoy) directly alongside every single application container.</div>
+                    <p>Instead of the Node.js User Service calling the Python Order Service directly over HTTP, the User
+                        Service Node.js app calls its own localhost Envoy proxy. The Envoy proxy validates tracing,
+                        secures the network with mTLS, checks circuit breakers, and routes the packet to the Order
+                        Service's Envoy proxy.</p>
+                </div>
+            </div>
+
+            <div class="mermaid">
+                graph LR
+                subgraph Pod A
+                App1[User App] <--> E1[(Envoy Proxy)]
+                    end
+
+                    subgraph Pod B
+                    App2[Order App] <--> E2[(Envoy Proxy)]
+                        end
+
+                        subgraph Pod C
+                        App3[Payment App] <--> E3[(Envoy Proxy)]
+                            end
+
+                            E1 -- mTLS Network Call --> E2
+                            E2 -- mTLS Network Call --> E3
+            </div>
+        </section>
+
+        <section id="features">
+            <h2>3. Service Mesh Killer Features</h2>
+            <ul>
+                <li><strong>mTLS (Mutual TLS):</strong> Automatically encrypts all traffic between internal services
+                    without developers writing a single line of TLS code. Perfect for zero-trust networks matching
+                    HIPAA/PCI compliance.</li>
+                <li><strong>Observability & Tracing:</strong> Automatically intercepts total network latency between
+                    every pod, tracking distributed Trace IDs across the cluster seamlessly, feeding into Jaeger or
+                    Datadog natively.</li>
+                <li><strong>Traffic Splitting (Canary):</strong> The proxy network can flawlessly divert exactly 5% of
+                    internal traffic to the new v2 of a microservice transparently to test for crashes before a 100%
+                    rollout.</li>
+                <li><strong>Retries & Circuit Breaking:</strong> Handles complex exponential backoffs natively inside
+                    the infrastructure layer without polluting the application codebase with retry libraries.</li>
+            </ul>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

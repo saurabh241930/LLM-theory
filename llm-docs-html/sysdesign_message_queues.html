@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Queues & Event Streaming</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Message Queues vs Event Streaming</h1>
+        <div class="subtitle">Decoupling microservices and scaling high-throughput event logs.</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="concept">
+            <h2>1. Why Async Communication?</h2>
+            <p>In a synchronous microservice architecture, if Service A calls Service B via HTTP/REST, and Service B is
+                down, Service A fails too. A Distributed Message Broker decouples these services: Service A writes to
+                the broker (guaranteed instantly) and continues on. Service B reads it whenever it wakes back up.</p>
+        </section>
+
+        <section id="architecture">
+            <h2>2. The Two Paradigms: RabbitMQ vs Apache Kafka</h2>
+
+            <table border="1" cellpadding="8" cellspacing="0"
+                style="width:100%; border-collapse:collapse; margin-bottom: 20px;">
+                <tr>
+                    <th>Feature</th>
+                    <th>RabbitMQ (Message Queue)</th>
+                    <th>Apache Kafka (Event Stream)</th>
+                </tr>
+                <tr>
+                    <td><strong>Philosophy</strong></td>
+                    <td>"Smart Broker, Dumb Consumer"</td>
+                    <td>"Dumb Broker, Smart Consumer"</td>
+                </tr>
+                <tr>
+                    <td><strong>Data Retention</strong></td>
+                    <td>Ephemeral. Once a message is acknowledged by the consumer, the broker instantly deletes it from
+                        memory.</td>
+                    <td>Persistent Log. Messages stay on disk sequentially for X days. The consumer tracks its own read
+                        offset.</td>
+                </tr>
+                <tr>
+                    <td><strong>Routing</strong></td>
+                    <td>Extremely complex. Exchanges, Topic routing, exact-match bindings.</td>
+                    <td>Simple. Messages append to a Partition inside a Topic.</td>
+                </tr>
+                <tr>
+                    <td><strong>Replayability</strong></td>
+                    <td>Zero replayability. Once consumed, it is gone forever.</td>
+                    <td>Total replayability. A consumer can rewind its offset cursor to 3 weeks ago and re-read the
+                        entire history to populate a new database.</td>
+                </tr>
+                <tr>
+                    <td><strong>Throughput</strong></td>
+                    <td>High (~50k msg/sec)</td>
+                    <td>Massive (~1M+ msg/sec)</td>
+                </tr>
+            </table>
+
+            <div class="mermaid">
+                graph TD
+                subgraph RabbitMQ Concept
+                P1[Producer Application] --> X[Exchange/Topic]
+                X -->|Binding Match| Q[Queue holding memory]
+                Q -- Consumer ACKs, Msg disappears --> W[Worker / Consumer]
+                end
+
+                subgraph Kafka Concept
+                P2[Producer Application] --> T[Topic Partition log on disk]
+                T -- Consumer offset moves ---> W2[Consumer Group]
+                T -- Another Consumer offset ---> W3[Analytics Group]
+                end
+            </div>
+        </section>
+
+        <section id="edge-cases">
+            <h2>3. Edge Cases: Ordering, Duplicate Delivery, Dead Letters</h2>
+
+            <div class="qa-container">
+                <h3>Message Ordering</h3>
+                <div class="answer">
+                    <p>In an event stream, processing sequences out of order (e.g., Update Profile before Create
+                        Profile) corrupts state. RabbitMQ loses strict ordering when queues have multiple concurrent
+                        consumers. Kafka guarantees strict 100% ordering <em>within a single partition</em>.</p>
+                    <p><strong>Fix:</strong> In Kafka, always publish messages related to the same entity (e.g.,
+                        `user_id = 123`) using the `user_id` as the message Key. Kafka hashes the key, guaranteeing all
+                        events for User 123 map to exactly Partition 2, which is read by exactly one consumer Thread
+                        sequentially.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Idempotency & Duplicate Delivery</h3>
+                <div class="answer">
+                    <p>Both RabbitMQ and Kafka offer <em>At-Least-Once</em> delivery by default. Network hiccups cause
+                        the consumer to fail acknowledging back to the broker, so the broker resends the exact same
+                        message later.</p>
+                    <div class="depth"><strong>Idempotent Consumers:</strong> The Consumer application MUST be
+                        idempotent. A payment processing worker must check the database for `transaction_id=XYZ` before
+                        charging the credit card, ensuring a duplicate message does not result in a double charge.</div>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>The Poison Pill (Dead Letter Queue)</h3>
+                <div class="answer">
+                    <p>What if a message payload is structurally invalid JSON? The consumer crashes attempting to parse
+                        it, fails to ACK, the broker resends it, creating an infinite crash-loop that locks up the
+                        entire queue (a Poison Pill).</p>
+                    <p><strong>Solution:</strong> The broker configures a maximum retry limit (e.g., 3 failures). The
+                        4th failure routes the toxic message permanently to a Dead Letter Queue (DLQ) for human
+                        debugging, unblocking the main pipeline.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

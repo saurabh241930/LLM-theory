@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circuit Breaker & Bulkhead Patterns</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Circuit Breaker & Bulkhead Patterns</h1>
+        <div class="subtitle">Preventing Cascading Failures in Distributed Systems</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="circuit-breaker">
+            <h2>1. The Circuit Breaker Pattern</h2>
+            <p>In a microservices architecture, if Service A synchronously calls Service B, and Service B experiences a
+                massive 30-second latency spike or complete outage, Service A will exhaust all of its threads waiting
+                for B to respond. This instantly crashes Service A, propagating the catastrophic failure across the
+                entire system network.</p>
+
+            <div class="mermaid">
+                stateDiagram-v2
+                CLOSED --> OPEN : Timeout Error Rate > 50%
+                OPEN --> HALF_OPEN : Wait Duration Expires (e.g. 5s)
+                HALF_OPEN --> CLOSED : Trial Call Succeeds
+                HALF_OPEN --> OPEN : Trial Call Fails
+            </div>
+
+            <div class="qa-container">
+                <h3>The Three States</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>Closed:</strong> Standard operation. Traffic flows smoothly to the downstream
+                            service. The circuit is continuously monitoring error rates and execution times.</li>
+                        <li><strong>Open:</strong> If the error rate crosses a threshold (e.g., 50% failures in 10s),
+                            the circuit "trips". ALL subsequent requests from Service A to Service B immediately fail
+                            fast (throwing a defined fallback or cached response) without actually making the network
+                            call, relieving all pressure on Service B.</li>
+                        <li><strong>Half-Open:</strong> After a timeout, the circuit allows exactly ONE test request
+                            through to check if Service B has recovered.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="bulkhead">
+            <h2>2. The Bulkhead Pattern</h2>
+            <p>If the hull of a ship is comprised of one massive compartment, a single puncture sinks the entire vessel.
+                By isolating the hull into partitioned, watertight bulkheads, a breach in one section does not flood the
+                entire ship.</p>
+
+            <div class="qa-container">
+                <h3>Resource Isolation</h3>
+                <div class="answer">
+                    <p>In software, if a Web Server has a connection pool of 500 threads, and an obscure Payment API
+                        integration suddenly goes dark and hangs, 100% of the 500 threads will quickly get trapped
+                        polling that API. The server becomes completely unresponsive, dropping simple calls like loading
+                        the homepage.</p>
+                    <div class="depth"><strong>Implementation:</strong> We partition our connection pools (Bulkheading).
+                        The Payment API integration is strictly allowed only 50 threads from the pool. The Homepage
+                        Rendering service is given 400 threads securely. If the Payment API hangs, exactly 50 threads
+                        lock up, and that internal feature crashes, but the core Homepage stays 100% perfectly available
+                        for other users.</div>
+                </div>
+            </div>
+
+            <div class="mermaid">
+                graph TD
+                subgraph Web Server
+                subgraph Home Page Pool
+                H[400 Isolated Threads]
+                end
+                subgraph Payment Pool
+                P[50 Isolated Threads]
+                end
+                end
+
+                H -- Smooth execution --> DB[(Core Database)]
+                P -. Network Deadlock .-x API[Stripe API Outage]
+            </div>
+        </section>
+
+        <section id="edge-cases">
+            <h2>3. Combining Strategies (Resiliency)</h2>
+            <p>A senior system designer prevents downtime by inherently expecting it.</p>
+            <ul>
+                <li><strong>Retry with Exponential Backoff:</strong> Re-executing failed network calls aggressively
+                    floods a struggling downstream service (Denial of Service). A Retry must ALWAYS include mathematical
+                    backoff (wait 1s, then 2s, then 4s, 8s) and randomized <em>Jitter</em> (scattering the retries
+                    across time so 5,000 servers don't retry on the exact same millisecond mark).</li>
+                <li><strong>Fallback Gracefully:</strong> If the Recommendations Microservice circuit breaker trips
+                    Open, the UI shouldn't render a 500 error block. The wrapper code should catch the circuit trip, and
+                    render a hard-coded static list of "Top Rated Items" as a safe fallback.</li>
+            </ul>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

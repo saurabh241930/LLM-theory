@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layer Normalization</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0c10;
+            --bg-box: #14171f;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --border: #334155;
+
+            --c-dot: #8b5cf6;
+            /* Purple */
+            --c-mean: #ef4444;
+            /* Red */
+            --c-std: #3b82f6;
+            /* Blue */
+            --c-learn: #10b981;
+            /* Green */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .animation-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #app {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 40px 20px;
+        }
+
+        header h1 {
+            color: #fff;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        header .subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .desc-text {
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto 30px;
+        }
+
+        .playground {
+            background: var(--bg-box);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            min-height: 700px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .btn:disabled {
+            background: #334155;
+            color: var(--muted);
+            cursor: not-allowed;
+        }
+
+        .scene {
+            display: none;
+            flex: 1;
+            position: relative;
+            animation: fadeIn 0.5s ease-out forwards;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .scene.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .instruction-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 12px 20px;
+            color: #93c5fd;
+            text-align: center;
+            max-width: 650px;
+            margin-bottom: 40px;
+            font-size: 15px;
+            line-height: 1.5;
+            z-index: 10;
+        }
+
+        /* 1D Number Line Graph */
+        .graph-container {
+            width: 100%;
+            max-width: 700px;
+            height: 100px;
+            position: relative;
+            margin-top: 60px;
+        }
+
+        .axis {
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .tick {
+            position: absolute;
+            width: 2px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.4);
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .tick-label {
+            position: absolute;
+            top: 65%;
+            transform: translateX(-50%);
+            color: var(--muted);
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .tick.zero {
+            height: 16px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .tick-label.zero {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        /* Dots representing activation values */
+        .dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--c-dot);
+            position: absolute;
+            top: 50%;
+            margin-top: -9px;
+            margin-left: -9px;
+            transition: left 1s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 0 10px var(--c-dot);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 9px;
+            font-weight: bold;
+            font-family: 'JetBrains Mono';
+        }
+
+        /* Indicators */
+        .mean-line {
+            position: absolute;
+            width: 2px;
+            height: 160px;
+            background: var(--c-mean);
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: all 1s ease;
+            z-index: 0;
+        }
+
+        .mean-line::after {
+            content: 'Mean (μ)';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--c-mean);
+            font-size: 12px;
+            font-weight: bold;
+            width: max-content;
+        }
+
+        .std-bracket {
+            position: absolute;
+            height: 8px;
+            border: 2px solid var(--c-std);
+            border-top: none;
+            top: calc(50% + 25px);
+            opacity: 0;
+            transition: all 1s ease;
+        }
+
+        .std-bracket::after {
+            content: 'Variance (σ)';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--c-std);
+            font-size: 11px;
+            width: max-content;
+        }
+
+        /* Math Overlay */
+        .math-box {
+            margin-top: 60px;
+            padding: 15px 30px;
+            border-radius: 8px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            font-family: 'JetBrains Mono', monospace;
+            color: #fbbf24;
+            font-size: 18px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .math-box.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="content-wrapper animation-wrapper">
+        <div id="app">
+            <header>
+                <h1>Layer Normalization</h1>
+                <div class="subtitle">Taming Exploding Numbers and Recovering Lost Freedom</div>
+            </header>
+
+            <p class="desc-text">
+                As data passes through extremely deep layers in a Transformer, repeated multiplications cause "Internal
+                Covariate Shift"—the scale of the numbers gets wildly distorted. Gradients explode or vanish.
+                <strong>Layer Normalization</strong> forcibly clamps every token's feature vector back into a stable,
+                identical scale.
+            </p>
+
+            <div class="playground" id="pg">
+                <div class="pg-header">
+                    <h3 id="phase-title" style="margin:0; color:#38bdf8;">Phase 1: Explosive Activations</h3>
+                    <div class="controls">
+                        <button class="btn" id="btn-back" onclick="prevStep()" disabled>← Back</button>
+                        <button class="btn" id="btn-next" onclick="nextStep()">Next →</button>
+                    </div>
+                </div>
+
+                <div class="scene active" id="scene-main">
+                    <div class="instruction-box" id="instruction">
+                        Imagine a single token's embedding vector consists of 5 numbers (dimensions). Notice how
+                        uncalibrated they are: some are hugely positive (+80), some are negative (-30), and they are
+                        entirely off-center.
+                    </div>
+
+                    <div class="graph-container">
+                        <div class="axis"></div>
+                        <!-- Ticks: -100 to 100. Center is 50% -->
+                        <div class="tick zero" style="left:50%"></div>
+                        <div class="tick-label zero" style="left:50%">0</div>
+
+                        <div class="tick" style="left:10%"></div>
+                        <div class="tick-label" style="left:10%">-80</div>
+                        <div class="tick" style="left:30%"></div>
+                        <div class="tick-label" style="left:30%">-40</div>
+                        <div class="tick" style="left:70%"></div>
+                        <div class="tick-label" style="left:70%">40</div>
+                        <div class="tick" style="left:90%"></div>
+                        <div class="tick-label" style="left:90%">80</div>
+
+                        <!-- The Values (0 to 100% maps to -100 to +100) -->
+                        <!-- Center=50%. formula: left = 50 + (val/2)% -->
+                        <div class="dot" id="d1">1</div>
+                        <div class="dot" id="d2">2</div>
+                        <div class="dot" id="d3">3</div>
+                        <div class="dot" id="d4">4</div>
+                        <div class="dot" id="d5">5</div>
+
+                        <!-- Indicators -->
+                        <div class="mean-line" id="ind-mean"></div>
+                        <div class="std-bracket" id="ind-std"></div>
+                    </div>
+
+                    <div class="math-box" id="math-overlay">
+                        x = [80, 20, -30, 40, -10]
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script>
+        // Initial values before normalization (Range -100 to 100)
+        // Let values be: 80, 20, -30, 40, -10
+        // Mean = (80+20-30+40-10)/5 = 100/5 = 20
+        // Values - Mean = [60, 0, -50, 20, -30]
+        // Var roughly = (3600 + 0 + 2500 + 400 + 900)/5 = 7400/5 = 1480
+        // StdDev roughly = 38.4
+
+        // Normalized values (Values-Mean)/StdDev:
+        // [1.56, 0, -1.3, 0.52, -0.78]
+
+        // But we want to map this onto our visual scale. 
+        // Visual scale mapping: x on screen = 50 + (val/2)%
+
+        function getPercent(val) { return 50 + (val / 2); }
+
+        const dots = [
+            { el: document.getElementById('d1'), raw: 80, val1: 80, valCent: 60, valNorm: 31.2 }, // 1.56 * 20 (scale factor for visual)
+            { el: document.getElementById('d2'), raw: 20, val1: 20, valCent: 0, valNorm: 0 },
+            { el: document.getElementById('d3'), raw: -30, val1: -30, valCent: -50, valNorm: -26 },  // -1.3 * 20
+            { el: document.getElementById('d4'), raw: 40, val1: 40, valCent: 20, valNorm: 10.4 }, // 0.52 * 20
+            { el: document.getElementById('d5'), raw: -10, val1: -10, valCent: -30, valNorm: -15.6 } // -0.78 * 20
+        ];
+
+        // Learned parameters Gamma (Scale)=1.5, Beta (Shift)=-15
+        dots.forEach(d => { d.valLearn = d.valNorm * 1.5 - 15; });
+
+        const meanLine = document.getElementById('ind-mean');
+        const stdBracket = document.getElementById('ind-std');
+        const mathBox = document.getElementById('math-overlay');
+
+        const steps = [
+            {
+                title: "Phase 1: Explosive Activations",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `Imagine a single token's embedding vector consists of 5 numbers (dimensions). Notice how uncalibrated they are: some are hugely positive (+80), some are negative (-30), and they are entirely off-center.`;
+
+                    dots.forEach(d => { d.el.style.left = getPercent(d.val1) + '%'; });
+                    meanLine.style.opacity = '0';
+                    stdBracket.style.opacity = '0';
+
+                    mathBox.classList.add('show');
+                    mathBox.innerHTML = `x = [80, 20, -30, 40, -10]`;
+                }
+            },
+            {
+                title: "Phase 2: Calculate Mean (μ)",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `First, we find the <strong>Mean (μ)</strong> of these 5 dimensions. In this specific token, the average value is +20.`;
+
+                    dots.forEach(d => { d.el.style.left = getPercent(d.val1) + '%'; });
+
+                    meanLine.style.left = getPercent(20) + '%';
+                    meanLine.style.opacity = '1';
+                    stdBracket.style.opacity = '0';
+
+                    mathBox.innerHTML = `μ = 20`;
+                }
+            },
+            {
+                title: "Phase 3: Centering (x - μ)",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `We rigidly slide every single point leftward by the mean (-20). Now, the dimensions are perfectly centered at Exactly Zero. However, they are still wildly spread out.`;
+
+                    dots.forEach(d => { d.el.style.left = getPercent(d.valCent) + '%'; });
+
+                    meanLine.style.left = getPercent(0) + '%';
+                    meanLine.style.opacity = '1';
+                    stdBracket.style.opacity = '0';
+
+                    mathBox.innerHTML = `x_{centered} = x - μ = [60, 0, -50, 20, -30]`;
+                }
+            },
+            {
+                title: "Phase 4: Divide by Variance (σ)",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `Next, we calculate the Standard Deviation (σ). We divide every point by this spread, fiercely pulling them in tightly. They are now officially Normalized: mean of 0, standard deviation of 1. Math is perfectly stable!`;
+
+                    dots.forEach(d => { d.el.style.left = getPercent(d.valNorm) + '%'; });
+
+                    meanLine.style.left = getPercent(0) + '%';
+                    meanLine.style.opacity = '1';
+
+                    // Draw standard deviation bracket around the core cluster (e.g. -20 to 20 visually)
+                    stdBracket.style.left = getPercent(-20) + '%';
+                    stdBracket.style.width = '20%'; // -20 to 20 is length 40 out of 200, so 20% width
+                    stdBracket.style.opacity = '1';
+
+                    mathBox.innerHTML = `x_{norm} = (x - μ) / σ`;
+                }
+            },
+            {
+                title: "Phase 5: Learned Scale & Shift (γ, β)",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `But forcing every vector into exactly [0, 1] destroys freedom! Sometimes a token exactly <em>wants</em> to naturally be shifted negative or spread out. So we gently multiply by a learned <strong>Scale (γ)</strong> and add a learned <strong>Shift (β)</strong> to let the network mold the stabilized data.`;
+
+                    dots.forEach(d => { d.el.style.left = getPercent(d.valLearn) + '%'; });
+
+                    // Hide standard norm indicators
+                    meanLine.style.opacity = '0';
+                    stdBracket.style.opacity = '0';
+
+                    mathBox.innerHTML = `LayerNorm(x) = γ * x_{norm} + β`;
+                    mathBox.style.color = 'var(--c-learn)';
+                }
+            }
+        ];
+
+        let currentStep = 0;
+        function applyStep() {
+            document.getElementById('phase-title').innerText = steps[currentStep].title;
+            document.getElementById('btn-back').disabled = currentStep === 0;
+            document.getElementById('btn-next').disabled = currentStep === steps.length - 1;
+            steps[currentStep].action();
+        }
+        function nextStep() { if (currentStep < steps.length - 1) { currentStep++; applyStep(); } }
+        function prevStep() { if (currentStep > 0) { currentStep--; applyStep(); } }
+
+        window.addEventListener('load', () => setTimeout(() => applyStep(), 150));
+    </script>
+</body>
+
+</html>

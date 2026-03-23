@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Transactions: 2PC & Saga</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Distributed Transactions</h1>
+        <div class="subtitle">Two-Phase Commit vs The Saga Pattern</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="concept">
+            <h2>1. The Microservices Nightmare</h2>
+            <p>In a monolith, transferring money from one account to another uses a strict ACID relational Database
+                Transaction. If either the debit or the credit code fails, the database natively rolls back everything
+                synchronously.</p>
+            <p>In a microservices architecture, the Order Service has an isolated database, and the Payment Service has
+                an isolated database. If the Order Service deducts inventory, and a subsequent HTTP call to the Payment
+                Service encounters a 500 Server Error to charge the card, your inventory is definitively corrupted. How
+                do you roll back changes across separate autonomous databases?</p>
+        </section>
+
+        <section id="2pc">
+            <h2>2. The Two-Phase Commit (2PC)</h2>
+            <p>A strict, synchronous protocol ensuring ACID properties distributed over the network via a central
+                Coordinator.</p>
+
+            <div class="qa-container">
+                <h3>Phase 1: Prepare</h3>
+                <div class="answer">
+                    <p>The Coordinator asks all participating nodes if they are fully prepared to commit the
+                        transaction. All nodes lock their local resources (e.g., locking the row in MySQL) and reply
+                        "Yes" or "No".</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Phase 2: Commit</h3>
+                <div class="answer">
+                    <p>If ALL nodes voted "Yes", the Coordinator sends a global "Commit" command. If a <em>single</em>
+                        node voted "No" (or timed out), the Coordinator sends a global "Abort" command, and all nodes
+                        release their locks immediately.</p>
+                </div>
+            </div>
+
+            <div class="depth"><strong>Why is 2PC inherently bad?</strong> It is synonymous with performance suicide. It
+                creates network-level blocking locks across multiple disjoint databases simultaneously. If the central
+                Coordinator node crashes halfway through Phase 2, the participating nodes helplessly freeze
+                indefinitely, permanently holding database locks that degrade the entire site until human intervention.
+            </div>
+        </section>
+
+        <section id="saga">
+            <h2>3. The Saga Pattern</h2>
+            <p>Sagas abandon strict ACID consistency in favor of distributed <strong>Base</strong> (Basically Available,
+                Soft State, Eventual Consistency). Instead of blocking distributed locks, a Saga splits a large
+                transaction into a sequence of small, localized database transactions.</p>
+
+            <div class="qa-container">
+                <h3>Compensating Transactions</h3>
+                <div class="answer">
+                    <div class="one-liner">Since each local step genuinely commits its data permanently to its localized
+                        database immediately, you cannot simply "rollback" if a later step fails.</div>
+                    <p>If Step 3 logically fails, the system must sequentially execute <strong>Compensating
+                            Transactions</strong> for Step 2 and Step 1. A Compensating Transaction is explicit
+                        application code written to conceptually negate the original action (e.g., if Step 1 was
+                        <code>chargeCard($50)</code>, the Compensating step is distinctly <code>refundCard($50)</code>.
+                    </p>
+                </div>
+            </div>
+
+            <p>Sagas are predominantly driven using one of two core models:</p>
+
+            <h3>Choreography Saga (Event-Driven)</h3>
+            <p>No central brain. Services publish Domain Events onto an Event Stream (Kafka). Other services listen and
+                react.</p>
+            <ul>
+                <li><code>OrderService:</code> Commits Order (Pending). Publishes <code>OrderCreated</code> Event.</li>
+                <li><code>PaymentService:</code> Listens to Event. Commits Charge. Publishes
+                    <code>PaymentSucceeded</code> Event.</li>
+                <li><code>InventoryService:</code> Listens to Event. Commits Deduct Stock.</li>
+            </ul>
+            <div class="depth"><strong>Pros:</strong> Totally decoupled. No single point of failure.
+                <strong>Cons:</strong> Complex to mentally trace the logical flow or debug effectively across 10
+                microservices interacting purely via scattered event listeners.</div>
+
+            <h3>Orchestration Saga (Command-Driven)</h3>
+            <p>A central "Orchestrator" service explicitly tells everyone what to do. It acts like an air-traffic
+                controller holding the state machine structure.</p>
+            <ul>
+                <li><code>Orchestrator:</code> Sends <em>Create Order</em> Command to Order Service. Waits for reply.
+                </li>
+                <li><code>Orchestrator:</code> Sends <em>Charge Card</em> Command to Payment Service. Waits for reply.
+                </li>
+                <li>If Payment fails, the <code>Orchestrator:</code> actively fires a <em>Cancel Order</em> Compensating
+                    Command back to the Order Service to trigger the conceptual rollback.</li>
+            </ul>
+            <div class="depth"><strong>Pros:</strong> The entire business flow is centralized, readable, and perfectly
+                traceable. <strong>Cons:</strong> Creates a localized single point of failure/bottleneck within the
+                orchestrator node itself.</div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

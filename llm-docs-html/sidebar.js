@@ -35,7 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'rnn_architecture.html', title: '5. RNN & Vanishing Gradients' },
                 { id: 'lstm_architecture.html', title: '6. LSTM & Cell State' },
                 { id: 'weight_initialization.html', title: '7. Weight Initialization' },
-                { id: 'dropout_mechanics.html', title: '8. Dropout Mechanics' }
+                { id: 'dropout_mechanics.html', title: '8. Dropout Mechanics' },
+                { id: 'feed_forward_animation.html', title: '9. Feed-Forward Networks' },
+                { id: 'residual_connections_animation.html', title: '10. Residual Connections' },
+                { id: 'layer_normalization_animation.html', title: '11. Layer Normalization' }
             ]
         },
         {
@@ -57,7 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'deepseek_animation.html', title: '14. DeepSeek v2 MoE & MLA' },
                 { id: 'bert_vs_gpt_animation.html', title: '15. BERT vs GPT Animation' },
                 { id: 'cross_attention.html', title: '16. Self vs Cross Attention' },
-                { id: 'transformer_math_story.html', title: '17. Micro-Math Matrix Story' }
+                { id: 'transformer_math_story.html', title: '17. Micro-Math Matrix Story' },
+                { id: 'attention_modifier_math.html', title: '18. Attention Intuition & Math' },
+                { id: 'qkv_matrix_animation.html', title: '19. QKV Matrix Projections' },
+                { id: 'multihead_attention_intuition.html', title: '20. Why Multi-Head Attention?' }
             ]
         },
         {
@@ -105,7 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: '20_interview_questions.html', title: '30. Interview Recap' },
                 { id: '21_real_world_questions.html', title: '31. Real World Production' },
                 { id: 'llm_serving.html', title: '32. LLM Serving' },
-                { id: 'mcp_protocol.html', title: '33. MCP Protocol' }
+                { id: 'mcp_protocol.html', title: '33. MCP Protocol' },
+                { id: 'interview_scenario_based.html', title: '34. Scenario Interviews' }
             ]
         },
         {
@@ -134,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'backend_core.html', title: 'Backend Core' },
                 { id: 'backend_fastapi.html', title: 'FastAPI Mastery' },
                 { id: 'backend_nodejs.html', title: 'Node.js Mastery' },
+                { id: 'backend_nodejs_advanced.html', title: 'Advanced Node.js' },
                 { id: 'backend_scaling.html', title: 'Backend Scaling' }
             ]
         },
@@ -141,7 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
             category: 'Frontend',
             links: [
                 { id: 'frontend_architecture.html', title: 'Frontend Architecture' },
-                { id: 'frontend_performance.html', title: 'Frontend Performance' }
+                { id: 'frontend_performance.html', title: 'Frontend Performance' },
+                { id: 'frontend_react_advanced.html', title: 'Advanced React' }
             ]
         },
         {
@@ -160,7 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
             category: 'Database',
             links: [
                 { id: 'database_internals.html', title: 'Database Internals' },
-                { id: 'database_scaling.html', title: 'Database Scaling' }
+                { id: 'database_scaling.html', title: 'Database Scaling' },
+                { id: 'database_postgres_advanced.html', title: 'Advanced PostgreSQL' },
+                { id: 'database_mongodb_advanced.html', title: 'Advanced MongoDB' }
             ]
         },
         {
@@ -172,7 +183,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'system_design_chatgpt.html', title: 'ChatGPT Case Study' },
                 { id: 'system_design_ecommerce_agents.html', title: 'E-commerce AI Agents' },
                 { id: 'sysdesign_enterprise_search.html', title: 'Enterprise Search (Glean)' },
-                { id: 'sysdesign_high_throughput_rag.html', title: 'High-Throughput RAG' }
+                { id: 'sysdesign_high_throughput_rag.html', title: 'High-Throughput RAG' },
+                { id: 'sysdesign_cap_theorem.html', title: 'S1. CAP Theorem' },
+                { id: 'sysdesign_consistent_hashing.html', title: 'S2. Consistent Hashing' },
+                { id: 'sysdesign_db_replication.html', title: 'S3. Database Replication' },
+                { id: 'sysdesign_message_queues.html', title: 'S4. Message Queues' },
+                { id: 'sysdesign_cdn_caching.html', title: 'S5. CDN & Caching' },
+                { id: 'sysdesign_circuit_breaker.html', title: 'S6. Circuit Breakers' },
+                { id: 'sysdesign_cqrs_splitting.html', title: 'S7. CQRS & Read Splitting' },
+                { id: 'sysdesign_service_mesh.html', title: 'S8. Service Mesh & API GW' },
+                { id: 'sysdesign_bloom_filters.html', title: 'S9. Bloom Filters' },
+                { id: 'sysdesign_distributed_transactions.html', title: 'S10. Distributed Transactions' }
             ]
         },
         {

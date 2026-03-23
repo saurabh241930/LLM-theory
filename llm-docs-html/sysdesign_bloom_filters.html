@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloom Filters & Probabilistic Data Structures</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Bloom Filters</h1>
+        <div class="subtitle">Probabilistic space-efficient structures saving databases from disk I/O</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="concept">
+            <h2>1. The Core Concept</h2>
+            <p>A Bloom Filter is a space-efficient probabilistic data structure that answers one specific question:
+                <strong>"Is this element a member of a set?"</strong></p>
+
+            <div class="qa-container">
+                <h3>The Probabilistic Guarantee</h3>
+                <div class="answer">
+                    <p>A Bloom filter returns either:</p>
+                    <ul>
+                        <li><strong>"Possibly in set"</strong> (False Positives <em>are</em> possible).</li>
+                        <li><strong>"Definitely not in set"</strong> (False Negatives are <em>mathematically
+                                impossible</em>).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="architecture">
+            <h2>2. How it works (The Bit Array)</h2>
+            <p>An empty Bloom filter is a massive bit array of <code>m</code> bits, all set to <code>0</code>. There
+                must also be <code>k</code> different hash functions defined.</p>
+
+            <ul>
+                <li><strong>Insertion:</strong> To add an element (e.g., "apple"), you feed "apple" to all
+                    <code>k</code> hash functions to get <code>k</code> array positions. Set the bits at all these
+                    positions to <code>1</code>.</li>
+                <li><strong>Querying:</strong> To check if "banana" is in the set, feed it to all <code>k</code> hash
+                    functions. If <em>any</em> of the resulting bit positions are <code>0</code>, the element is
+                    absolutely, 100% <strong>not</strong> in the set. If <em>all</em> the resulting bit positions are
+                    <code>1</code>, the element is <em>probably</em> in the set.</li>
+            </ul>
+
+            <div class="depth"><strong>Why a False Positive?</strong> Different elements might hash to the exact same
+                bit positions over time, causing collisions. A query might check 3 positions that happen to be
+                exclusively set to <code>1</code> by other prior distinct element insertions. You can decrease the false
+                positive probability massively by increasing the size of the bit array (<code>m</code>).</div>
+        </section>
+
+        <section id="use-cases">
+            <h2>3. Critical Distributed Use Cases</h2>
+
+            <div class="qa-container">
+                <h3>Database Disk I/O Prevention (Cassandra / PostgreSQL)</h3>
+                <div class="answer">
+                    <div class="one-liner">Checking if a row exists in a 10TB table natively requires a painfully
+                        expensive disk read.</div>
+                    <p>Modern databases keep a tiny RAM-based Bloom filter caching every single Primary Key inserted
+                        into an SSTable block. When a query searches for User ID <code>999</code>, the DB hits the Bloom
+                        Filter first in microseconds.</p>
+                    <p><strong>Definitely NOT in set:</strong> The DB instantly returns `null` to the client without
+                        ever looking at the spinning disk. You just saved 100ms of latency.</p>
+                    <p><strong>Probably in set:</strong> The DB performs the expensive disk read. Even if it's a 1%
+                        false positive rate (the row doesn't exist on disk), you still drastically saved on 99% of
+                        useless read I/O queries.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>CDN Caching Algorithms</h3>
+                <div class="answer">
+                    <p>Akamai notably uses Bloom filters for the <em>"One-hit wonder"</em> problem. 75%+ of URLs
+                        requested on the web are requested exactly one single time and never again. Caching these
+                        one-off URLs instantly fills up expensive RAM and forces out useful popular assets.</p>
+                    <p>Instead, Akamai routes the first request through directly without caching it, but adds the URL to
+                        a Bloom Filter. When a request hits that URL a second time, it checks the filter, sees it's
+                        "probably in the set" (i.e., has been requested before), and ONLY THEN finally caches the object
+                        physically into RAM. This violently increases cache efficiency statistics.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Malicious URL Blocking</h3>
+                <div class="answer">
+                    <p>Browsers (like Safari/Chrome) download a small (a few Megabytes) Bloom filter of all known
+                        malicious phishing URLs. When a user navigates, the browser checks the local offline Bloom
+                        filter. If it hits, the browser then sends an API query to Google Safe Browsing to confirm the
+                        false-positive status. This protects user privacy (no API call on 99% of safe, normal web
+                        browsing).</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced React & Architecture</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .one-liner {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Advanced React & Next.js Architecture</h1>
+        <div class="subtitle">RSC, Concurrent Features, Query Caching & Micro-Frontends</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="react-query">
+            <h2>1. React Query (TanStack Query)</h2>
+            <p>React Query manages asynchronous state (server state) independently of client state. It handles caching,
+                deduplication, and background updates natively.</p>
+
+            <div class="qa-container">
+                <h3>staleTime vs cacheTime (gcTime)</h3>
+                <div class="answer">
+                    <p><strong>staleTime (default: 0):</strong> The duration until data is considered "stale". If data
+                        is fresh, React Query will serve it directly from the cache without refetching from the network.
+                    </p>
+                    <p><strong>cacheTime / gcTime (default: 5 mins):</strong> The duration inactive data remains in
+                        memory. Once a query has no active observers for this duration, it is garbage collected.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Optimistic Updates</h3>
+                <div class="answer">
+                    <p>Updating the UI instantly before the server mutation actually succeeds. If the server request
+                        fails, the cache is rolled back to its previous state.</p>
+                    <div class="mermaid">
+                        sequenceDiagram
+                        participant User
+                        participant UI Cache
+                        participant Server
+
+                        User->>UI Cache: Likes Post (Click)
+                        UI Cache-->>User: Hearts Post Immediately (Optimistic)
+                        UI Cache->>Server: POST /like
+                        alt Success
+                        Server-->>UI Cache: 200 OK (Keep change)
+                        else Failure
+                        Server-->>UI Cache: 500 Error
+                        UI Cache-->>User: Rollback to Unliked, Show Toast Error
+                        end
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="server-components">
+            <h2>2. React Server Components (RSC) vs Client Components</h2>
+            <p>Server Components render exclusively on the server and transmit a serialized representation of the UI to
+                the client, shipping zero JavaScript bundle weight.</p>
+
+            <div class="mermaid">
+                graph TD
+                subgraph Server
+                SC1[Server Component - fetch DB directly]
+                SC2[Server Component - read filesystem]
+                end
+                subgraph Client Boundary ("use client")
+                CC1[Client Component - useState, onClick]
+                CC2[Client Component - Browser APIs]
+                end
+                SC1 --> CC1
+                SC1 --> SC2
+                CC1 -. children props .-> SC2
+            </div>
+
+            <div class="qa-container">
+                <h3>Data Fetching Waterfalls</h3>
+                <div class="answer">
+                    <p>In traditional client-side fetching (e.g., <code>useEffect</code> inside components), nested
+                        components create a waterfall: Parent fetches -> Parent Renders -> Child Mounts -> Child
+                        fetches. RSC eliminates this because the server resolves all components and data fetches
+                        simultaneously or in parallel before streaming the result to the browser.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="nextjs-app-router">
+            <h2>3. Next.js App Router Mechanics</h2>
+            <p>The App Router shifts from page-based routing to folder-and-file-based routing, heavily utilizing React
+                Suspense and RSC.</p>
+
+            <ul>
+                <li><strong>layouts & templates:</strong> <code>layout.tsx</code> preserves state during navigation
+                    (does not unmount). <code>template.tsx</code> remounts completely on navigation.</li>
+                <li><strong>loading.tsx & error.tsx:</strong> Native Error Boundaries and Suspense fallbacks. When
+                    placed in a folder, Next.js automatically wraps the nested <code>page.tsx</code> in
+                    <code>&lt;Suspense fallback={...}&gt;</code> and <code>&lt;ErrorBoundary&gt;</code>.</li>
+            </ul>
+
+            <div class="qa-container">
+                <h3>Parallel & Intercepting Routes</h3>
+                <div class="answer">
+                    <p><strong>Parallel Routes (<code>@folder</code>):</strong> Render multiple pages simultaneously in
+                        the same layout (e.g., a Dashboard with <code>@analytics</code> and <code>@team</code> rendered
+                        conditionally).</p>
+                    <p><strong>Intercepting Routes (<code>(..)folder</code>):</strong> Loading a route within the
+                        current layout context (e.g., clicking a photo in a feed opens a Model over the feed, but
+                        refreshing the page loads the photo exactly on its own distinct, full-page route).</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="concurrent-features">
+            <h2>4. useTransition & useDeferredValue</h2>
+            <p>React 18 Concurrent Mode allows React to interrupt heavy rendering tasks to ensure user interactions
+                remain responsive.</p>
+
+            <div class="qa-container">
+                <h3>Interruptible Rendering</h3>
+                <div class="answer">
+                    <div class="one-liner">Without Concurrent features, rendering is a synchronous, blocking operation
+                        resulting in UI freezes.</div>
+                    <p><strong>useTransition:</strong> Used for state updates that trigger heavy calculations or
+                        fetches. You mark an update as a "transition" so React knows it's low priority. Example: Typing
+                        in a search bar instantly updates the input value (Urgent), but rendering the 10,000 search
+                        results is wrapped in <code>startTransition</code> (Low Priority).</p>
+                    <p><strong>useDeferredValue:</strong> Similar to debouncing but without a fixed timer. It receives a
+                        value and returns a deferred version of it. React will attempt to re-render with the deferred
+                        value when the thread is idle.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="testing-library">
+            <h2>5. React Testing Library (RTL)</h2>
+            <p>RTL enforces testing components from a user's perspective rather than testing implementation details
+                (like component state or internal methods).</p>
+
+            <div class="qa-container">
+                <h3>Best Practices</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>Screen Queries:</strong> Always use <code>screen.getByRole</code> or
+                            <code>screen.getByText</code> over <code>getByTestId</code>. If a user cannot find it
+                            visually by role/text, you have an accessibility issue.</li>
+                        <li><strong>userEvent vs fireEvent:</strong> <code>userEvent</code> perfectly simulates full
+                            browser interactions (firing focus, keydown, input, keyup sequentially), whereas
+                            <code>fireEvent</code> just dispatches a single raw DOM event.</li>
+                        <li><strong>What NOT to test:</strong> Do not test third-party library behavior, do not test
+                            internal state variables, and avoid snapshot testing as they are brittle and often ignored
+                            by devs.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="useref-deep-dive">
+            <h2>6. useRef Deep Cases</h2>
+            <p><code>useRef</code> is essentially an escape hatch from React's declarative, state-driven paradigm. It
+                acts as a mutable container whose identity remains stable across re-renders.</p>
+
+            <div class="qa-container">
+                <h3>DOM Refs vs Mutable Instance Vars</h3>
+                <div class="answer">
+                    <p>While usually used to grab classical DOM elements (e.g., <code>inputRef.current.focus()</code>),
+                        <code>useRef</code> is also used to store mutable data that <strong>should not trigger a
+                            re-render</strong> when mutated (unlike <code>useState</code>). Example: Storing a
+                        <code>setInterval</code> ID to clear it later.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>forwardRef & useImperativeHandle</h3>
+                <div class="answer">
+                    <p>By default, components do not expose DOM nodes to their parents. <code>forwardRef</code>
+                        encapsulates a component allowing the parent to pass a ref down.</p>
+                    <p><code>useImperativeHandle</code> restricts what the parent can do with that Ref. Instead of
+                        giving the parent the raw DOM node, you expose a controlled API, e.g.,
+                        <code>ref.current.customFocusMethod()</code>.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="custom-hooks">
+            <h2>7. Custom Hooks Patterns</h2>
+            <p>Custom hooks extract stateful logic from components allowing for clean composition.</p>
+
+            <ul>
+                <li><strong>useDebounce:</strong> Returns a debounced version of a rapidly changing value (often paired
+                    with `useEffect` timeouts).</li>
+                <li><strong>usePrevious:</strong> Utilizes a <code>useRef</code> and a <code>useEffect</code>. Because
+                    Effects run <i>after</i> render, the Ref holds the value from the previous render cycle, which can
+                    be returned synchronously before the Effect updates it.</li>
+                <li><strong>useEventListener:</strong> Safely adds/removes event listeners on mount/unmount entirely
+                    abstracting the messy cleanup logic out of the core component.</li>
+            </ul>
+        </section>
+
+        <section id="error-boundaries">
+            <h2>8. Error Boundaries & Portals</h2>
+
+            <div class="qa-container">
+                <h3>Error Boundaries</h3>
+                <div class="answer">
+                    <p>React requires Error Boundaries to be built as <strong>Class Components</strong> utilizing
+                        <code>static getDerivedStateFromError()</code> (to render fallback UI) and
+                        <code>componentDidCatch()</code> (to log errors to Sentry/Datadog).</p>
+                    <p>Functional components cannot natively be error boundaries yet. The best practice is using the
+                        <code>react-error-boundary</code> package which provides reset fallback strategies (e.g., "Try
+                        Again" buttons).</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Portals & Event Bubbling</h3>
+                <div class="answer">
+                    <p><code>createPortal</code> renders a React element into a completely different DOM node (like
+                        <code>document.body</code>). This is universally used for Modals, Tooltips, and Dropdowns to
+                        escape CSS <code>overflow: hidden</code> and <code>z-index</code> stacking context issues.</p>
+                    <div class="depth"><strong>Senior Signal:</strong> Even though a Portal takes the element physically
+                        out of the React DOM tree, <strong>React Event Bubbling still functions exactly as if the
+                            element was inline</strong>. Clicking a Modal rendered in the <code>&lt;body&gt;</code> via
+                        Portal still bubbles the `onClick` up to its original React Parent Component.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="micro-frontends">
+            <h2>9. Micro-Frontend Architecture</h2>
+            <p>Scaling huge frontend apps across multiple autonomous teams involves breaking down monolithic React apps.
+            </p>
+
+            <div class="mermaid">
+                graph TD
+                Shell[Shell Application / Host]
+                TeamA[Remote App A: Product Catalog]
+                TeamB[Remote App B: Checkout Service]
+
+                Shell --> TeamA
+                Shell --> TeamB
+            </div>
+
+            <div class="qa-container">
+                <h3>Webpack Module Federation</h3>
+                <div class="answer">
+                    <p>Module Federation allows dynamic loading of JavaScript code from another distinct build at
+                        runtime. A "Shell" application lazily loads remote React bundles seamlessly (e.g., rendering a
+                        Next.js App component inside an old Create-React-App host).</p>
+                    <p>It explicitly handles dependency sharing: If the Shell already loaded React 18, it tells the
+                        Remote Apps to use the host's version, preventing massive bundle duplication over the wire.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

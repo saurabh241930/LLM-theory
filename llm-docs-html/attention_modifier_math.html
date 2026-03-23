@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Self-Attention Intuition</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        .playground {
+            background: #14171f;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            position: relative;
+            overflow: hidden;
+            min-height: 700px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .btn:disabled {
+            background: #334155;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .scene {
+            display: none;
+            flex: 1;
+            animation: fadeIn 0.5s ease-out forwards;
+            position: relative;
+        }
+
+        .scene.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* SCENE 1: Linguistic Vertical Layout */
+        .scene-1 {
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .word-col {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            font-size: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #10b981;
+            /* Default bright green for words */
+            margin-left: 100px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .word-row {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            height: 40px;
+            position: relative;
+        }
+
+        .word {
+            width: 100px;
+            transition: all 0.3s;
+        }
+
+        .word.dim {
+            color: #475569;
+        }
+
+        .word.focus {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+
+        /* Tooltip */
+        .tooltip-bubble {
+            position: absolute;
+            left: -290px;
+            top: -15px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            color: #e2e8f0;
+            white-space: nowrap;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+
+        .tooltip-bubble .query-badge {
+            display: block;
+            color: #fbbf24;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        /* The pointer of tooltip */
+        .tooltip-bubble::after {
+            content: '';
+            position: absolute;
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+            width: 20px;
+            height: 20px;
+            background: #0f172a;
+            border-top: 1px solid #334155;
+            border-right: 1px solid #334155;
+        }
+
+        .tooltip-bubble.show {
+            opacity: 1;
+        }
+
+        /* Static Embeddings Matrix */
+        .matrix {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: #e2e8f0;
+            position: relative;
+            padding: 0 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            opacity: 0;
+            /* hidden initially */
+            transition: opacity 0.5s;
+        }
+
+        .matrix::before,
+        .matrix::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            bottom: -4px;
+            width: 6px;
+            border: 1px solid #10b981;
+        }
+
+        .matrix::before {
+            left: 0;
+            border-right: none;
+        }
+
+        .matrix::after {
+            right: 0;
+            border-left: none;
+        }
+
+        .matrix.show {
+            opacity: 1;
+        }
+
+        /* Weights */
+        .weight-label {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: #e2e8f0;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .weight-label.show {
+            opacity: 1;
+        }
+
+        /* SVG Canvas for arrows */
+        #arrow-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .arrow-path {
+            fill: none;
+            stroke: #3b82f6;
+            stroke-width: 1.5;
+            stroke-dasharray: 400;
+            stroke-dashoffset: 400;
+            transition: stroke-dashoffset 1s ease-in-out;
+        }
+
+        .arrow-head {
+            fill: #3b82f6;
+            opacity: 0;
+            transition: opacity 0.3s 0.8s;
+        }
+
+        .arrow-path.draw {
+            stroke-dashoffset: 0;
+        }
+
+        .arrow-head.draw {
+            opacity: 1;
+        }
+
+        /* SCENE 2: Mathematical Horizontal Layout */
+        .scene-2 {
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .math-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: nowrap;
+        }
+
+        .math-term {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.6s ease-out;
+        }
+
+        .math-term.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .math-header {
+            background: #0f172a;
+            border: 1px solid #334155;
+            padding: 8px 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .math-weight {
+            color: #94a3b8;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .math-word {
+            color: #fbbf24;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .operator {
+            font-size: 24px;
+            color: #e2e8f0;
+            font-family: 'JetBrains Mono', monospace;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .operator.show {
+            opacity: 1;
+        }
+
+        .result-term {
+            margin-left: 20px;
+        }
+
+        .result-header {
+            color: #fbbf24;
+            font-size: 15px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .result-desc {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: #60a5fa;
+            font-size: 11px;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .desc-text {
+            color: #94a3b8;
+            font-size: 15px;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto 30px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Self-Attention: Intuition & Math</h1>
+        <div class="subtitle">Visualizing Context-Aware Embeddings</div>
+    </header>
+
+    <div class="content-wrapper">
+        <p class="desc-text">
+            Self-Attention calculates a <strong>Context-Aware Embedding</strong> for each token by computing a weighted
+            sum of all surrounding tokens in the sequence. In the video tutorial approach, we start by understanding
+            <em>linguistically</em> which modifiers apply to a noun, and then prove it mathematically using the
+            Key-Query dot products to generate the exact percentages (weights).
+        </p>
+
+        <div class="playground" id="pg">
+            <div class="pg-header">
+                <h3 id="phase-title" style="margin:0; color:#38bdf8;">Phase 1: Linguistic Intuition</h3>
+                <div class="controls">
+                    <button class="btn" id="btn-back" onclick="prevStep()" disabled>← Back</button>
+                    <button class="btn" id="btn-next" onclick="nextStep()">Next →</button>
+                </div>
+            </div>
+
+            <!-- Scene 1: Vertical Layout -->
+            <div class="scene scene-1 active" id="scene-1">
+                <svg id="arrow-svg"></svg>
+                <div class="word-col">
+
+                    <div class="word-row">
+                        <div class="word" id="w0">I</div>
+                        <div class="matrix" id="m0">
+                            <span>0.39</span><span>-0.11</span><span>...</span><span>-0.46</span></div>
+                    </div>
+
+                    <div class="word-row">
+                        <div class="word" id="w1">made</div>
+                        <div class="matrix" id="m1"><span>0.15</span><span>0.82</span><span>...</span><span>0.12</span>
+                        </div>
+                    </div>
+
+                    <div class="word-row">
+                        <div class="word" id="w2">a</div>
+                        <div class="matrix" id="m2"><span>-0.01</span><span>0.05</span><span>...</span><span>0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Modifiers -->
+                    <div class="word-row" id="row-sweet">
+                        <div class="word" id="w3">sweet</div>
+                        <div class="matrix" id="m3">
+                            <span>0.39</span><span>-0.11</span><span>-0.98</span><span>...</span><span>-0.46</span>
+                        </div>
+                        <div class="weight-label" id="wt3">36.3 %</div>
+                    </div>
+
+                    <div class="word-row" id="row-indian">
+                        <div class="word" id="w4">Indian</div>
+                        <div class="matrix" id="m4">
+                            <span>0.29</span><span>0.67</span><span>0.52</span><span>...</span><span>0.85</span></div>
+                        <div class="weight-label" id="wt4">11.0 %</div>
+                    </div>
+
+                    <div class="word-row" id="row-rice">
+                        <div class="word" id="w5">rice</div>
+                        <div class="matrix" id="m5">
+                            <span>-0.43</span><span>0.91</span><span>0.18</span><span>...</span><span>-0.75</span></div>
+                        <div class="weight-label" id="wt5">19.3 %</div>
+                    </div>
+
+                    <!-- Target -->
+                    <div class="word-row" id="row-dish">
+                        <div class="word focus" id="w6" style="position:relative;">
+                            dish
+                            <div class="tooltip-bubble" id="query-tooltip">
+                                <span class="query-badge">Query</span>
+                                I want to know about my modifiers
+                            </div>
+                        </div>
+                        <div class="matrix" id="m6">
+                            <span>1.09</span><span>-0.72</span><span>0.66</span><span>...</span><span>-0.80</span></div>
+                        <div class="weight-label" id="wt6">29.2 %</div>
+                    </div>
+
+                    <div class="word-row">
+                        <div class="word" id="w7">called</div>
+                        <div class="matrix" id="m7"><span>0.11</span><span>-0.55</span><span>...</span><span>0.41</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Scene 2: Mathematical Layout -->
+            <div class="scene scene-2" id="scene-2">
+                <div class="math-row">
+
+                    <!-- Dish -->
+                    <div class="math-term" id="mt-dish">
+                        <div class="math-header">
+                            <div class="math-weight">29.2 %</div>
+                            <div class="math-word">dish</div>
+                        </div>
+                        <div class="matrix show">
+                            <span>1.09</span><span>-0.72</span><span>0.66</span><span>...</span><span>-0.80</span></div>
+                        <div class="result-desc" style="background:transparent;border-color:transparent;color:#94a3b8">
+                            Static Embedding</div>
+                    </div>
+
+                    <div class="operator" id="op-1">+</div>
+
+                    <!-- Rice -->
+                    <div class="math-term" id="mt-rice">
+                        <div class="math-header">
+                            <div class="math-weight">19.3 %</div>
+                            <div class="math-word" style="color:#10b981">rice ness</div>
+                        </div>
+                        <div class="matrix show">
+                            <span>-0.43</span><span>0.91</span><span>0.18</span><span>...</span><span>-0.75</span></div>
+                    </div>
+
+                    <div class="operator" id="op-2">+</div>
+
+                    <!-- Indian -->
+                    <div class="math-term" id="mt-indian">
+                        <div class="math-header">
+                            <div class="math-weight">11.0 %</div>
+                            <div class="math-word" style="color:#10b981">indian ness</div>
+                        </div>
+                        <div class="matrix show">
+                            <span>0.29</span><span>0.67</span><span>0.52</span><span>...</span><span>0.85</span></div>
+                    </div>
+
+                    <div class="operator" id="op-3">+</div>
+
+                    <!-- Sweet -->
+                    <div class="math-term" id="mt-sweet">
+                        <div class="math-header">
+                            <div class="math-weight">36.3 %</div>
+                            <div class="math-word" style="color:#10b981">sweet ness</div>
+                        </div>
+                        <div class="matrix show">
+                            <span>0.39</span><span>-0.11</span><span>-0.98</span><span>...</span><span>-0.46</span>
+                        </div>
+                    </div>
+
+                    <div class="operator" id="op-4">+ ... =</div>
+
+                    <!-- Result -->
+                    <div class="math-term result-term" id="mt-result">
+                        <div class="result-header">dish</div>
+                        <div class="matrix show">
+                            <span>1.34</span><span>0.75</span><span>0.38</span><span>...</span><span>-1.16</span></div>
+                        <div class="result-desc">Context Aware Embedding</div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script>
+        const steps = [
+            {
+                title: "Phase 1: Linguistic Intuition",
+                action: () => {
+                    document.getElementById('scene-1').classList.add('active');
+                    document.getElementById('scene-2').classList.remove('active');
+                    document.getElementById('query-tooltip').classList.remove('show');
+
+                    document.querySelectorAll('.word').forEach(el => el.classList.remove('dim'));
+                    clearArrows();
+
+                    ['m3', 'm4', 'm5', 'm6', 'wt3', 'wt4', 'wt5', 'wt6'].forEach(id => {
+                        document.getElementById(id).classList.remove('show');
+                    });
+                }
+            },
+            {
+                title: "Phase 2: The Query",
+                action: () => {
+                    document.getElementById('query-tooltip').classList.add('show');
+                    document.querySelectorAll('.word').forEach((el, i) => {
+                        if ([3, 4, 5, 6].includes(i)) {
+                            el.classList.remove('dim');
+                        } else {
+                            el.classList.add('dim');
+                        }
+                    });
+                    clearArrows();
+                    ['m3', 'm4', 'm5', 'm6', 'wt3', 'wt4', 'wt5', 'wt6'].forEach(id => {
+                        document.getElementById(id).classList.remove('show');
+                    });
+                }
+            },
+            {
+                title: "Phase 3: Finding Modifiers",
+                action: () => {
+                    document.getElementById('query-tooltip').classList.add('show');
+                    drawArrow('w3', 'w6', 120);
+                    drawArrow('w4', 'w6', 80);
+                    drawArrow('w5', 'w6', 40);
+                    ['m3', 'm4', 'm5', 'm6', 'wt3', 'wt4', 'wt5', 'wt6'].forEach(id => {
+                        document.getElementById(id).classList.remove('show');
+                    });
+                }
+            },
+            {
+                title: "Phase 4: Static Embeddings",
+                action: () => {
+                    ['m3', 'm4', 'm5', 'm6'].forEach(id => {
+                        document.getElementById(id).classList.add('show');
+                    });
+                    ['wt3', 'wt4', 'wt5', 'wt6'].forEach(id => {
+                        document.getElementById(id).classList.remove('show');
+                    });
+                }
+            },
+            {
+                title: "Phase 5: Calculating Attention Weights",
+                action: () => {
+                    ['wt3', 'wt4', 'wt5', 'wt6'].forEach(id => {
+                        document.getElementById(id).classList.add('show');
+                    });
+                }
+            },
+            {
+                title: "Phase 6: The Mathematical Weighted Sum",
+                action: () => {
+                    document.getElementById('scene-1').classList.remove('active');
+                    document.getElementById('scene-2').classList.add('active');
+
+                    // Cascading entrance for math terms
+                    const delay = 300;
+                    setTimeout(() => document.getElementById('mt-dish').classList.add('show'), 100);
+                    setTimeout(() => { document.getElementById('op-1').classList.add('show'); document.getElementById('mt-rice').classList.add('show'); }, 500);
+                    setTimeout(() => { document.getElementById('op-2').classList.add('show'); document.getElementById('mt-indian').classList.add('show'); }, 900);
+                    setTimeout(() => { document.getElementById('op-3').classList.add('show'); document.getElementById('mt-sweet').classList.add('show'); }, 1300);
+                    setTimeout(() => { document.getElementById('op-4').classList.add('show'); document.getElementById('mt-result').classList.add('show'); }, 1800);
+                }
+            }
+        ];
+
+        let currentStep = 0;
+
+        function nextStep() {
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                applyStep();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                applyStep();
+            }
+        }
+
+        function applyStep() {
+            document.getElementById('phase-title').innerText = steps[currentStep].title;
+            document.getElementById('btn-back').disabled = currentStep === 0;
+            document.getElementById('btn-next').disabled = currentStep === steps.length - 1;
+
+            // If stepping back into scene 2 from a completed state, ensure all items reset
+            if (currentStep < 5) {
+                document.querySelectorAll('.math-term, .operator').forEach(el => el.classList.remove('show'));
+            }
+
+            steps[currentStep].action();
+        }
+
+        function clearArrows() {
+            document.getElementById('arrow-svg').innerHTML = '';
+        }
+
+        // Function to physically draw SVG paths between DOM elements
+        function drawArrow(id1, id2, curveOffsetX) {
+            const el1 = document.getElementById(id1);
+            const el2 = document.getElementById(id2);
+            const svg = document.getElementById('arrow-svg');
+            const pgRect = document.getElementById('pg').getBoundingClientRect();
+            const rect1 = el1.getBoundingClientRect();
+            const rect2 = el2.getBoundingClientRect();
+
+            // Start position (right side of 'sweet', 'rice', etc)
+            const startX = rect1.right - pgRect.left + 10;
+            const startY = rect1.top - pgRect.top + rect1.height / 2;
+
+            // End position (right side of 'dish', pointing back towards it)
+            const endX = rect2.right - pgRect.left + 10;
+            const endY = rect2.top - pgRect.top + rect2.height / 2;
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+            const anchorX = Math.max(startX, endX) + curveOffsetX;
+            const d = `M ${startX} ${startY} C ${anchorX} ${startY}, ${anchorX} ${endY}, ${endX + 15} ${endY}`;
+
+            path.setAttribute("d", d);
+            path.setAttribute("class", "arrow-path");
+
+            const head = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            // Arrow head pointing left
+            head.setAttribute("points", `${endX + 15},${endY - 4} ${endX + 15},${endY + 4} ${endX + 5},${endY}`);
+            head.setAttribute("class", "arrow-head");
+
+            svg.appendChild(path);
+            svg.appendChild(head);
+
+            // Trigger reflow to start transition
+            void path.offsetWidth;
+            path.classList.add('draw');
+            head.classList.add('draw');
+        }
+
+        // Initialize
+        applyStep();
+
+    </script>
+</body>
+
+</html>

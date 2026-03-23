@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consistent Hashing Deep Dive</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Consistent Hashing</h1>
+        <div class="subtitle">The backbone of Memcached, Redis Cluster, and DynamoDB scaling</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="concept">
+            <h2>1. The Rehashing Problem (Why we need it)</h2>
+            <p>If you have `N` cache servers, the standard way to balance load is mapping a key using modular hashing:
+                <code>serverIndex = hash(key) % N</code>.</p>
+
+            <div class="qa-container">
+                <h3>The Flaw of Standard Modulo</h3>
+                <div class="answer">
+                    <p>If you have 4 servers and one dies (N becomes 3), the modular equation fundamentally changes for
+                        almost every single key. Suddenly, a key that routed to Server 1 now mathematically routes to
+                        Server 2. This causes a massive <strong>cache miss storm</strong>, overwhelming backend
+                        databases as 75%+ of the keys are remapped instantly.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="architecture">
+            <h2>2. The Hash Ring Architecture</h2>
+            <p>Consistent Hashing maps both the servers and the data keys onto the same abstract circle (Hash Ring),
+                typically utilizing a space like SHA-1 (0 to 2^160 - 1).</p>
+
+            <div class="mermaid">
+                graph TD
+                Ring((Hash Ring Space))
+                S0[Server 0] -. hashes to .-> Pos1(Position 100)
+                S1[Server 1] -. hashes to .-> Pos2(Position 400)
+                S2[Server 2] -. hashes to .-> Pos3(Position 800)
+
+                K1(Key A) -. hashes to .-> PosA(Position 150)
+                K2(Key B) -. hashes to .-> PosB(Position 550)
+
+                PosA -. routes clockwise to .-> S1
+                PosB -. routes clockwise to .-> S2
+            </div>
+
+            <ul>
+                <li><strong>Placement:</strong> Hash the Server IP using SHA-1 and place it on the ring.</li>
+                <li><strong>Routing Flow:</strong> Hash the Data Key, place it on the ring. Then, travel
+                    <strong>CLOCKWISE</strong> along the ring until you find the first Server. Store/read the key there.
+                </li>
+            </ul>
+        </section>
+
+        <section id="flow">
+            <h2>3. Node Addition and Removal Flow</h2>
+            <p>The beauty of the Ring is the isolation of disruption.</p>
+            <ul>
+                <li><strong>Removing a Node:</strong> If Server 1 dies, only the keys that explicitly lived between
+                    Server 0 and Server 1 are remapped (they inherently fall forward clockwise to Server 2). The keys
+                    belonging to Server 0 and Server 2 remain completely untouched.</li>
+                <li><strong>Adding a Node:</strong> If you add Server 3 between Server 1 and Server 2, it intercepts a
+                    logical slice of keys that previously routed to Server 2. Again, no other servers are affected. On
+                    average, only <code>K/N</code> keys are remapped (where K is total keys, N is total servers).</li>
+            </ul>
+        </section>
+
+        <section id="edge-cases">
+            <h2>4. Edge Cases: Virtual Nodes (vNodes)</h2>
+            <p>What if the hash function places Server 0 and Server 1 very close to each other on the ring, but Server 2
+                is far away? Server 2 would end up managing 80% of the ring's surface area, becoming a massive hot spot.
+            </p>
+
+            <div class="depth">
+                <strong>Solution: Virtual Nodes</strong>
+                <p>Instead of mapping a physical server onto the ring once, map it 100 or 1,000 times using labels like
+                    <code>Server1_001</code>, <code>Server1_002</code>, etc.</p>
+                <p>This uniformly perfectly distributes the load across the ring. If Server 1 goes down, its 1,000
+                    vNodes disappear, meaning its load is evenly subsidized across all the remaining physical servers in
+                    the cluster instead of catastrophically dumping onto a single clockwise neighbor.</p>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

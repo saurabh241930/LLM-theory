@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Read/Write Splitting & CQRS</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Read/Write Splitting & CQRS</h1>
+        <div class="subtitle">Command Query Responsibility Segregation & Event Sourcing</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="read-write-split">
+            <h2>1. Native Read/Write Splitting</h2>
+            <p>When database traffic overwhelmingly skews towards reading (95% read vs 5% write), scaling vertically
+                (buying larger single node databases) is economically abysmal. Instead, traffic is split across the
+                network boundary.</p>
+
+            <ul>
+                <li><strong>Architecture:</strong> Single primary node serving all
+                    <code>INSERT</code>/<code>UPDATE</code> statements natively streams binary logs asynchronously to
+                    multiple Read-Only replicas serving all <code>SELECT</code> statements.</li>
+                <li><strong>Complexity:</strong> The backend application ORM layer intelligently routes queries based on
+                    the HTTP verb. It requires explicit logic to prevent the <em>Read-Your-Own-Writes</em> anomaly
+                    stemming from replication lag.</li>
+            </ul>
+        </section>
+
+        <section id="cqrs">
+            <h2>2. CQRS Deep Dive</h2>
+            <p>Read/Write Splitting uses the exact same database schema natively for both operations. <strong>CQRS
+                    (Command Query Responsibility Segregation)</strong> posits that the Data Model utilized for
+                Writes/Validation should be fundamentally, physically different from the Data Model utilized for
+                Reads/Display.</p>
+
+            <div class="mermaid">
+                graph TD
+                subgraph Write Side
+                W[Command API] --> RelDB[(Relational DB : Normalized)]
+                end
+
+                RelDB -- Change Data CDC Stream --> ES[Kafka / Event Bus]
+
+                subgraph Read Side
+                ES -- Projects Data --> NoSQL[(NoSQL DB : Denormalized)]
+                ES -- Projects Data --> Elastic[(Elasticsearch : Analytics)]
+                NoSQL --> R[Query API]
+                end
+            </div>
+
+            <div class="qa-container">
+                <h3>Why different models?</h3>
+                <div class="answer">
+                    <p><strong>The Write Side (Commands):</strong> Demands absolute data integrity, locking, strict
+                        normalizations, constraints, and relational consistency. It executes business logic (e.g.,
+                        verifying funds before withdrawal) to mutate state safely in a PostgreSQL engine.</p>
+                    <p><strong>The Read Side (Queries):</strong> Demands blazing fast multi-view performance. Complex
+                        heavily-joined relational data is transformed via a streamed message queue into a highly
+                        denormalized document inside MongoDB or an Elasticsearch cluster explicitly tailored for instant
+                        search UI rendering.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="event-sourcing">
+            <h2>3. Event Sourcing (The Core Companion)</h2>
+            <p>CQRS is almost entirely permanently coupled with Event Sourcing. Instead of maintaining the current state
+                of a database entity (relational rows replacing old values)...</p>
+
+            <div class="qa-container">
+                <h3>Storing Events Instead of State</h3>
+                <div class="answer">
+                    <div class="one-liner">Event Sourcing records every state mutation as an immutable chronological
+                        sequence of events.</div>
+                    <p>Instead of storing the exact current Account Balance ($100), the system strictly stores the
+                        ledger: <code>[AccountCreated, Deposit($50), Deposit($100), Withdrawal($50)]</code>. The current
+                        actual state is resolved mathematically by replaying the events.</p>
+                    <div class="depth"><strong>Benefit:</strong> A completely flawless audit trail. An absolute "undo"
+                        structure perfectly tracking historical anomaly states. If you introduce a new Read reporting
+                        database next year, you just replay the Event Log from the beginning of time sequentially to
+                        hydrate the entire new database immediately.</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

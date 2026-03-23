@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Replication Deep Dive</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Database Replication: Leader/Follower Internals</h1>
+        <div class="subtitle">Scaling Reads, High Availability, and Handling Lag</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="concept">
+            <h2>1. Architecture Concept</h2>
+            <p>To scale a database that is read-heavy (like Twitter, where there are 1000 reads for every 1 write), we
+                use <strong>Leader-Follower</strong> (Master/Slave) replication.</p>
+
+            <div class="mermaid">
+                graph LR
+                App[Web Server] -- "Writes (Insert, Update)" --> L[Leader DB]
+                L -- Replicates WAL --> F1[Follower 1]
+                L -- Replicates WAL --> F2[Follower 2]
+                App -- "Reads (Select)" --> F1
+                App -- "Reads (Select)" --> F2
+            </div>
+
+            <ul>
+                <li>The Leader receives all Write traffic.</li>
+                <li>The Followers receive the Write-Ahead Log (WAL) or statement stream from the Leader, reconstruct the
+                    data, and serve Read traffic.</li>
+            </ul>
+        </section>
+
+        <section id="flow">
+            <h2>2. Sync vs Async vs Semi-Sync Replication</h2>
+
+            <div class="qa-container">
+                <h3>Asynchronous (Default in PG/MySQL)</h3>
+                <div class="answer">
+                    <p>The Leader writes data to its local disk and instantly acknowledges success to the client. In the
+                        background, it streams changes to Followers.</p>
+                    <p><strong>Pros:</strong> Fast writes. <strong>Cons:</strong> If the Leader dies immediately after
+                        ACK but before streaming, data is permanently lost.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Synchronous</h3>
+                <div class="answer">
+                    <p>The Leader writes to local disk, sends data to all Followers, waits for <em>all</em> of them to
+                        write to disk, and then ACKs the client.</p>
+                    <p><strong>Pros:</strong> Zero data loss. <strong>Cons:</strong> Excruciatingly slow. If one node in
+                        a different timezone goes offline, the entire database blocks writes entirely.</p>
+                </div>
+            </div>
+
+            <div class="depth">
+                <strong>Semi-Synchronous (The Practical Choice)</strong>
+                <p>The Leader requires exactly ONE Follower to acknowledge the write to disk before returning success to
+                    the client. This guarantees data survives a single-node failure without dragging write performance
+                    to a complete halt.</p>
+            </div>
+        </section>
+
+        <section id="edge-cases">
+            <h2>3. Edge Cases: Replication Lag Anomalies</h2>
+            <p>Because Async replication is the standard, a Follower node might be milliseconds or even minutes behind
+                the Leader. This creates severe UX anomalies.</p>
+
+            <div class="qa-container">
+                <h3>Read-Your-Own-Writes Anomaly</h3>
+                <div class="answer">
+                    <p><strong>Scenario:</strong> A user updates their profile picture (Write to Leader), then the page
+                        instantly refreshes (Read from Follower). The Follower hasn't received the write yet, so the
+                        user sees their old profile picture and assumes the save failed.</p>
+                    <p><strong>Solution:</strong> The system remembers the timestamp of the user's write. For the next X
+                        seconds, all reads specifically for that user's ID are forcefully routed to the Leader instead
+                        of the Follower.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Monotonic Reads Anomaly</h3>
+                <div class="answer">
+                    <p><strong>Scenario:</strong> Follower 1 has zero lag. Follower 2 has 5 seconds of lag. A user
+                        refreshes their Twitter feed, hitting F1, and sees a new tweet. They refresh again, hitting F2,
+                        and the post vanishes!</p>
+                    <p><strong>Solution:</strong> Hash the User ID so that a specific user always consistently routes
+                        their read queries to the exact same Replica. Time "never moves backward" for them.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

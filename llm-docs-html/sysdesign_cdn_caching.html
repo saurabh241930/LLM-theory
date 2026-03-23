@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDN Architecture & Cache Invalidation</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .qa-container {
+            margin-bottom: 2em;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--wp-accent);
+            border-radius: 4px;
+        }
+
+        .qa-container h3 {
+            margin-top: 0;
+            color: var(--wp-title-text);
+        }
+
+        .depth {
+            background-color: #e2e3e5;
+            padding: 10px;
+            border-left: 4px solid #6c757d;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>CDN Architecture & Cache Invalidation</h1>
+        <div class="subtitle">Global Content Delivery & Managing Stale Data</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="concept">
+            <h2>1. Content Delivery Networks (CDNs)</h2>
+            <p>A CDN is a geographically distributed network of proxy servers that cache static assets (HTML, CSS, JS,
+                Images, Videos) closer to requesting end users.</p>
+
+            <div class="mermaid">
+                graph LR
+                U1[User in Tokyo] --> C1[Tokyo CDN Edge Node]
+                U2[User in London] --> C2[London CDN Edge Node]
+                C1 -. Cache Miss .-> Origin[Origin Server in NY]
+                C2 -. Cache Miss .-> Origin
+            </div>
+        </section>
+
+        <section id="flow">
+            <h2>2. Push vs Pull CDNs</h2>
+
+            <table border="1" cellpadding="8" cellspacing="0"
+                style="width:100%; border-collapse:collapse; margin-bottom: 20px;">
+                <tr>
+                    <th>Strategy</th>
+                    <th>How it works</th>
+                    <th>Best Use Cases</th>
+                </tr>
+                <tr>
+                    <td><strong>Pull CDN</strong></td>
+                    <td>The Edge node is initially empty. When a user requests a file, the CDN pulls it from the Origin
+                        server, caches it, and serves future users from the cache.</td>
+                    <td>Sites with massive, infrequently changing libraries holding millions of distinct images. (E.g.
+                        Pinterest, Wikipedia). Highly automated.</td>
+                </tr>
+                <tr>
+                    <td><strong>Push CDN</strong></td>
+                    <td>Engineers actively upload content to the CDN edge nodes before users ever request it.</td>
+                    <td>Small footprints, highly predictable content, or massive scheduled media drops (E.g. Netflix
+                        uploading a new season at midnight).</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="edge-cases">
+            <h2>3. Cache Invalidation (The Hard Part)</h2>
+            <p>“There are only two hard things in Computer Science: cache invalidation and naming things.”</p>
+            <p>When the Origin Server updates an image, how do the CDN nodes know not to serve the old one?</p>
+
+            <div class="qa-container">
+                <h3>Time To Live (TTL)</h3>
+                <div class="answer">
+                    <p>You set a header (<code>Cache-Control: max-age=3600</code>). After 1 hour, the CDN considers the
+                        file stale, discards it, and pulls the fresh version from the origin on the next request.</p>
+                    <p><strong>Problem:</strong> For 59 minutes, users might see completely outdated profiles or broken
+                        CSS files.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Object Versioning (Cache Busting)</h3>
+                <div class="answer">
+                    <div class="one-liner">The universally accepted industry standard for infinite, safe caching.</div>
+                    <p>Instead of updating <code>style.css</code>, your build pipeline generates a uniquely
+                        fingerprinted filename: <code>style.a7b93c.css</code>. Because the filename is unique to its
+                        hashed contents, it can be cached by the CDN <em>forever</em> (TTL 1 Year).</p>
+                    <p>When you deploy a new version (<code>style.b8x12.css</code>), the HTML requests the new file
+                        name. The CDN naturally registers a Cache Miss and fetches the new file natively without
+                        requiring explicit invalidation commands.</p>
+                </div>
+            </div>
+
+            <div class="qa-container">
+                <h3>Active Purge APIs</h3>
+                <div class="answer">
+                    <p>Calling an explicit API (e.g., Cloudflare Purge Cache) to forcefully delete a URL across all
+                        global edge nodes instantly. This is extremely expensive and computationally heavy, reserved
+                        mostly for urgent legal takedowns or security fixes.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="database-caching">
+            <h2>4. Database Caching Strategies (Redis / Memcached)</h2>
+            <p>Similar to CDN edge logic, backend engineers cache raw database results in memory keys (Redis).</p>
+
+            <div class="depth">
+                <strong>Cache Aside (Lazy Loading):</strong><br>
+                1. APP checks Redis.<br>
+                2. If hit, return. If miss, fetch from DB, save to Redis, then return.<br>
+                <em>Best for:</em> General read-heavy apps.
+                <br><br>
+                <strong>Write-Through Cache:</strong><br>
+                1. APP writes the new data to the DB and exactly at the same time writes it to Redis.<br>
+                <em>Best for:</em> Avoiding stale Data anomalies. The cache is perfectly consistent, but write
+                performance takes a slight hit.
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

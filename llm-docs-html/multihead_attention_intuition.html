@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Multi-Head Attention?</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0c10;
+            --bg-box: #14171f;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --border: #334155;
+
+            --head-single: #a8a29e;
+            /* Grey, muddy */
+            --head-1: #ef4444;
+            /* Red - Action */
+            --head-2: #3b82f6;
+            /* Blue - Location */
+            --head-3: #10b981;
+            /* Green - Subject */
+            --head-4: #8b5cf6;
+            /* Purple - Detail */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .animation-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #app {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 40px 20px;
+        }
+
+        header h1 {
+            color: #fff;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        header .subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .desc-text {
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto 30px;
+        }
+
+        .playground {
+            background: var(--bg-box);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            min-height: 700px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .btn:disabled {
+            background: #334155;
+            color: var(--muted);
+            cursor: not-allowed;
+        }
+
+        /* SCENE SYSTEM */
+        .scene {
+            display: none;
+            flex: 1;
+            position: relative;
+            animation: fadeIn 0.5s ease-out forwards;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .scene.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .instruction-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 12px 20px;
+            color: #93c5fd;
+            text-align: center;
+            max-width: 600px;
+            margin-bottom: 40px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* SENTENCE CONTAINER */
+        .sentence-row {
+            display: flex;
+            gap: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 22px;
+            margin-bottom: 60px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .word-box {
+            padding: 10px 15px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .word-box.dim {
+            opacity: 0.3;
+        }
+
+        .word-box.target {
+            border-color: #fbbf24;
+            color: #fbbf24;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.2);
+        }
+
+        .word-box.active-trait {
+            border-color: currentColor;
+            box-shadow: 0 0 15px currentColor;
+        }
+
+        /* ATTENTION VISUALS */
+        .spotlight-container {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .head-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .head-box.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .head-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 15px;
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        .vector-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 40px;
+            border: 2px solid;
+            border-color: inherit;
+            padding: 4px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .vector-cell {
+            height: 15px;
+            background: currentColor;
+            opacity: 0.8;
+        }
+
+        .label-title {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .label-sub {
+            font-size: 11px;
+            color: var(--muted);
+            text-align: center;
+            max-width: 100px;
+        }
+
+        /* CONCATENATION ARENA */
+        .concat-arena {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 40px;
+            opacity: 0;
+            transition: opacity 0.5s 1s;
+        }
+
+        .concat-arena.show {
+            opacity: 1;
+        }
+
+        .concat-vector {
+            display: flex;
+            height: 30px;
+            border: 2px solid #fbbf24;
+            padding: 2px;
+            border-radius: 6px;
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+        }
+
+        .concat-segment {
+            width: 30px;
+            height: 100%;
+            margin: 0 1px;
+            background: currentColor;
+            opacity: 0;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: all 0.5s;
+        }
+
+        .concat-segment.expand {
+            opacity: 0.9;
+            transform: scaleX(1);
+        }
+
+        /* SVG CONNECTORS */
+        #svg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .beam {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 3;
+            opacity: 0;
+            stroke-dasharray: 200;
+            stroke-dashoffset: 200;
+            transition: all 0.8s ease;
+        }
+
+        .beam.show {
+            opacity: 0.6;
+            stroke-dashoffset: 0;
+        }
+
+        /* Colors */
+        .c-single {
+            color: var(--head-single);
+        }
+
+        .c-h1 {
+            color: var(--head-1);
+        }
+
+        .c-h2 {
+            color: var(--head-2);
+        }
+
+        .c-h3 {
+            color: var(--head-3);
+        }
+
+        .c-h4 {
+            color: var(--head-4);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="content-wrapper animation-wrapper">
+        <div id="app">
+            <header>
+                <h1>Why Multi-Head Attention?</h1>
+                <div class="subtitle">The Problem With Averaging Everything</div>
+            </header>
+
+            <p class="desc-text">
+                Multi-Head Attention is the core reason Transformers are so powerful. Instead of using a single "Context
+                Searcher" (which would result in a messy, blurred average of grammatical and semantic relationships),
+                the network splits its searching power across <strong>multiple independent heads</strong>.
+            </p>
+
+            <div class="playground" id="pg">
+                <div class="pg-header">
+                    <h3 id="phase-title" style="margin:0; color:#38bdf8;">Phase 1: The Ambiguous Word</h3>
+                    <div class="controls">
+                        <button class="btn" id="btn-back" onclick="prevStep()" disabled>← Back</button>
+                        <button class="btn" id="btn-next" onclick="nextStep()">Next →</button>
+                    </div>
+                </div>
+
+                <svg id="svg-layer"></svg>
+
+                <div class="scene active" id="scene-main">
+                    <div class="instruction-box" id="instruction">
+                        Consider the word "bank". To understand exactly what it means, it needs context from the
+                        surrounding sentence.
+                    </div>
+
+                    <div class="sentence-row">
+                        <div class="word-box" id="w-the1">The</div>
+                        <div class="word-box target" id="w-bank">bank</div>
+                        <div class="word-box" id="w-was">was</div>
+                        <div class="word-box" id="w-robbed">robbed</div>
+                        <div class="word-box" id="w-by">by</div>
+                        <div class="word-box" id="w-the2">the</div>
+                        <div class="word-box" id="w-river">river</div>
+                    </div>
+
+                    <div class="spotlight-container" id="spotlights">
+
+                        <!-- Single Head Muddle -->
+                        <div class="head-box c-single" id="head-single">
+                            <div class="label-title">Single Head</div>
+                            <div class="head-icon">One</div>
+                            <div class="label-sub">Averaging 50% Crime, 50% Water... Result is confused.</div>
+                            <div class="vector-stack" style="margin-top:10px;">
+                                <div class="vector-cell" style="background:linear-gradient(bottom, #ef4444, #3b82f6)">
+                                </div>
+                                <div class="vector-cell" style="background:linear-gradient(bottom, #ef4444, #3b82f6)">
+                                </div>
+                                <div class="vector-cell" style="background:linear-gradient(bottom, #ef4444, #3b82f6)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Multi Heads -->
+                        <div class="head-box c-h1 head-multi" id="head-h1" style="display:none;">
+                            <div class="label-title">Head 1</div>
+                            <div class="head-icon">Action</div>
+                            <div class="vector-stack" style="margin-top:10px;">
+                                <div class="vector-cell"></div>
+                                <div class="vector-cell"></div>
+                                <div class="vector-cell"></div>
+                            </div>
+                        </div>
+
+                        <div class="head-box c-h2 head-multi" id="head-h2" style="display:none;">
+                            <div class="label-title">Head 2</div>
+                            <div class="head-icon">Loc</div>
+                            <div class="vector-stack" style="margin-top:10px;">
+                                <div class="vector-cell"></div>
+                                <div class="vector-cell"></div>
+                                <div class="vector-cell"></div>
+                            </div>
+                        </div>
+
+                        <div class="head-box c-h3 head-multi" id="head-h3" style="display:none;">
+                            <div class="label-title">Head 3</div>
+                            <div class="head-icon">Subj</div>
+                            <div class="vector-stack" style="margin-top:10px;">
+                                <div class="vector-cell"></div>
+                                <div class="vector-cell"></div>
+                                <div class="vector-cell"></div>
+                            </div>
+                        </div>
+
+                        <div class="head-box c-h4 head-multi" id="head-h4" style="display:none;">
+                            <div class="label-title">Head 4</div>
+                            <div class="head-icon">Gram</div>
+                            <div class="vector-stack" style="margin-top:10px;">
+                                <div class="vector-cell"></div>
+                                <div class="vector-cell"></div>
+                                <div class="vector-cell"></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Concatenation -->
+                    <div class="concat-arena" id="concatArena">
+                        <div style="font-size:18px; color: #fbbf24;">Final Embedding = </div>
+                        <div class="concat-vector" id="cvContainer">
+                            <div class="concat-segment c-h1"></div>
+                            <div class="concat-segment c-h2"></div>
+                            <div class="concat-segment c-h3"></div>
+                            <div class="concat-segment c-h4"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script>
+        let svgLayer = document.getElementById('svg-layer');
+
+        function drawBeam(idStart, idEnd, colorClass, delay) {
+            const el1 = document.getElementById(idStart);
+            const el2 = document.getElementById(idEnd);
+            const pg = document.getElementById('pg').getBoundingClientRect();
+            const r1 = el1.getBoundingClientRect();
+            const r2 = el2.getBoundingClientRect();
+
+            const startX = r1.left + r1.width / 2 - pg.left;
+            const startY = r1.bottom - pg.top + 5;
+
+            const endX = r2.left + r2.width / 2 - pg.left;
+            const endY = r2.top - pg.top - 5;
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            // Curve down then over
+            const cpY = startY + (endY - startY) / 2;
+            path.setAttribute("d", `M ${startX} ${startY} C ${startX} ${cpY}, ${endX} ${cpY}, ${endX} ${endY}`);
+            path.setAttribute("class", `beam ${colorClass}`);
+            if (delay) path.style.transitionDelay = delay + 'ms';
+
+            svgLayer.appendChild(path);
+
+            // Trigger reflow
+            void path.offsetWidth;
+            setTimeout(() => path.classList.add('show'), 50);
+        }
+
+        function clearBeams() {
+            svgLayer.innerHTML = '';
+        }
+
+        const steps = [
+            {
+                title: "Phase 1: The Context Challenge",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `Consider the word "bank". To understand exactly what it means, it needs context from the surrounding sentence.`;
+                    document.getElementById('w-robbed').classList.remove('active-trait', 'c-h1');
+                    document.getElementById('w-river').classList.remove('active-trait', 'c-h2');
+                    document.getElementById('head-single').classList.remove('show');
+                    clearBeams();
+                }
+            },
+            {
+                title: "Phase 2: Single-Head Attention (The Muddle)",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `A single attention head looks at the sentence. It finds "robbed" (crime) and "river" (geography). It tries to absorb both, resulting in a <strong>muddled, averaged brown gradient</strong>. It can't distinguish distinct roles!`;
+                    document.getElementById('w-robbed').classList.add('active-trait', 'c-h1');
+                    document.getElementById('w-river').classList.add('active-trait', 'c-h2');
+
+                    document.getElementById('head-single').classList.add('show');
+                    document.getElementById('head-single').style.display = "flex";
+                    document.querySelectorAll('.head-multi').forEach(el => el.style.display = "none");
+                    document.getElementById('concatArena').classList.remove('show');
+
+                    clearBeams();
+                    drawBeam('w-robbed', 'head-single', 'c-single', 0);
+                    drawBeam('w-river', 'head-single', 'c-single', 300);
+                }
+            },
+            {
+                title: "Phase 3: Splitting into Multi-Head",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `To fix this, we split the searchlight into multiple independent <strong>Heads</strong>. Each Head is allowed to ask a completely different, specific question (Action? Location? Subject?).`;
+
+                    document.getElementById('head-single').style.display = "none";
+                    document.getElementById('head-single').classList.remove('show');
+
+                    document.querySelectorAll('.head-multi').forEach(el => {
+                        el.style.display = "flex";
+                        // We trigger reflow so the transition works
+                        void el.offsetWidth;
+                        el.classList.add('show');
+                    });
+
+                    clearBeams();
+                    document.getElementById('w-robbed').classList.remove('active-trait', 'c-h1');
+                    document.getElementById('w-river').classList.remove('active-trait', 'c-h2');
+                    document.getElementById('concatArena').classList.remove('show');
+                    document.querySelectorAll('.concat-segment').forEach(s => s.classList.remove('expand'));
+                }
+            },
+            {
+                title: "Phase 4: Independent Searching",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `Now look! Head 1 perfectly captures the crime context ("robbed"). Head 2 perfectly captures the geography context ("river"). No averaging! Each concept remains crisp and distinct.`;
+
+                    document.getElementById('w-robbed').classList.add('active-trait', 'c-h1');
+                    document.getElementById('w-river').classList.add('active-trait', 'c-h2');
+                    document.getElementById('w-the1').classList.add('active-trait', 'c-h3');
+                    document.getElementById('w-was').classList.add('active-trait', 'c-h4');
+
+                    clearBeams();
+                    drawBeam('w-robbed', 'head-h1', 'c-h1', 0);
+                    drawBeam('w-river', 'head-h2', 'c-h2', 200);
+                    drawBeam('w-the1', 'head-h3', 'c-h3', 400);
+                    drawBeam('w-was', 'head-h4', 'c-h4', 600);
+                }
+            },
+            {
+                title: "Phase 5: The Ultimate Context Embedding",
+                action: () => {
+                    document.getElementById('instruction').innerHTML = `Finally, the results from all heads are <strong>concatenated</strong> (glued side-by-side) into a single large vector. This final Context-Aware Embedding now holds multiple diverse truths simultaneously. This is why Multi-Head is strictly required for language.`;
+
+                    document.getElementById('concatArena').classList.add('show');
+
+                    // Staggered expansion of the segments
+                    setTimeout(() => document.querySelectorAll('.concat-segment')[0].classList.add('expand'), 600);
+                    setTimeout(() => document.querySelectorAll('.concat-segment')[1].classList.add('expand'), 900);
+                    setTimeout(() => document.querySelectorAll('.concat-segment')[2].classList.add('expand'), 1200);
+                    setTimeout(() => document.querySelectorAll('.concat-segment')[3].classList.add('expand'), 1500);
+                }
+            }
+        ];
+
+        let currentStep = 0;
+
+        function applyStep() {
+            document.getElementById('phase-title').innerText = steps[currentStep].title;
+            document.getElementById('btn-back').disabled = currentStep === 0;
+            document.getElementById('btn-next').disabled = currentStep === steps.length - 1;
+            steps[currentStep].action();
+        }
+
+        function nextStep() { if (currentStep < steps.length - 1) { currentStep++; applyStep(); } }
+        function prevStep() { if (currentStep > 0) { currentStep--; applyStep(); } }
+
+        // Init
+        window.addEventListener('load', () => applyStep());
+    </script>
+</body>
+
+</html>
