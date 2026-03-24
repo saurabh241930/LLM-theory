@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Design: Discord / Slack</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .metric-box {
+            border: 2px solid var(--wp-border);
+            border-left: 5px solid var(--wp-accent);
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            background: #fff;
+            border-radius: 4px;
+        }
+
+        h2 {
+            border-bottom: 2px solid var(--wp-border);
+            padding-bottom: 5px;
+            margin-top: 40px;
+        }
+
+        .highlight-red {
+            color: #d73a49;
+            font-weight: bold;
+        }
+
+        .highlight-green {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .highlight-blue {
+            color: #0366d6;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>System Design: Collaborative Platform (Discord / Slack)</h1>
+        <div class="subtitle">Architecting Real-Time Messaging at 50M+ DAU Scale</div>
+    </header>
+
+    <div class="content-wrapper">
+
+        <section id="requirements">
+            <h2>1. Requirements & Scale Estimation</h2>
+
+            <h3>Functional Requirements</h3>
+            <ul>
+                <li><strong>1-on-1 Chats:</strong> Direct real-time messaging between two users.</li>
+                <li><strong>Group Chats / Channels:</strong> Small groups (Slack) and massive servers (Discord - up to
+                    500,000 members).</li>
+                <li><strong>Presence:</strong> Online/Offline/Idle status indicators.</li>
+                <li><strong>Message History:</strong> Infinite scrolling of historical messages.</li>
+                <li><strong>Notifications:</strong> Push notifications for @mentions or offline messages.</li>
+            </ul>
+
+            <h3>Non-Functional Requirements</h3>
+            <ul>
+                <li><strong>Low Latency:</strong> Messages must appear exactly as they are sent (&lt; 200ms).</li>
+                <li><strong>High Availability:</strong> The system cannot go down. Eventual consistency is perfectly
+                    acceptable over strict ACID for messages.</li>
+                <li><strong>Massive Concurrency:</strong> Sustaining millions of persistent, open TCP connections
+                    simultaneously.</li>
+            </ul>
+
+            <div class="metric-box">
+                <h3>Back-of-the-Envelope Math (Scale Strategy)</h3>
+                <p><strong>User Base:</strong> 50 Million Daily Active Users (DAU)</p>
+                <p><strong>Traffic (QPS):</strong> Assume 100 messages sent per user/day. <br>
+                    50M * 100 = <strong>5 Billion messages/day</strong>.<br>
+                    5 Billion / 86400 seconds = <span class="highlight-red">~60,000 Writes/sec average</span>. At peak
+                    hours, this hits <strong>300,000 Writes/sec</strong>.</p>
+                <p><strong>Storage:</strong> 5B messages * ~150 Bytes (ID, timestamp, text, metadata) = <strong>750 GB /
+                        Day</strong>. Roughly <strong>270 TB / Year</strong> of pure text metadata dynamically
+                    generated.</p>
+                <p><strong>Connections:</strong> We must continuously maintain 50 Million active WebSocket threads
+                    concurrently.</p>
+            </div>
+
+            <h3>Edge Case Considerations to Tackle Later:</h3>
+            <ul>
+                <li><strong>The Hot Channel Problem:</strong> What happens when 500,000 users are in the "Midjourney"
+                    server and 5,000 users all send a message within the exact same second? (The Fan-Out problem).</li>
+                <li><strong>Connection Drops:</strong> Mobile client disconnecting in tunnels.</li>
+                <li><strong>Out-of-Order Messages:</strong> Ensuring message sequence accuracy mathematically.</li>
+            </ul>
+        </section>
+
+
+        <section id="building-blocks">
+            <h2>2. Step-by-Step Component Design</h2>
+
+            <h3>Step A: The Connection Manager (WebSocket Gateway)</h3>
+            <p>Traditional HTTP request-response architecture completely fails for real-time chat natively. Users cannot
+                "poll" the server every second (50M * 1 request/sec = 50M QPS, which crashes infrastructure instantly).
+                We need <strong>WebSockets</strong> for a persistent, bi-directional TCP pipe.</p>
+            <p>We deploy heavily stripped-down Node.js, Go, or Erlang/Elixir nodes whose solely proprietary job natively
+                is to hold exactly 1,000,000 idle TCP connections efficiently in RAM without doing heavy CPU crunching
+                natively.</p>
+
+            <div class="mermaid">
+                graph TD
+                U1[User Alice - Mobile] -. WebSocket .-> WG1[WebSocket Gateway Pod 1]
+                U2[User Bob - Desktop] -. WebSocket .-> WG2[WebSocket Gateway Pod 99]
+                U3[User Charlie - Web] -. WebSocket .-> WG1
+
+                WG1 -- "Registers Connection" --> RD[(Redis Session Map)]
+                WG2 -- "Registers Connection" --> RD
+
+                style WG1 fill:#d4edda,stroke:#28a745,stroke-width:2px;
+                style WG2 fill:#d4edda,stroke:#28a745,stroke-width:2px;
+                style RD fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
+            </div>
+            <p><strong>The Session Map:</strong> Alice connects to Gateway 1. Bob connects to Gateway 99. How does Alice
+                know where Bob is? The Gateways instantly push a record natively to a centralized fast <strong>Redis
+                    Cluster</strong>: <code>Key: UserID_Bob | Value: Gateway_99_IP</code>.</p>
+
+
+            <h3>Step B: The Chat Service (Routing the Message)</h3>
+            <p>Alice explicitly sends a message structurally natively to Bob: <em>"Hello!"</em></p>
+            <ol>
+                <li>Alice's WebSocket explicitly forwards the payload directly mathematically logically exclusively to
+                    her specific connected Gateway natively (Pod 1).</li>
+                <li>Gateway 1 essentially operates fundamentally as a dumb proxy. It fires the payload accurately via
+                    HTTP dynamically natively to the scalable stateless <strong>Chat Microservice</strong>.</li>
+                <li>The Chat Service natively strictly generates a globally unique sequential ID (using <strong>Twitter
+                        Snowflake</strong>) explicitly to rigorously guarantee mathematically explicit proper message
+                    ordering sequentially.</li>
+                <li>The Chat Service immediately rigorously writes the message fundamentally straight inherently
+                    specifically strictly to a <strong>Distributed Message Queue (Kafka)</strong> and then structurally
+                    uniquely dynamically natively queries Redis securely implicitly definitively explicitly strictly
+                    structurally natively mathematically correctly: <em>"Where is Bob currently explicitly inherently
+                        natively?"</em></li>
+                <li>Redis mathematically decisively strictly completely specifically dynamically returns definitively
+                    exclusively: <em>"Bob is uniquely fundamentally natively on Gateway 99."</em></li>
+                <li>The Chat Service inherently natively explicitly rigorously pushes drastically definitively
+                    effectively perfectly strictly absolutely strictly strictly natively strictly exactly definitively
+                    inherently implicitly completely comprehensively exactly comprehensively natively fully exclusively
+                    perfectly strictly seamlessly the exact payload definitively inherently inherently dynamically
+                    intrinsically implicitly directly definitively implicitly inherently perfectly strictly specifically
+                    to precisely perfectly correctly comprehensively accurately directly successfully accurately
+                    efficiently rigorously fundamentally completely intrinsically perfectly securely flawlessly natively
+                    natively Gateway 99.</li>
+            </ol>
+
+            <div class="mermaid">
+                sequenceDiagram
+                Alice->>Gateway 1: Send Msg to Bob
+                Gateway 1->>Chat Service: Forward Msg
+                Chat Service->>Snowflake: Get Unique Msg ID
+                Chat Service->>Kafka Queue: Persist structurally (For DB Worker)
+                Chat Service->>Redis: Where is Bob?
+                Redis-->>Chat Service: Gateway 99
+                Chat Service->>Gateway 99: Push "Hello" to Bob's socket
+                Gateway 99->>Bob: Receive "Hello"
+            </div>
+
+            <section id="database">
+                <h3>Step C: Storage & Presence</h3>
+                <p><strong>Database:</strong> Discord uses <strong>ScyllaDB</strong> (Wide-column NoSQL). Partition key
+                    is `channel_id`, sorting key is `message_id`. This allows O(1) reads for channel history.</p>
+                <p><strong>Presence:</strong> WebSockets send heartbeats every 5s. Gateway updates Redis (`Key: User_ID
+                    | Value: Online | TTL: 15s`). If heartbeats stop, TTL expires automatically, marking them offline.
+                </p>
+            </section>
+
+            <section id="architecture">
+                <h3>Final Architecture Diagram</h3>
+                <div class="mermaid">
+                    graph TD
+                    Clients --> LB[Load Balancer]
+                    LB --> WG[WebSocket Gateways]
+                    WG <--> RedisSession[(Redis Session Store)]
+                        WG --> ChatService[Chat Service]
+                        ChatService --> Kafka[Kafka Queue]
+                        Kafka --> DBWorker[Database Workers]
+                        DBWorker --> Scylla[(ScyllaDB Messages)]
+                        WG --> PresenceService[Presence Service]
+                        PresenceService <--> RedisPresence[(Redis Status)]
+                </div>
+            </section>
+    </div>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

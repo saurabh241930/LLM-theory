@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Mastery: Dynamic Programming (Animated)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        .mastery-container {
+            padding: 20px;
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .theory-highlight {
+            border-left: 5px solid #db2777;
+            background: #fdf2f8;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        /* DP Table Animation Styles */
+        .dp-animation-container {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+
+        .dp-table {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin: 20px 0;
+            min-height: 80px;
+        }
+
+        .dp-cell {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #555;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #222;
+            transition: all 0.3s ease;
+        }
+
+        .dp-cell.active {
+            border-color: #db2777;
+            background: #db277733;
+            transform: scale(1.1);
+        }
+
+        .dp-cell.computed {
+            border-color: #10b981;
+        }
+
+        .cell-index {
+            font-size: 0.7rem;
+            color: #888;
+        }
+
+        .cell-val {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        pre {
+            background: #2d2d2d !important;
+            color: #ccc !important;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .code-tabs {
+            display: flex;
+            gap: 1px;
+            margin-bottom: -1px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #e1e4e8;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            border: 1px solid #d1d5da;
+            font-weight: bold;
+        }
+
+        .tab.active {
+            background: #2d2d2d;
+            color: white;
+            border-bottom: none;
+        }
+
+        .code-content {
+            display: none;
+        }
+
+        .code-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Dynamic Programming: The Art of Storing Work</h1>
+        <div class="subtitle">Overlapping Subproblems, Tabulation, and Time-Space Trade-offs</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="theory">
+            <h2>1. Technical Deep-Dive: Why DP Exists</h2>
+            <p>Dynamic Programming is simply <strong>Recursion + Memoization</strong>. It is used when an expensive
+                calculation repeats itself multiple times in a decision tree (Overlapping Subproblems).</p>
+
+            <div class="theory-highlight">
+                <h3>The Two Philosophies</h3>
+                <p><strong>1. Top-Down (Memoization):</strong> You start with the big problem and break it down. If
+                    <code>f(n)</code> has already been solved, you return the cached result. <em>Benefit:</em> Only
+                    computes required states.</p>
+                <p><strong>2. Bottom-Up (Tabulation):</strong> You solve the smallest subproblems first (0, 1, 2...) and
+                    fill a table until you reach <code>n</code>. <em>Benefit:</em> Avoids recursion depth overhead;
+                    easier to space-optimize (e.g., only keeping last 2 variables).</p>
+            </div>
+
+            <h3>How to Spot a DP Problem?</h3>
+            <ul>
+                <li><strong>Keywords:</strong> "Total number of ways...", "Minimum cost to...", "Longest path...".</li>
+                <li><strong>Constraint:</strong> The answer for <code>N</code> depends on <code>N-1</code> and/or
+                    <code>N-2</code>.</li>
+            </ul>
+        </section>
+
+        <section id="dp-animation">
+            <h2>2. Visualizing Tabulation (Climbing Stairs)</h2>
+            <p>Problem: You can take 1 or 2 steps. How many ways to reach step <code>i</code>? <br>
+                Formula: <code>dp[i] = dp[i-1] + dp[i-2]</code>.</p>
+
+            <div class="dp-animation-container" id="dpAnim">
+                <div class="dp-table" id="dpTable"></div>
+
+                <div class="explanation-text" id="statusText" style="margin-top:20px;">Click Next to compute the next
+                    step in the table.</div>
+
+                <div class="controls">
+                    <button class="btn-anim" id="btnNext">Compute dp[i]</button>
+                    <button class="btn-anim" id="btnReset">Reset Table</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="patterns-code">
+            <h2>3. Master Patterns & Dual-Language Code</h2>
+
+            <div class="mastery-container">
+                <h3>A. Knapsack Pattern (0/1 DP)</h3>
+                <p>Deciding "to include or not include" an item to maximize value within weight limit.</p>
+
+                <div class="code-tabs">
+                    <div class="tab active" onclick="showCode('knap', 'js')">JavaScript</div>
+                    <div class="tab" onclick="showCode('knap', 'py')">Python</div>
+                </div>
+
+                <div id="knap-js" class="code-content active">
+                    <pre><code>function knapsack(weights, values, W) {
+    const n = weights.length;
+    let dp = Array.from({length: n + 1}, () => new Array(W + 1).fill(0));
+
+    for (let i = 1; i <= n; i++) {
+        for (let j = 1; j <= W; j++) {
+            if (weights[i-1] <= j) {
+                // Max(Take it, Leave it)
+                dp[i][j] = Math.max(values[i-1] + dp[i-1][j - weights[i-1]], dp[i-1][j]);
+            } else {
+                dp[i][j] = dp[i-1][j];
+            }
+        }
+    }
+    return dp[n][W];
+}</code></pre>
+                </div>
+
+                <div id="knap-py" class="code-content">
+                    <pre><code>def knapsack(weights, values, W):
+    n = len(weights)
+    # Space Optimized 1D DP
+    dp = [0] * (W + 1)
+    
+    for i in range(n):
+        # Traverse backwards to avoid using same item twice
+        for j in range(W, weights[i] - 1, -1):
+            dp[j] = max(dp[j], values[i] + dp[j - weights[i]])
+            
+    return dp[W]</code></pre>
+                </div>
+            </div>
+
+            <div class="mastery-container">
+                <h3>B. Longest Common Subsequence (LCS)</h3>
+                <p>Finding the longest sequence of characters that appear in both strings in the same relative order.
+                </p>
+
+                <div class="code-tabs">
+                    <div class="tab active" onclick="showCode('lcs', 'js')">JavaScript</div>
+                    <div class="tab" onclick="showCode('lcs', 'py')">Python</div>
+                </div>
+
+                <div id="lcs-js" class="code-content active">
+                    <pre><code>function longestCommonSubsequence(text1, text2) {
+    const m = text1.length, n = text2.length;
+    let dp = Array.from({length: m + 1}, () => new Array(n + 1).fill(0));
+
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (text1[i-1] === text2[j-1]) {
+                dp[i][j] = 1 + dp[i-1][j-1];
+            } else {
+                dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+            }
+        }
+    }
+    return dp[m][n];
+}</code></pre>
+                </div>
+
+                <div id="lcs-py" class="code-content">
+                    <pre><code>def lcs(s1, s2):
+    m, n = len(s1), len(s2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if s1[i-1] == s2[j-1]:
+                dp[i][j] = 1 + dp[i-1][j-1]
+            else:
+                # Max of ignoring char from s1 or s2
+                dp[i][j] = max(dp[i-1][j], dp[i][j-1])
+                
+    return dp[m][n]</code></pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function showCode(section, lang) {
+            document.querySelectorAll(`#${section}-js, #${section}-py`).forEach(el => el.classList.remove('active'));
+            document.querySelector(`#${section}-${lang}`).classList.add('active');
+            event.target.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // --- DP ANIMATION (Climbing Stairs) ---
+        const nSteps = 7;
+        let dp = Array(nSteps + 1).fill(null);
+        let currIdx = 2; // base cases dp[0]=1, dp[1]=1
+        const dpTable = document.getElementById('dpTable');
+        const statusText = document.getElementById('statusText');
+
+        function initTable() {
+            dpTable.innerHTML = '';
+            dp = Array(nSteps + 1).fill(null);
+            dp[0] = 1; dp[1] = 1;
+            for (let i = 0; i <= nSteps; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'dp-cell';
+                cell.id = `dp-cell-${i}`;
+                cell.innerHTML = `<div class="cell-index">dp[${i}]</div><div class="cell-val">${dp[i] !== null ? dp[i] : '?'}</div>`;
+                if (dp[i] !== null) cell.classList.add('computed');
+                dpTable.appendChild(cell);
+            }
+        }
+
+        document.getElementById('btnNext').addEventListener('click', () => {
+            if (currIdx > nSteps) {
+                statusText.innerText = "Table Full! The result for N=7 is " + dp[nSteps];
+                return;
+            }
+
+            // Current calculation
+            dp[currIdx] = dp[currIdx - 1] + dp[currIdx - 2];
+
+            document.querySelectorAll('.dp-cell').forEach(c => c.classList.remove('active'));
+            const prev1 = document.getElementById(`dp-cell-${currIdx - 1}`);
+            const prev2 = document.getElementById(`dp-cell-${currIdx - 2}`);
+            const current = document.getElementById(`dp-cell-${currIdx}`);
+
+            current.classList.add('active');
+            current.classList.add('computed');
+            current.querySelector('.cell-val').innerText = dp[currIdx];
+
+            statusText.innerHTML = `dp[${currIdx}] = dp[${currIdx - 1}] (${dp[currIdx - 1]}) + dp[${currIdx - 2}] (${dp[currIdx - 2]}) = <b>${dp[currIdx]}</b>`;
+
+            currIdx++;
+        });
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            currIdx = 2;
+            initTable();
+            statusText.innerText = "Click Next to compute the next step in the table.";
+        });
+
+        initTable();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

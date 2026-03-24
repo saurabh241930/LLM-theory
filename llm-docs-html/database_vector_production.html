@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masterclass: Production Vector Ops (Series 2)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            border: 1px solid #e1e4e8;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .comparison-table th {
+            background: #f8f9fa;
+            color: #3366cc;
+        }
+
+        .code-snippet-box {
+            background: #2d2d2d;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .snippet-header {
+            background: #1a1a1a;
+            padding: 10px 15px;
+            color: #fff;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        pre {
+            margin: 0;
+            padding: 15px;
+            color: #ccc;
+            overflow-x: auto;
+        }
+
+        .ops-card {
+            border: 1px solid #ef4444;
+            background: #fef2f2;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .ops-card h3 {
+            color: #b91c1c;
+            margin-top: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Masterclass: Production Vector Ops</h1>
+        <div class="subtitle">Pinecone, pgvector, Cost Tradeoffs, and Hybrid Search</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="choice">
+            <h2>1. Architecting the Choice: Serverless vs Native</h2>
+            <p>The first decision in RAG production is where your vectors live. It's a battle between
+                <strong>Specialization</strong> and <strong>Consolidation</strong>.</p>
+
+            <table class="comparison-table">
+                <tr>
+                    <th>Feature</th>
+                    <th>Pinecone (Serverless)</th>
+                    <th>pgvector (Integrated)</th>
+                </tr>
+                <tr>
+                    <td><strong>Scale</strong></td>
+                    <td>Hyperscale (Billions of vectors)</td>
+                    <td>High (Millions of vectors)</td>
+                </tr>
+                <tr>
+                    <td><strong>Query Latency</strong></td>
+                    <td>Low (Highly optimized)</td>
+                    <td>Medium (Shared DB resources)</td>
+                </tr>
+                <tr>
+                    <td><strong>Metadata</strong></td>
+                    <td>Pre-filter / Post-filter limited</td>
+                    <td>Infinite (full SQL power)</td>
+                </tr>
+                <tr>
+                    <td><strong>Operational Cost</strong></td>
+                    <td>Pay-per-query/storage</td>
+                    <td>Static (Your existing DB cost)</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="hybrid">
+            <h2>2. Hybrid Search: The Industry Standard</h2>
+            <p>90% of failures in RAG are due to "Keyword Mismatch." Hybrid Search combines **Dense** (Vectors) and
+                **Sparse** (BM25) results using **RRF (Reciprocal Rank Fusion)**.</p>
+
+            <div class="code-snippet-box">
+                <div class="snippet-header"><span>Python (Pinecone Hybrid)</span></div>
+                <pre><code>from pinecone import Pinecone
+
+pc = Pinecone(api_key="...")
+index = pc.Index("customer-support")
+
+# Upsert with sparse and dense values
+index.upsert(
+    vectors=[
+        {
+          "id": "doc1", 
+          "values": [0.1, 0.2, ...], 
+          "sparse_values": {"indices": [1, 5], "values": [0.3, 0.8]}
+        }
+    ]
+)</code></pre>
+            </div>
+        </section>
+
+        <section id="filtering">
+            <h2>3. Metadata Filtering: The ACL Gap</h2>
+            <p>In Enterprise RAG, you can't just retrieve "Similar Docs." You must retrieve "Similar Docs that USER_A
+                has permission to see."</p>
+
+            <div class="ops-card">
+                <h3>Pre-Filtering vs Post-Filtering</h3>
+                <p><strong>Post-Filtering:</strong> Retrieve top 100, then filter by permission. <strong>RISK:</strong>
+                    If user only has access to 2 docs, they might get 0 results.</p>
+                <p><strong>Pre-Filtering:</strong> The Vector DB applies the filter *during* the graph traversal.
+                    <strong>pgvector</strong> excels here because it uses your actual <code>users</code> and
+                    <code>permissions</code> tables.</p>
+            </div>
+        </section>
+
+        <section id="namespaces">
+            <h2>4. Multi-Tenancy & Namespaces</h2>
+            <p>Never mix customer data in the same "flat" index. Use Namespaces (Pinecone) or Partitioned Tables
+                (Postgres) to create hard silos.</p>
+            <pre><code>// JS Namespace Query (LangChain.js)
+const docs = await vectorStore.similaritySearch(
+  "How to reset password?", 
+  3, 
+  { namespace: "client_id_99" }
+);</code></pre>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

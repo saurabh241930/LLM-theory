@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Mastery: Arrays & Strings (Series 3 - High Fidelity)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        :root {
+            --primary: #3366cc;
+            --accent: #10b981;
+            --bg-dark: #1a1a1a;
+            --cell-bg: #222;
+            --code-bg: #252525;
+            --highlight: rgba(51, 102, 204, 0.3);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        /* Explanation Blocks */
+        .explanation-card {
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-left: 5px solid var(--primary);
+            padding: 25px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+
+        .complexity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .badge-time {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .badge-space {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        /* High-Fidelity Visualizer */
+        .visualizer-container {
+            background: var(--bg-dark);
+            color: #fff;
+            border-radius: 12px;
+            margin: 40px 0;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .viz-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 25px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .viz-body {
+            display: flex;
+            flex-wrap: wrap;
+            min-height: auto;
+        }
+
+        .viz-canvas-side {
+            flex: 1;
+            min-width: 350px;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid #333;
+        }
+
+        .viz-code-side {
+            flex: 0.8;
+            min-width: 300px;
+            background: var(--code-bg);
+            padding: 25px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+
+        /* Dynamic Inputs */
+        .viz-input-group {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .viz-input {
+            background: #333;
+            border: 1px solid #555;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 300px;
+            font-family: inherit;
+        }
+
+        /* Array Cells */
+        .array-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 40px 0;
+            perspective: 1000px;
+            justify-content: center;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            background: var(--cell-bg);
+            border: 2px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-radius: 6px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .cell.fast {
+            border-color: #f87171;
+            background: rgba(248, 113, 113, 0.1);
+        }
+
+        .cell.slow {
+            border-color: var(--accent);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .cell.modified {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .ptr-label {
+            position: absolute;
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+
+        .ptr-fast {
+            bottom: -30px;
+            background: #f87171;
+            color: white;
+        }
+
+        .ptr-slow {
+            top: -30px;
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Code Highlighting */
+        .code-line {
+            padding: 3px 10px;
+            border-radius: 4px;
+            color: #888;
+            white-space: pre;
+            border-left: 3px solid transparent;
+        }
+
+        .code-line.active {
+            background: var(--highlight);
+            color: #fff;
+            border-left-color: var(--primary);
+        }
+
+        /* Controls */
+        .viz-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn-viz {
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-viz:hover {
+            background: #444;
+            border-color: #777;
+        }
+
+        .btn-viz.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-viz:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-box {
+            margin-top: 30px;
+            padding: 15px;
+            background: #2d2d2d;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 0.9rem;
+            width: 100%;
+            border-left: 4px solid #777;
+        }
+
+        @media (max-width: 900px) {
+            .viz-body {
+                flex-direction: column;
+            }
+
+            .viz-canvas-side {
+                border-right: none;
+                border-bottom: 1px solid #333;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="hero-section">
+        <h1>Arrays & Strings Masterclass</h1>
+        <p>Interactive Exploration of High-Efficiency Patterns</p>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="remove-duplicates">
+            <h2>1. Remove Duplicates from Sorted Array</h2>
+
+            <div class="explanation-card">
+                <h3>Explanation & Intuition</h3>
+                <p>If we could use extra memory (O(n)), we could easily solve this using a Hash Set. However, given that
+                    the input is <strong>Sorted</strong> and we must use <strong>O(1) extra space</strong>, we can
+                    exploit the ordering.</p>
+                <p><strong>Key Observation:</strong> Since it's sorted, duplicates always appear consecutively. Once we
+                    "skip" a group of identical numbers, they will never reappear.</p>
+                <p><strong>Fast/Slow Strategy:</strong>
+                <ul>
+                    <li>The <code>Slow</code> pointer tracks the position of the last unique element confirmed.</li>
+                    <li>The <code>Fast</code> pointer scans ahead.</li>
+                    <li>When <code>arr[fast] != arr[slow]</code>, we've found a new unique number. We increment
+                        <code>slow</code> and write the new value there.
+                    </li>
+                </ul>
+                </p>
+
+                <div style="margin-top: 20px;">
+                    <span class="complexity-badge badge-time">Time Complexity: O(n)</span>
+                    <span class="complexity-badge badge-space">Space Complexity: O(1)</span>
+                </div>
+            </div>
+
+            <div class="visualizer-container" id="rd-viz">
+                <div class="viz-header">
+                    <span>Algorithm Visualizer: Fast/Slow Pointers</span>
+                    <span id="rd-step-text">Step: 0</span>
+                </div>
+                <div class="viz-body">
+                    <div class="viz-canvas-side">
+                        <div class="viz-input-group">
+                            <input type="text" id="rd-input" class="viz-input" value="1, 1, 2, 2, 3, 4, 4">
+                            <button class="btn-viz" onclick="rdReset()">Reset</button>
+                        </div>
+
+                        <div class="array-row" id="rd-array-row"></div>
+
+                        <div class="viz-controls">
+                            <button class="btn-viz" id="rd-btn-step" onclick="rdNextStep()">Step Forward</button>
+                            <button class="btn-viz primary" id="rd-btn-play" onclick="rdTogglePlay()">Play
+                                Animation</button>
+                        </div>
+
+                        <div class="status-box" id="rd-status">
+                            Enter a sorted array above and click Step to begin the unique-element migration.
+                        </div>
+                    </div>
+                    <div class="viz-code-side">
+                        <div style="margin-bottom: 15px; color: #666; font-size: 0.7rem;">PSEUDO-CODE (PYTHON STYLE)
+                        </div>
+                        <div class="code-line" id="rd-l1">slow = 0</div>
+                        <div class="code-line" id="rd-l2">for fast in range(1, len(nums)):</div>
+                        <div class="code-line" id="rd-l3"> if nums[fast] != nums[slow]:</div>
+                        <div class="code-line" id="rd-l4"> slow += 1</div>
+                        <div class="code-line" id="rd-l5"> nums[slow] = nums[fast]</div>
+                        <div class="code-line" id="rd-l6">return slow + 1</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- More Patterns could follow here with same structure -->
+    </div>
+
+    <script>
+        // --- REMOVE DUPLICATES LOGIC ---
+        let rdNums = [];
+        let rdisPlaying = false;
+        let rdSlow = 0;
+        let rdFast = 1;
+        let rdStep = 0;
+        let rdInterval = null;
+        let rdState = 'INIT'; // INIT, COMPARE, MOVE, NEXT
+
+        function rdReset() {
+            const input = document.getElementById('rd-input').value;
+            rdNums = input.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
+            rdSlow = 0;
+            rdFast = 1;
+            rdStep = 0;
+            rdState = 'INIT';
+            rdStop();
+            updateRDUI();
+            document.getElementById('rd-status').innerText = "Visualizer ready. Fast pointer will skip duplicates.";
+            highlightCode('rd', null);
+        }
+
+        function highlightCode(prefix, line) {
+            document.querySelectorAll(`[id^="${prefix}-l"]`).forEach(l => l.classList.remove('active'));
+            if (line) document.getElementById(`${prefix}-l${line}`).classList.add('active');
+        }
+
+        function updateRDUI() {
+            const row = document.getElementById('rd-array-row');
+            row.innerHTML = '';
+            rdNums.forEach((num, i) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (i <= rdSlow) cell.classList.add('modified');
+                if (i === rdSlow) cell.innerHTML += `<span class="ptr-label ptr-slow">Slow (Write)</span>`;
+                if (i === rdFast) {
+                    cell.innerHTML += `<span class="ptr-label ptr-fast">Fast (Seek)</span>`;
+                    cell.classList.add('fast');
+                }
+                cell.innerHTML += num;
+                row.appendChild(cell);
+            });
+            document.getElementById('rd-step-text').innerText = `Step: ${rdStep}`;
+        }
+
+        function rdNextStep() {
+            if (rdFast >= rdNums.length) {
+                rdStop();
+                document.getElementById('rd-status').innerText = "Traversal Complete! All unique elements shifted left.";
+                highlightCode('rd', 6);
+                return;
+            }
+
+            rdStep++;
+
+            switch (rdState) {
+                case 'INIT':
+                    highlightCode('rd', 1);
+                    rdState = 'COMPARE';
+                    break;
+                case 'COMPARE':
+                    highlightCode('rd', 3);
+                    if (rdNums[rdFast] !== rdNums[rdSlow]) {
+                        document.getElementById('rd-status').innerText = `New unique element ${rdNums[rdFast]} found! Preparing to increment slow pointer.`;
+                        rdState = 'MOVE';
+                    } else {
+                        document.getElementById('rd-status').innerText = `Duplicate ${rdNums[rdFast]} found at index ${rdFast}. Fast pointer proceeds.`;
+                        rdState = 'NEXT';
+                    }
+                    break;
+                case 'MOVE':
+                    highlightCode('rd', 5);
+                    rdSlow++;
+                    rdNums[rdSlow] = rdNums[rdFast];
+                    document.getElementById('rd-status').innerText = `Wrote ${rdNums[rdFast]} into index ${rdSlow}.`;
+                    rdState = 'NEXT';
+                    break;
+                case 'NEXT':
+                    highlightCode('rd', 2);
+                    rdFast++;
+                    rdState = 'COMPARE';
+                    break;
+            }
+            updateRDUI();
+        }
+
+        function rdTogglePlay() {
+            if (rdisPlaying) rdStop();
+            else rdStart();
+        }
+
+        function rdStart() {
+            rdisPlaying = true;
+            document.getElementById('rd-btn-play').innerText = "Pause Animation";
+            rdInterval = setInterval(rdNextStep, 800);
+        }
+
+        function rdStop() {
+            rdisPlaying = false;
+            document.getElementById('rd-btn-play').innerText = "Play Animation";
+            if (rdInterval) clearInterval(rdInterval);
+        }
+
+        // Initialize
+        rdReset();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

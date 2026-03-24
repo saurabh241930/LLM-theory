@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masterclass: Azure AI Search (Series 2)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        .azure-card {
+            border: 1px solid #0078d4;
+            border-radius: 12px;
+            padding: 25px;
+            background: #fff;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .azure-label {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: #0078d4;
+            color: white;
+            padding: 2px 12px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        /* Skillset Animation */
+        .skillset-viz {
+            background: #f0f4f8;
+            border: 1px solid #d1d5da;
+            border-radius: 8px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            margin: 20px 0;
+        }
+
+        .step-node {
+            width: 80px;
+            height: 50px;
+            background: white;
+            border: 2px solid #0078d4;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: #0078d4;
+            font-weight: bold;
+            transition: all 0.5s;
+            position: relative;
+        }
+
+        .step-node.active {
+            background: #0078d4;
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(0, 120, 212, 0.4);
+        }
+
+        .step-arrow {
+            color: #888;
+            font-size: 1.5rem;
+        }
+
+        .theory-highlight {
+            border-left: 5px solid #0078d4;
+            background: #f0f6ff;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        pre {
+            background: #2d2d2d !important;
+            color: #ccc !important;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .mermaid-container {
+            background: #fff;
+            border: 1px solid #eaecf0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Masterclass: Azure AI Search</h1>
+        <div class="subtitle">Skillsets, Indexers, Semantic Rankers, and Hybrid RAG Pipelines</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="architecture">
+            <h2>1. Enterprise RAG Architecture on Azure</h2>
+            <p>Azure AI Search is the <strong>Orchestrator</strong> of enterprise knowledge. It bridges unstructured
+                blob data to vectorized semantic insights.</p>
+
+            <div class="mermaid-container">
+                <div class="mermaid">
+                    graph LR
+                    B[(Azure Blob)] --> IDX[Indexer]
+                    IDX --> SK[Skillset: AI Enrichment]
+                    SK --> V[(AI Search Index)]
+                    V --> SR[Semantic Ranker]
+                    SR --> AOAI[Azure OpenAI]
+                </div>
+            </div>
+        </section>
+
+        <section id="skillsets">
+            <h2>2. Skillset Enrichment Pipeline</h2>
+            <p>Skillsets allow "In-flight" AI processing during indexing. You can OCR images, detect PII, and generate
+                embeddings *before* the data hits the index.</p>
+
+            <div class="skillset-viz">
+                <div class="step-node" id="sn1">Raw PDF</div>
+                <div class="step-arrow">&rarr;</div>
+                <div class="step-node" id="sn2">OCR Skill</div>
+                <div class="step-arrow">&rarr;</div>
+                <div class="step-node" id="sn3">Entity Skill</div>
+                <div class="step-arrow">&rarr;</div>
+                <div class="step-node" id="sn4">Vector Skill</div>
+            </div>
+            <div style="text-align: center;">
+                <button class="btn-anim" onclick="runSkillsetAnim()">Simulate Enrichment Pipeline</button>
+            </div>
+        </section>
+
+        <section id="semantic-ranking">
+            <h2>3. Semantic Ranker: The L2 Secret</h2>
+            <p>Azure's <strong>Semantic Ranker</strong> is a secondary ranking pass that uses Bing's deep learning
+                models to re-order the Top 50 results. It doesn't just look for "keywords"; it understands
+                <strong>Intent</strong>.</p>
+
+            <div class="theory-highlight">
+                <h3>The Dual Ranking Pattern</h3>
+                <ul>
+                    <li><strong>Pass 1 (Hybrid):</strong> BM25 (Keyword) + HNSW (Vector) combined via RRF. Fast, finds
+                        candidates.</li>
+                    <li><strong>Pass 2 (Semantic):</strong> Cross-encoder re-ranks the hybrid results. Slower, but
+                        highest precision.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="code">
+            <h2>4. Implementation & OData Filtering</h2>
+            <p>Unlike simple Vector DBs, Azure AI Search supports <strong>OData v4</strong> complex filtering, allowing
+                you to combine semantic similarity with structured business rules.</p>
+
+            <pre><code># Hybrid Search with Semantic Ranking (Python SDK)
+from azure.search.documents import SearchClient
+from azure.search.documents.models import VectorQuery, SemanticQuery
+
+client = SearchClient(endpoint, index_name, credential)
+
+results = client.search(
+    search_text="How to claim RSA benefits?",
+    vector_queries=[VectorQuery(vector=query_emb, k_nearest_neighbors=50, fields="embedding")],
+    # The Magic: Semantic Ranking
+    query_type="semantic",
+    semantic_configuration_name="my-config",
+    # OData Filter: Security & Metadata
+    filter="category eq 'insurance' and user_role ge 3"
+)</code></pre>
+        </section>
+    </div>
+
+    <script>
+        async function runSkillsetAnim() {
+            const nodes = ['sn1', 'sn2', 'sn3', 'sn4'];
+            for (let id of nodes) {
+                document.getElementById(id).classList.add('active');
+                await new Promise(r => setTimeout(r, 600));
+            }
+            setTimeout(() => {
+                nodes.forEach(id => document.getElementById(id).classList.remove('active'));
+            }, 2000);
+        }
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

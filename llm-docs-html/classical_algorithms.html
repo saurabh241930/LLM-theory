@@ -139,7 +139,8 @@
                     <div class="answer">
                         <p>As the number of features increases, the distance between any two points becomes nearly
                             constant, making 'nearness' meaningless. KNN requires <strong>Feature Scaling</strong> and
-                            <strong>Dimensionality Reduction</strong> to work effectively.</p>
+                            <strong>Dimensionality Reduction</strong> to work effectively.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -149,7 +150,8 @@
             <h2>6. Naive Bayes</h2>
             <div class="algo-box">
                 <p>Based on <strong>Bayes' Theorem</strong>. It's 'Naive' because it assumes that all features are
-                    <strong>independent</strong> of each other given the class label.</p>
+                    <strong>independent</strong> of each other given the class label.
+                </p>
                 <div class="math-block">P(A|B) = [P(B|A) * P(A)] / P(B)</div>
                 <div class="qa-container">
                     <h3>Q: When is Naive Bayes better than complex models?</h3>
@@ -158,6 +160,83 @@
                                 Classification</strong> (Spam filtering). It is extremely fast and handles
                             high-dimensional categorical data well.</p>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="algorithm-selection">
+            <h2>7. Algorithm Selection Guide: When to use what?</h2>
+            <table border="1" cellpadding="8" cellspacing="0"
+                style="width:100%; border-collapse:collapse; margin-top: 15px; margin-bottom: 20px;">
+                <tr>
+                    <th style="background-color: #eaecf0;">Algorithm</th>
+                    <th style="background-color: #eaecf0;">When to Use It (The Sweet Spot)</th>
+                    <th style="background-color: #eaecf0;">When NOT to Use It</th>
+                </tr>
+                <tr>
+                    <td><strong>Logistic / Linear Regression</strong></td>
+                    <td>When <strong>interpretability</strong> is your absolute highest priority (e.g., medical
+                        diagnoses, finance). You need to know exactly how much 1 unit of X changes Y natively
+                        mathematically.</td>
+                    <td>When relationships are highly non-linear or feature interactions are complex.</td>
+                </tr>
+                <tr>
+                    <td><strong>Decision Trees</strong></td>
+                    <td>When you need to visually explain the exact decision flow to non-technical stakeholders (e.g.,
+                        "If Age > 50 and Smoker = Yes -> Risk High").</td>
+                    <td>In production systems for raw predictive power (they easily overfit fundamentally and lack
+                        generalization).</td>
+                </tr>
+                <tr>
+                    <td><strong>Random Forest</strong></td>
+                    <td>The <strong>default starting point</strong> for tabular data. It gives excellent performance
+                        "out-of-the-box" with almost zero hyperparameter tuning. Great for avoiding overfitting.</td>
+                    <td>When latency is critical (predicting takes longer due to evaluating 100+ trees simultaneously)
+                        or when maximum possible accuracy is rigidly required.</td>
+                </tr>
+                <tr>
+                    <td><strong>XGBoost / LightGBM</strong></td>
+                    <td>When you need <strong>Maximum Accuracy</strong> on tabular data (Kaggle winners). Best when you
+                        have time and resources to meticulously tune hyperparameters like learning rate and depth.</td>
+                    <td>On very small datasets (highly prone to overfitting) or when you need strict legal/mathematical
+                        interpretability.</td>
+                </tr>
+                <tr>
+                    <td><strong>Naive Bayes</strong></td>
+                    <td><strong>Text Classification</strong> baselines (Spam filtering, Sentiment analysis). Works
+                        incredibly well natively with high-dimensional, sparse data and very small datasets. Lightning
+                        fast.</td>
+                    <td>When features are strongly dependent and mathematically correlated with each other (it
+                        explicitly assumes naive independence).</td>
+                </tr>
+                <tr>
+                    <td><strong>SVM (Support Vector Machines)</strong></td>
+                    <td>High-dimensional spaces where the number of dimensions explicitly exceeds the number of samples
+                        natively. Good when there is a clear, absolute margin of separation.</td>
+                    <td>Extremely large datasets (training time is structurally O(n^2) or worse inherently) or when the
+                        data is highly noisy with overlapping classes natively.</td>
+                </tr>
+                <tr>
+                    <td><strong>K-Nearest Neighbors (KNN)</strong></td>
+                    <td>Simple recommendation systems (finding similar items) or as a quick, zero-training programmatic
+                        baseline algorithm natively.</td>
+                    <td>High-dimensional data (The Curse of Dimensionality destroys distance metrics natively) or
+                        latency-sensitive applications (inference requires computing distance mathematically to every
+                        single training point).</td>
+                </tr>
+            </table>
+
+            <div class="qa-container">
+                <h3>The TL;DR Rule of Thumb</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>Tabular Data (CSV, SQL):</strong> Start with Random Forest. If you need strictly
+                            more accuracy, hyper-tune XGBoost natively.</li>
+                        <li><strong>Textual Data:</strong> Start with Naive Bayes strictly for baselines. Inherently
+                            move to Deep Learning (Transformers/LLMs).</li>
+                        <li><strong>Strict Explainability Needed (Compliance):</strong> Use Logistic Regression or a
+                            solitary Decision Tree exclusively.</li>
+                    </ul>
                 </div>
             </div>
         </section>

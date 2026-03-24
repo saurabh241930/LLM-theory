@@ -4,39 +4,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced PostgreSQL</title>
-    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <title>Masterclass: PostgreSQL Internals (Series 2)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
     <style>
-        .qa-container {
-            margin-bottom: 2em;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-left: 4px solid var(--wp-accent);
-            border-radius: 4px;
+        .mastery-card {
+            border: 1px solid #e1e4e8;
+            border-radius: 12px;
+            padding: 25px;
+            background: #fff;
+            margin-bottom: 30px;
         }
 
-        .qa-container h3 {
-            margin-top: 0;
-            color: var(--wp-title-text);
-        }
-
-        .one-liner {
+        .sql-highlight {
+            color: #3366cc;
             font-weight: bold;
-            margin-bottom: 10px;
         }
 
-        .depth {
-            background-color: #e2e3e5;
-            padding: 10px;
-            border-left: 4px solid #6c757d;
-            margin-top: 10px;
+        /* Execution Plan Visualizer */
+        .plan-viz {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .plan-node {
+            margin-left: 20px;
+            border-left: 1px dashed #444;
+            padding-left: 10px;
+            margin-top: 5px;
+        }
+
+        .cost-tag {
+            color: #f87171;
+            font-style: italic;
+            margin-left: 10px;
+        }
+
+        .highlight-scan {
+            background: rgba(239, 68, 68, 0.2);
+            border-radius: 3px;
+        }
+
+        /* Animation: Index Seek vs Scan */
+        .db-anim-container {
+            height: 200px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .page-block {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #a2a9b1;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .page-block.active {
+            background: #3366cc;
+            color: white;
+            border-color: #254b99;
+            transform: scale(1.1);
+        }
+
+        .page-block.found {
+            background: #10b981;
+            color: white;
+        }
+
+        .theory-box {
+            border-left: 5px solid #3366cc;
+            background: #f0f4ff;
+            padding: 15px;
+            margin: 20px 0;
         }
 
         pre {
-            background-color: #272822;
-            color: #f8f8f2;
-            padding: 10px;
-            border-radius: 5px;
+            background: #2d2d2d !important;
+            color: #ccc !important;
+            padding: 15px;
+            border-radius: 8px;
             overflow-x: auto;
         }
     </style>
@@ -44,259 +106,124 @@
 
 <body>
     <header>
-        <h1>Advanced PostgreSQL Mastery</h1>
-        <div class="subtitle">Window Functions, CTEs, Concurrency, and Execution Plans</div>
+        <h1>Masterclass: PostgreSQL Internals</h1>
+        <div class="subtitle">Index Engineering, CTE Boundaries, and Transaction isolation</div>
     </header>
 
     <div class="content-wrapper">
-        <section id="window-functions">
-            <h2>1. Window Functions</h2>
-            <p>Unlike aggregate functions (<code>GROUP BY</code>) which collapse multiple rows into a single output row,
-                Window Functions compute an aggregate value based on a group of rows but <strong>keep the individual
-                    rows intact</strong>.</p>
+        <section id="explain">
+            <h2>1. Decoding the Execution Plan (EXPLAIN)</h2>
+            <p>The <strong>Postgres Planner</strong> converts your SQL into a tree of nodes. Understanding these nodes
+                is the difference between a 10ms query and a 10s timeout.</p>
 
-            <pre><code>SELECT employee_id, department, salary,
-       ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC) as rank_num,
-       LAG(salary) OVER (PARTITION BY department ORDER BY salary DESC) as previous_salary,
-       LEAD(salary) OVER (PARTITION BY department ORDER BY salary DESC) as next_salary
-FROM employees;</code></pre>
-
-            <div class="qa-container">
-                <h3>ROW_NUMBER vs RANK vs DENSE_RANK</h3>
-                <div class="answer">
-                    <ul>
-                        <li><strong>ROW_NUMBER():</strong> Basic sequential counter (1, 2, 3, 4). No ties.</li>
-                        <li><strong>RANK():</strong> Assigns the same rank for ties, but skips the next numbers (1, 2,
-                            2, 4).</li>
-                        <li><strong>DENSE_RANK():</strong> Assigns the same rank for ties, but does NOT skip numbers (1,
-                            2, 2, 3).</li>
-                    </ul>
-                </div>
+            <div class="plan-viz">
+                <div>Limit <span class="cost-tag">(cost=100.5..105.2)</span></div>
+                <div class="plan-node">-> Sort <span class="cost-tag">(cost=99.2..100.1)</span></div>
+                <div class="plan-node highlight-scan"> -> Seq Scan on transactions <span
+                        class="cost-tag">(cost=0.0..85.0)</span></div>
+                <div style="margin-top:15px; color:#888;"># ALERT: Seq Scan detected on 200M rows!</div>
             </div>
 
-            <div class="qa-container">
-                <h3>LAG and LEAD</h3>
-                <div class="answer">
-                    <p>Fetches data from the previous physically contiguous row (<code>LAG</code>) or the next row
-                        (<code>LEAD</code>) within the specified partition. Exceptional for calculating month-over-month
-                        growth.</p>
-                </div>
+            <div class="db-anim-container" id="animBox">
+                <!-- Blocks generated by JS -->
             </div>
+            <div style="text-align: center;">
+                <button class="btn-anim" onclick="runAnim('scan')">Run Sequential Scan</button>
+                <button class="btn-anim" onclick="runAnim('seek')">Run Index Seek</button>
+            </div>
+            <p id="animStatus" style="text-align: center; color: #666; margin-top: 10px;">Select an access pattern to
+                visualize disk I/O.</p>
         </section>
 
         <section id="ctes">
-            <h2>2. CTEs & Recursive CTEs</h2>
-            <p>Common Table Expressions (<code>WITH</code>) act as temporary views scoped to a single query execution.
-                They massively improve query readability over deeply nested subqueries.</p>
+            <h2>2. CTEs: Optimization Boundaries</h2>
+            <p>Common Table Expressions (<code>WITH</code>) are often thought of as "Views." However, in Postgres < v12,
+                    they were <strong>Optimization Fences</strong>—materialized entirely before the main query, which
+                    could cause massive memory spikes.</p>
 
-            <div class="qa-container">
-                <h3>Recursive CTEs for Hierarchical Data</h3>
-                <div class="answer">
-                    <div class="one-liner">Recursive CTEs are the universally accepted way to query tree-structured data
-                        (like an Org Chart, File System paths, or Comment Replies) in SQL.</div>
-                    <pre><code>WITH RECURSIVE OrgChart AS (
-  -- 1. Base Case (Anchor Member): Find the CEO
-  SELECT id, name, manager_id, 1 AS level
-  FROM employees WHERE manager_id IS NULL
-  
-  UNION ALL
-  
-  -- 2. Recursive Step: Find subordinates of everyone currently in the OrgChart
-  SELECT e.id, e.name, e.manager_id, oc.level + 1
-  FROM employees e
-  INNER JOIN OrgChart oc ON e.manager_id = oc.id
+            <div class="theory-box">
+                <strong>Modern Tip:</strong> Use <code>WITH ... AS NOT MATERIALIZED</code> to allow the planner to
+                "inline" the CTE into the main query for better optimization.
+            </div>
+
+            <pre><code>-- Recursive CTE for Hierarchical Comments
+WITH RECURSIVE CommentTree AS (
+    SELECT id, body, parent_id, 1 as depth
+    FROM comments WHERE parent_id IS NULL
+    UNION ALL
+    SELECT c.id, c.body, c.parent_id, ct.depth + 1
+    FROM comments c
+    JOIN CommentTree ct ON c.parent_id = ct.id
 )
-SELECT * FROM OrgChart;</code></pre>
-                </div>
+SELECT * FROM CommentTree WHERE depth <= 3;</code></pre>
+        </section>
+
+        <section id="advanced-ops">
+            <h2>3. Multi-Version Concurrency (MVCC)</h2>
+            <p>Postgres never overwrites data. When you <code>UPDATE</code> a row, it creates a <strong>new
+                    version</strong> (tuple) and marks the old one as dead. This is why <code>VACUUM</code> exists—to
+                reclaim the disk space from "dead" tuples.</p>
+
+            <div class="mastery-card">
+                <h3>Senior Patterns: FOR UPDATE SKIP LOCKED</h3>
+                <p>Building a high-throughput job queue in SQL? <code>SKIP LOCKED</code> is the gold standard. It allows
+                    workers to ignore locked rows, preventing contention bottlenecks.</p>
+                <pre><code>-- Pick the next 5 available jobs without blocking other workers
+SELECT * FROM job_queue
+WHERE status = 'pending'
+FOR UPDATE SKIP LOCKED
+LIMIT 5;</code></pre>
             </div>
         </section>
 
-        <section id="isolation-levels">
-            <h2>3. Transaction Isolation Levels</h2>
-            <p>PostgreSQL handles concurrent transactions referencing the same rows using MVCC (Multi-Version
-                Concurrency Control).</p>
+        <section id="pgvector">
+            <h2>4. The Bridge: pgvector Internals</h2>
+            <p>Postgres is now a first-class Vector DB. With <code>pgvector</code>, you store embeddings alongside
+                business data, enabling <strong>Hybrid Filters</strong> (e.g., "Find similar images WHERE price <
+                    $50").</p>
 
-            <div class="qa-container">
-                <h3>Concurrency Phenomena</h3>
-                <div class="answer">
-                    <ul>
-                        <li><strong>Dirty Read:</strong> Reading uncommitted changes from another transaction.
-                            (PostgreSQL completely prevents this at all levels).</li>
-                        <li><strong>Non-Repeatable Read:</strong> A transaction re-reads a row it read previously,
-                            finding it was modified by a committed transaction.</li>
-                        <li><strong>Phantom Read:</strong> A query is executed twice, but a second transaction
-                            inserted/deleted rows that match the query criteria in the meantime.</li>
-                    </ul>
-                </div>
-            </div>
+                    <pre><code>-- Efficiently query 1,536-dim vectors
+CREATE INDEX idx_vec ON products 
+USING hnsw (embedding vector_cosine_ops);
 
-            <table border="1" cellpadding="8" cellspacing="0"
-                style="width:100%; text-align:left; border-collapse:collapse; margin-bottom: 20px;">
-                <tr>
-                    <th>Isolation Level</th>
-                    <th>Dirty Read</th>
-                    <th>Non-Repeatable Read</th>
-                    <th>Phantom Read</th>
-                </tr>
-                <tr>
-                    <td><strong>Read Committed</strong> (PG Default)</td>
-                    <td>Prevented</td>
-                    <td>Possible</td>
-                    <td>Possible</td>
-                </tr>
-                <tr>
-                    <td><strong>Repeatable Read</strong></td>
-                    <td>Prevented</td>
-                    <td>Prevented</td>
-                    <td>Prevented (in PG, although SQL spec allows it)</td>
-                </tr>
-                <tr>
-                    <td><strong>Serializable</strong> (Strictest)</td>
-                    <td>Prevented</td>
-                    <td>Prevented</td>
-                    <td>Prevented (Guarantees true serial execution outcome)</td>
-                </tr>
-            </table>
-        </section>
-
-        <section id="deadlocks">
-            <h2>4. Deadlocks & Row-Level Locking</h2>
-
-            <div class="mermaid">
-                graph TD
-                Tx1[Transaction A] -- Locks --> Row1
-                Tx2[Transaction B] -- Locks --> Row2
-                Tx1 -- Waits for --> Row2
-                Tx2 -- Waits for --> Row1
-            </div>
-
-            <p><strong>Prevention:</strong> Always lock rows in the exact same order across all application code. Avoid
-                scattered random updates.</p>
-
-            <div class="qa-container">
-                <h3>FOR UPDATE SKIP LOCKED</h3>
-                <div class="answer">
-                    <p>In job queue implementations built on SQL databases, multiple worker threads picking jobs will
-                        naturally block each other on <code>SELECT ... FOR UPDATE</code>. <code>SKIP LOCKED</code> tells
-                        the worker to ignore rows currently locked by other transactions, instantly grabbing the next
-                        available job without waiting.</p>
-                </div>
-            </div>
-
-            <div class="qa-container">
-                <h3>Advisory Locks</h3>
-                <div class="answer">
-                    <p><code>pg_advisory_lock(key)</code> provides application-level locking (mutexes) handled entirely
-                        by the database. Instead of locking a specific row/table, you lock a 64-bit integer conceptually
-                        tied to a resource.</p>
-                </div>
-            </div>
-        </section>
-
-        <section id="partitioning">
-            <h2>5. Partitioning Strategies</h2>
-            <p>Partitioning splits a massive logical table into smaller physical pieces (shards) across the disk to
-                dramatically improve read/write performance.</p>
-
-            <ul>
-                <li><strong>Range Partitioning:</strong> By Date (e.g., <code>logs_2024_01</code>,
-                    <code>logs_2024_02</code>). Best for time-series data.</li>
-                <li><strong>List Partitioning:</strong> By explicit category (e.g., <code>users_na</code>,
-                    <code>users_eu</code>).</li>
-                <li><strong>Hash Partitioning:</strong> By hashing an ID to evenly distribute load across partitions.
-                </li>
-            </ul>
-
-            <div class="depth"><strong>Partition Pruning:</strong> Ensure queries always include the partitioning key in
-                the <code>WHERE</code> clause. The planner automatically drops irrelevant partitions, scanning only
-                fractional data sets. Do <strong>NOT</strong> partition if the table is under 10s of millions of rows or
-                if queries span many partitions simultaneously without the partition key.</div>
-        </section>
-
-        <section id="materialized-views">
-            <h2>6. Materialized Views</h2>
-            <p>Regular views execute their underlying query every time they are called. Materialized Views physically
-                store the result set on disk like a real table.</p>
-
-            <div class="qa-container">
-                <h3>REFRESH MATERIALIZED VIEW CONCURRENTLY</h3>
-                <div class="answer">
-                    <p>Materialized views eventually go stale as underlying tables change. A regular
-                        <code>REFRESH</code> locks the view entirely. Adding <code>CONCURRENTLY</code> requires a unique
-                        index on the view and refreshes it in the background without blocking read traffic.</p>
-                </div>
-            </div>
-        </section>
-
-        <section id="jsonb">
-            <h2>7. JSONB Operations</h2>
-            <p>PostgreSQL acts as an incredibly powerful Document DB natively through its binary JSON type
-                (<code>JSONB</code>).</p>
-
-            <div class="qa-container">
-                <h3>Querying and Indexing JSONB</h3>
-                <div class="answer">
-                    <p>Operators: <code>->></code> (get text), <code>@></code> (contains operator), <code>?</code> (key
-                        exists operator).</p>
-                    <pre><code>-- Find users whose "skills" array contains 'React'
-SELECT * FROM users WHERE metadata @> '{"skills": ["React"]}';</code></pre>
-                    <div class="depth"><strong>Performance Note:</strong> B-Tree indexes do not work well on JSONB
-                        objects. You MUST wrap JSONB columns with a <strong>GIN (Generalized Inverted Index)</strong> to
-                        make containment operators (<code>@></code>) lightning fast over millions of rows.</div>
-                </div>
-            </div>
-        </section>
-
-        <section id="upserts">
-            <h2>8. Upsert Patterns</h2>
-            <p>Upsert (Insert or Update) safely guarantees concurrency resolution without throwing unique constraint
-                violations.</p>
-
-            <pre><code>INSERT INTO users (id, last_login)
-VALUES (1, NOW())
-ON CONFLICT (id) DO UPDATE 
-SET last_login = EXCLUDED.last_login
-RETURNING *;</code></pre>
-            <p><code>EXCLUDED</code> represents the hypothetical row that was proposed for insertion.</p>
-        </section>
-
-        <section id="execution-plans">
-            <h2>9. Execution Plans Deep Dive</h2>
-            <p>Running <code>EXPLAIN ANALYZE</code> executes the query and provides the actual runtime vs estimated
-                runtime.</p>
-
-            <div class="qa-container">
-                <h3>Join Strategies</h3>
-                <div class="answer">
-                    <ul>
-                        <li><strong>Nested Loop Join:</strong> Optimal for small datasets. For every row in table A,
-                            scan table B. Explodes quickly `O(N*M)`.</li>
-                        <li><strong>Hash Join:</strong> Optimal for large datasets without sorting. Builds a memory hash
-                            table of the smaller set, then scans the larger set probing the hash table `O(N+M)`.</li>
-                        <li><strong>Merge Join:</strong> Optimal for massive, already-sorted datasets. Sorts both tables
-                            based on join key, then steps through them sequentially.</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <section id="pg-stat-activity">
-            <h2>10. Analyzing Live Performance</h2>
-
-            <div class="qa-container">
-                <h3>pg_stat_activity & pg_locks</h3>
-                <div class="answer">
-                    <p><code>pg_stat_activity</code> provides a live feed of all running connections, the exact query
-                        they are currently executing, their state (<code>active</code> vs
-                        <code>idle in transaction</code>) and how long they have been executing.</p>
-                    <p>If production freezes, run:
-                        <code>SELECT pid, pg_blocking_pids(pid), query FROM pg_stat_activity WHERE wait_event_type = 'Lock';</code>
-                        to instantly reveal which exact PID is locking up the database queue.</p>
-                </div>
-            </div>
+SELECT name FROM products 
+ORDER BY embedding <=> '[0.12, -0.5, ...]' 
+LIMIT 5;</code></pre>
         </section>
     </div>
 
+    <script>
+        const container = document.getElementById('animBox');
+        for (let i = 0; i < 8; i++) {
+            const b = document.createElement('div');
+            b.className = 'page-block';
+            b.innerText = i;
+            container.appendChild(b);
+        }
+
+        async function runAnim(type) {
+            const blocks = document.querySelectorAll('.page-block');
+            const status = document.getElementById('animStatus');
+            blocks.forEach(b => b.className = 'page-block');
+
+            if (type === 'scan') {
+                status.innerText = "Seq Scan: Checking EVERY block O(N)...";
+                for (let b of blocks) {
+                    b.classList.add('active');
+                    await new Promise(r => setTimeout(r, 150));
+                    if (b.innerText == '5') b.classList.add('found');
+                }
+            } else {
+                status.innerText = "Index Seek: Traversing B-Tree O(log N)...";
+                const path = [0, 4, 6, 5]; // Simulate tree traversal
+                for (let idx of path) {
+                    blocks[idx].classList.add('active');
+                    await new Promise(r => setTimeout(r, 300));
+                }
+                blocks[5].classList.add('found');
+            }
+        }
+    </script>
     <script src="sidebar.js?v=2"></script>
 </body>
 

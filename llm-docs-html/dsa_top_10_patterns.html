@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Mastery: Top 10 Interview Patterns (Series 4)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --accent: #10b981;
+            --bg-dark: #1a1a1a;
+            --cell-bg: #222;
+            --code-bg: #252525;
+            --highlight: rgba(99, 102, 241, 0.3);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 12px;
+            margin-bottom: 40px;
+        }
+
+        .pattern-card {
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-left: 6px solid var(--primary);
+            padding: 30px;
+            border-radius: 10px;
+            margin: 40px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .complexity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .badge-time {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .badge-space {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        /* High-Fidelity Visualizer */
+        .visualizer-container {
+            background: var(--bg-dark);
+            color: #fff;
+            border-radius: 12px;
+            margin: 30px 0;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+        }
+
+        .viz-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 25px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .viz-body {
+            display: flex;
+            flex-wrap: wrap;
+            min-height: auto;
+        }
+
+        .viz-canvas-side {
+            flex: 1;
+            min-width: 350px;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid #333;
+            position: relative;
+        }
+
+        .viz-code-side {
+            flex: 0.8;
+            min-width: 300px;
+            background: var(--code-bg);
+            padding: 25px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+
+        /* Interval Visualizer */
+        .interval-row {
+            height: 120px;
+            width: 100%;
+            position: relative;
+            background: #222;
+            border-radius: 6px;
+            margin: 20px 0;
+            border: 1px solid #444;
+        }
+
+        .interval-bar {
+            position: absolute;
+            height: 12px;
+            background: #444;
+            border-radius: 6px;
+            transition: all 0.5s;
+            cursor: pointer;
+        }
+
+        .interval-bar.active {
+            background: var(--primary);
+            height: 16px;
+            box-shadow: 0 0 15px var(--primary);
+            z-index: 10;
+        }
+
+        .interval-bar.merged {
+            background: var(--accent);
+            height: 16px;
+            z-index: 5;
+        }
+
+        .interval-label {
+            position: absolute;
+            top: -20px;
+            font-size: 0.65rem;
+            color: #aaa;
+            width: 100%;
+            text-align: center;
+        }
+
+        /* Cyclic Sort Visualizer */
+        .array-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 30px 0;
+            justify-content: center;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            background: #333;
+            border: 2px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-radius: 6px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .cell.correct {
+            border-color: var(--accent);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .cell.swapping {
+            border-color: var(--primary);
+            transform: translateY(-10px);
+        }
+
+        .idx-label {
+            position: absolute;
+            bottom: -20px;
+            font-size: 0.65rem;
+            color: #777;
+        }
+
+        .btn-viz {
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .status-box {
+            margin-top: 15px;
+            padding: 12px;
+            background: #2d2d2d;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 0.85rem;
+            width: 100%;
+            border-left: 4px solid #777;
+        }
+
+        .code-line {
+            padding: 2px 10px;
+            border-radius: 4px;
+            color: #888;
+            white-space: pre;
+            border-left: 3px solid transparent;
+        }
+
+        .code-line.active {
+            background: var(--highlight);
+            color: #fff;
+            border-left-color: var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="hero-section">
+        <h1>Top 10 Interview Patterns Masterclass</h1>
+        <p>Strategic Algorithmic Blueprints for Senior Engineering Interviews</p>
+    </header>
+
+    <div class="content-wrapper">
+        <!-- Pattern 1: Merge Intervals -->
+        <section id="merge-intervals">
+            <div class="pattern-card">
+                <h2>1. Merge Intervals</h2>
+                <p><strong>Intuition:</strong> This pattern is used to deal with overlapping intervals. The key is to
+                    <strong>Sort</strong> the intervals based on their start time. Once sorted, we only need to compare
+                    the end of the current interval with the start of the next.
+                </p>
+                <div style="margin: 15px 0;">
+                    <span class="complexity-badge badge-time">Time Complexity: O(n log n)</span>
+                    <span class="complexity-badge badge-space">Space Complexity: O(n)</span>
+                </div>
+
+                <div class="visualizer-container">
+                    <div class="viz-header">Algorithm Visualizer: Interval Merging</div>
+                    <div class="viz-body">
+                        <div class="viz-canvas-side">
+                            <div class="interval-row" id="iv-canvas"></div>
+                            <div style="display: flex; gap:10px;">
+                                <button class="btn-viz" onclick="ivReset()">Reset</button>
+                                <button class="btn-viz" onclick="ivNextStep()">Next Step &rarr;</button>
+                            </div>
+                            <div class="status-box" id="iv-status">Click Next to begin merging overlapping intervals.
+                            </div>
+                        </div>
+                        <div class="viz-code-side">
+                            <div class="code-line" id="iv-l1">intervals.sort(key=lambda x: x[0])</div>
+                            <div class="code-line" id="iv-l2">merged = [intervals[0]]</div>
+                            <div class="code-line" id="iv-l3">for current in intervals[1:]:</div>
+                            <div class="code-line" id="iv-l4"> last = merged[-1]</div>
+                            <div class="code-line" id="iv-l5"> if current[0] <= last[1]:</div>
+                                    <div class="code-line" id="iv-l6"> last[1] = max(last[1], current[1])</div>
+                                    <div class="code-line" id="iv-l7"> else:</div>
+                                    <div class="code-line" id="iv-l8"> merged.append(current)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </section>
+
+        <!-- Pattern 2: Cyclic Sort -->
+        <section id="cyclic-sort">
+            <div class="pattern-card">
+                <h2>2. Cyclic Sort</h2>
+                <p><strong>Intuition:</strong> Used when the input numbers are in a range from <code>1 to n</code>.
+                    Instead of a full sort, we iterate and swap each number to its correct index (i.e., <code>num</code>
+                    at <code>index num-1</code>).</p>
+                <div style="margin: 15px 0;">
+                    <span class="complexity-badge badge-time">Time Complexity: O(n)</span>
+                    <span class="complexity-badge badge-space">Space Complexity: O(1)</span>
+                </div>
+
+                <div class="visualizer-container">
+                    <div class="viz-header">Algorithm Visualizer: Cyclic Index Positioning</div>
+                    <div class="viz-body">
+                        <div class="viz-canvas-side">
+                            <div class="array-row" id="cs-array"></div>
+                            <div style="display: flex; gap:10px;">
+                                <button class="btn-viz" onclick="csReset()">Reset</button>
+                                <button class="btn-viz" onclick="csNextStep()">Next Step &rarr;</button>
+                            </div>
+                            <div class="status-box" id="cs-status">Sort numbers in-place in O(n) by placing them at
+                                their correct indices.</div>
+                        </div>
+                        <div class="viz-code-side">
+                            <div class="code-line" id="cs-l1">while i < len(nums):</div>
+                                    <div class="code-line" id="cs-l2"> j = nums[i] - 1</div>
+                                    <div class="code-line" id="cs-l3"> if nums[i] != nums[j]:</div>
+                                    <div class="code-line" id="cs-l4"> nums[i], nums[j] = nums[j], nums[i]</div>
+                                    <div class="code-line" id="cs-l5"> else:</div>
+                                    <div class="code-line" id="cs-l6"> i += 1</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </section>
+
+        <!-- more patterns can be added here -->
+        <!-- Pattern 3: Two Heaps (Median of a Stream) -->
+        <section id="two-heaps">
+            <div class="pattern-card">
+                <h2>3. Two Heaps (Median of a Stream)</h2>
+                <p><strong>Intuition:</strong> Finding the median of a growing stream of numbers is tricky. We use two
+                    heaps: a <strong>Max-Heap</strong> for the smaller half and a <strong>Min-Heap</strong> for the
+                    larger half. The median is either the top of the larger heap or the average of both tops.</p>
+                <div style="margin: 15px 0;">
+                    <span class="complexity-badge badge-time">Time Complexity: O(log n) per add</span>
+                    <span class="complexity-badge badge-space">Space Complexity: O(n)</span>
+                </div>
+
+                <div class="visualizer-container">
+                    <div class="viz-header">Algorithm Visualizer: Dual-Heap Balancing</div>
+                    <div class="viz-body">
+                        <div class="viz-canvas-side">
+                            <div style="display: flex; gap:30px; width:100%; justify-content:center;">
+                                <div id="max-heap-viz" style="text-align:center;">
+                                    <div style="font-size:0.7rem; color:#aaa; margin-bottom:10px;">MAX-HEAP (SMALL HALF)
+                                    </div>
+                                    <div class="array-row" id="max-heap-row"></div>
+                                </div>
+                                <div id="min-heap-viz" style="text-align:center;">
+                                    <div style="font-size:0.7rem; color:#aaa; margin-bottom:10px;">MIN-HEAP (LARGE HALF)
+                                    </div>
+                                    <div class="array-row" id="min-heap-row"></div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap:10px; margin-top:20px;">
+                                <input type="number" id="heap-num" class="btn-viz" style="width:60px;" value="10">
+                                <button class="btn-viz" onclick="heapAdd()">Add to Stream</button>
+                                <button class="btn-viz" onclick="heapReset()">Reset</button>
+                            </div>
+                            <div class="status-box" id="heap-status">Add numbers to see how the heaps balance to
+                                maintain the median.</div>
+                        </div>
+                        <div class="viz-code-side">
+                            <div class="code-line" id="h-l1">heappush(max_heap, -num)</div>
+                            <div class="code-line" id="h-l2">heappush(min_heap, -heappop(max_heap))</div>
+                            <div class="code-line" id="h-l3">if len(min_heap) > len(max_heap):</div>
+                            <div class="code-line" id="h-l4"> heappush(max_heap, -heappop(min_heap))</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pattern 4: Subsets (Backtracking / BFS) -->
+        <section id="subsets">
+            <div class="pattern-card">
+                <h2>4. Subsets (Backtracking / BFS)</h2>
+                <p><strong>Intuition:</strong> To generate all subsets, we start with an empty set. For each number, we
+                    clone all existing subsets and add the new number to them. This creates a branching factor of 2 at
+                    each step.</p>
+                <div style="margin: 15px 0;">
+                    <span class="complexity-badge badge-time">Time Complexity: O(2^n)</span>
+                    <span class="complexity-badge badge-space">Space Complexity: O(2^n)</span>
+                </div>
+
+                <div class="visualizer-container">
+                    <div class="viz-header">Algorithm Visualizer: Power Set Generation</div>
+                    <div class="viz-body">
+                        <div class="viz-canvas-side">
+                            <div class="array-row" id="subsets-row" style="flex-wrap:wrap; max-width:400px; gap:8px;">
+                            </div>
+                            <div style="display: flex; gap:10px; margin-top:20px;">
+                                <button class="btn-viz" onclick="subNext()">Process Next Number</button>
+                                <button class="btn-viz" onclick="subReset()">Reset</button>
+                            </div>
+                            <div class="status-box" id="sub-status">Watch the power set grow exponentially as we process
+                                [1, 2, 3].</div>
+                        </div>
+                        <div class="viz-code-side">
+                            <div class="code-line" id="s-l1">subsets = [[]]</div>
+                            <div class="code-line" id="s-l2">for num in nums:</div>
+                            <div class="code-line" id="s-l3"> for i in range(len(subsets)):</div>
+                            <div class="code-line" id="s-l4"> sub = list(subsets[i])</div>
+                            <div class="code-line" id="s-l5"> sub.append(num)</div>
+                            <div class="code-line" id="s-l6"> subsets.append(sub)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // --- INTERVALS ---
+        const ivData = [[1, 3], [2, 6], [8, 10], [9, 12]];
+        let ivIdx = 1;
+        let ivMerged = [];
+
+        function ivReset() {
+            ivIdx = 1; ivMerged = [[1, 3]];
+            ivDraw();
+            highlightCode('iv', null);
+            document.getElementById('iv-status').innerText = "Sorted intervals. First interval added to 'merged'.";
+        }
+
+        function ivDraw() {
+            const canvas = document.getElementById('iv-canvas');
+            canvas.innerHTML = '';
+            ivData.forEach((iv, i) => {
+                const bar = document.createElement('div');
+                bar.className = 'interval-bar';
+                bar.style.left = `${iv[0] * 6}%`;
+                bar.style.width = `${(iv[1] - iv[0]) * 6}%`;
+                bar.style.top = `${20 + i * 20}px`;
+                if (i === ivIdx) bar.classList.add('active');
+                bar.innerHTML = `<div class="interval-label">[${iv[0]}, ${iv[1]}]</div>`;
+                canvas.appendChild(bar);
+            });
+            ivMerged.forEach((iv, i) => {
+                const bar = document.createElement('div');
+                bar.className = 'interval-bar merged';
+                bar.style.left = `${iv[0] * 6}%`;
+                bar.style.width = `${(iv[1] - iv[0]) * 6}%`;
+                bar.style.top = `100px`;
+                bar.innerHTML = `<div class="interval-label" style="top:20px;">Merged: [${iv[0]}, ${iv[1]}]</div>`;
+                canvas.appendChild(bar);
+            });
+        }
+
+        function ivNextStep() {
+            if (ivIdx >= ivData.length) return;
+            highlightCode('iv', 3);
+            const curr = ivData[ivIdx];
+            const last = ivMerged[ivMerged.length - 1];
+
+            setTimeout(() => {
+                highlightCode('iv', 5);
+                if (curr[0] <= last[1]) {
+                    highlightCode('iv', 6);
+                    last[1] = Math.max(last[1], curr[1]);
+                    document.getElementById('iv-status').innerText = `Overlap found! Extending merged interval to [${last[0]}, ${last[1]}]`;
+                } else {
+                    highlightCode('iv', 8);
+                    ivMerged.push([...curr]);
+                    document.getElementById('iv-status').innerText = `No overlap. Adding [${curr[0]}, ${curr[1]}] to results.`;
+                }
+                ivIdx++;
+                ivDraw();
+            }, 500);
+        }
+
+        // --- CYCLIC SORT ---
+        let csNums = [3, 1, 5, 4, 2];
+        let csI = 0;
+
+        function csReset() {
+            csNums = [3, 1, 5, 4, 2]; csI = 0;
+            csDraw();
+            highlightCode('cs', null);
+            document.getElementById('cs-status').innerText = "Array initialized. Swapping elements to their correct positions.";
+        }
+
+        function csDraw() {
+            const row = document.getElementById('cs-array');
+            row.innerHTML = '';
+            csNums.forEach((n, i) => {
+                const el = document.createElement('div');
+                el.className = 'cell';
+                if (n === i + 1) el.classList.add('correct');
+                if (i === csI) el.classList.add('swapping');
+                el.innerText = n;
+                el.innerHTML += `<div class="idx-label">${i}</div>`;
+                row.appendChild(el);
+            });
+        }
+
+        function csNextStep() {
+            if (csI >= csNums.length) return;
+            const j = csNums[csI] - 1;
+            highlightCode('cs', 1);
+
+            setTimeout(() => {
+                highlightCode('cs', 3);
+                if (csNums[csI] !== csNums[j]) {
+                    highlightCode('cs', 4);
+                    [csNums[csI], csNums[j]] = [csNums[j], csNums[csI]];
+                    document.getElementById('cs-status').innerText = `Swapping index ${csI} and ${j} because ${csNums[j]} belongs at index ${j}.`;
+                } else {
+                    highlightCode('cs', 6);
+                    document.getElementById('cs-status').innerText = `Number ${csNums[csI]} is in its correct place. Moving pointer.`;
+                    csI++;
+                }
+                csDraw();
+            }, 500);
+        }
+
+        // --- TWO HEAPS ---
+        let maxHeap = []; // stores negative values for max-heap behavior
+        let minHeap = [];
+
+        function heapReset() {
+            maxHeap = []; minHeap = [];
+            heapDraw();
+            document.getElementById('heap-status').innerText = "Heaps cleared.";
+        }
+
+        function heapAdd() {
+            const num = parseInt(document.getElementById('heap-num').value);
+            if (isNaN(num)) return;
+
+            // Simulating the code logic
+            maxHeap.push(num); maxHeap.sort((a, b) => b - a);
+            const val = maxHeap.shift();
+            minHeap.push(val); minHeap.sort((a, b) => a - b);
+
+            if (minHeap.length > maxHeap.length) {
+                const v = minHeap.shift();
+                maxHeap.push(v); maxHeap.sort((a, b) => b - a);
+            }
+
+            const median = (maxHeap.length > minHeap.length) ? maxHeap[0] : (maxHeap[0] + minHeap[0]) / 2;
+            document.getElementById('heap-status').innerHTML = `Added ${num}. <span style="color:var(--accent); font-weight:bold;">Median: ${median}</span>`;
+            heapDraw();
+        }
+
+        function heapDraw() {
+            const maxRow = document.getElementById('max-heap-row');
+            const minRow = document.getElementById('min-heap-row');
+            maxRow.innerHTML = ''; minRow.innerHTML = '';
+            maxHeap.forEach(v => {
+                const el = document.createElement('div'); el.className = 'cell'; el.innerText = v; maxRow.appendChild(el);
+            });
+            minHeap.forEach(v => {
+                const el = document.createElement('div'); el.className = 'cell'; el.innerText = v; minRow.appendChild(el);
+            });
+        }
+
+        // --- SUBSETS ---
+        let subsets = [[]];
+        let subNums = [1, 2, 3];
+        let subIdx = 0;
+
+        function subReset() {
+            subsets = [[]]; subIdx = 0;
+            subDraw();
+            document.getElementById('sub-status').innerText = "Power set reset to empty set [[]].";
+        }
+
+        function subNext() {
+            if (subIdx >= subNums.length) return;
+            const num = subNums[subIdx];
+            const currentCount = subsets.length;
+            for (let i = 0; i < currentCount; i++) {
+                subsets.push([...subsets[i], num]);
+            }
+            subIdx++;
+            subDraw();
+            document.getElementById('sub-status').innerText = `Added ${num} to all existing subsets. Count: ${subsets.length}`;
+        }
+
+        function subDraw() {
+            const row = document.getElementById('subsets-row');
+            row.innerHTML = '';
+            subsets.forEach(s => {
+                const el = document.createElement('div');
+                el.className = 'cell';
+                el.style.width = 'auto'; el.style.padding = '0 8px'; el.style.fontSize = '0.6rem';
+                el.innerText = `[${s.join(',')}]`;
+                row.appendChild(el);
+            });
+        }
+
+        // --- REUSE OLD SCRIPTS ---
+        // ... (Include previous iv/cs scripts here)
+        function highlightCode(prefix, line) {
+            document.querySelectorAll(`[id^="${prefix}-l"]`).forEach(l => l.classList.remove('active'));
+            if (line) document.getElementById(`${prefix}-l${line}`).classList.add('active');
+        }
+
+        ivReset(); csReset(); heapReset(); subReset();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Mastery: Hash Maps (Series 3 - High Fidelity)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        :root {
+            --primary: #d97706;
+            --accent: #60a5fa;
+            --bg-dark: #1a1a1a;
+            --cell-bg: #222;
+            --code-bg: #252525;
+            --highlight: rgba(217, 119, 6, 0.3);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        /* Explanation Blocks */
+        .explanation-card {
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-left: 5px solid var(--primary);
+            padding: 25px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+
+        .complexity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .badge-time {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .badge-space {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        /* High-Fidelity Visualizer */
+        .visualizer-container {
+            background: var(--bg-dark);
+            color: #fff;
+            border-radius: 12px;
+            margin: 40px 0;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .viz-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 25px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .viz-body {
+            display: flex;
+            flex-wrap: wrap;
+            min-height: auto;
+        }
+
+        .viz-canvas-side {
+            flex: 1;
+            min-width: 350px;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid #333;
+        }
+
+        .viz-code-side {
+            flex: 0.8;
+            min-width: 300px;
+            background: var(--code-bg);
+            padding: 25px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        /* Dynamic Inputs */
+        .viz-input-group {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .viz-input {
+            background: #333;
+            border: 1px solid #555;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            width: 150px;
+        }
+
+        /* Map Visualizer */
+        .map-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+            margin: 30px 0;
+            justify-content: center;
+        }
+
+        .array-view,
+        .map-view {
+            flex: 1;
+            min-width: 250px;
+            border: 1px solid #444;
+            padding: 15px;
+            border-radius: 8px;
+            background: #222;
+            min-height: 200px;
+        }
+
+        .map-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 10px;
+            margin-bottom: 5px;
+            background: #333;
+            border-radius: 4px;
+            border-left: 3px solid var(--primary);
+            font-family: monospace;
+        }
+
+        .map-key {
+            color: var(--accent);
+        }
+
+        .map-val {
+            color: #aaa;
+        }
+
+        .array-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            background: #333;
+            border: 1px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .cell.scanning {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .cell.found {
+            background: var(--primary);
+            color: white;
+        }
+
+        .code-line {
+            padding: 3px 10px;
+            border-radius: 4px;
+            color: #888;
+            white-space: pre;
+            border-left: 3px solid transparent;
+        }
+
+        .code-line.active {
+            background: var(--highlight);
+            color: #fff;
+            border-left-color: var(--primary);
+        }
+
+        .btn-viz {
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-viz:hover {
+            background: #444;
+        }
+
+        .status-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2d2d2d;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="hero-section">
+        <h1>Hash Maps & Sets Masterclass</h1>
+        <p>The Power of O(1) Search Patterns</p>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="two-sum">
+            <h2>1. Two Sum (The Gateway Problem)</h2>
+
+            <div class="explanation-card">
+                <h3>Intuition</h3>
+                <p>The "Brute Force" approach involves two nested loops to check every possible pair, which is
+                    <strong>O(n²)</strong>. To improve this, we must trade space for time.
+                </p>
+                <p><strong>Goal:</strong> Given <code>nums</code> and a <code>target</code>, find <code>i</code> and
+                    <code>j</code> such that <code>nums[i] + nums[j] == target</code>.
+                </p>
+                <p><strong>Hash Map Strategy:</strong> As we iterate through the array, we ask: "Have we seen a number X
+                    such that <code>X + current_num == target</code>?"</p>
+                <ul>
+                    <li>Calculate the <code>complement = target - current_num</code>.</li>
+                    <li>Lookup <code>complement</code> in our Map. If it exists, we found our pair!</li>
+                    <li>If not, add <code>current_num</code> to our Map (with its index as the value) and move on.</li>
+                </ul>
+
+                <div style="margin-top: 20px;">
+                    <span class="complexity-badge badge-time">Time Complexity: O(n)</span>
+                    <span class="complexity-badge badge-space">Space Complexity: O(n)</span>
+                </div>
+            </div>
+
+            <div class="visualizer-container" id="ts-viz">
+                <div class="viz-header">
+                    <span>Algorithm Visualizer: Two Sum Lookup</span>
+                    <span id="ts-step-text">Step: 0</span>
+                </div>
+                <div class="viz-body">
+                    <div class="viz-canvas-side">
+                        <div class="viz-input-group">
+                            <label style="color:#aaa;">Array:</label>
+                            <input type="text" id="ts-nums" class="viz-input" value="2, 7, 11, 15" style="width:150px;">
+                            <label style="color:#aaa;">Target:</label>
+                            <input type="number" id="ts-target" class="viz-input" value="9" style="width:60px;">
+                            <button class="btn-viz" onclick="tsReset()">Reset</button>
+                        </div>
+
+                        <div class="map-section">
+                            <div class="array-view">
+                                <div style="color:#888; font-size:0.75rem; margin-bottom:10px;">SCANNING ARRAY</div>
+                                <div class="array-row" id="ts-array-row"></div>
+                            </div>
+                            <div class="map-view">
+                                <div style="color:#888; font-size:0.75rem; margin-bottom:10px;">SEEN MAP ({Value:
+                                    Index})</div>
+                                <div id="ts-map-row"></div>
+                            </div>
+                        </div>
+
+                        <div class="viz-controls">
+                            <button class="btn-viz" onclick="tsNextStep()">Step Forward</button>
+                        </div>
+
+                        <div class="status-box" id="ts-status">
+                            Click Step to start the O(n) lookup.
+                        </div>
+                    </div>
+                    <div class="viz-code-side">
+                        <div style="margin-bottom: 15px; color: #666; font-size: 0.7rem;">HASH MAP LOOKUP</div>
+                        <div class="code-line" id="ts-l1">seen = {}</div>
+                        <div class="code-line" id="ts-l2">for i, num in enumerate(nums):</div>
+                        <div class="code-line" id="ts-l3"> complement = target - num</div>
+                        <div class="code-line" id="ts-l4"> if complement in seen:</div>
+                        <div class="code-line" id="ts-l5"> return [seen[complement], i]</div>
+                        <div class="code-line" id="ts-l6"> seen[num] = i</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        let tsNums = [];
+        let tsTarget = 9;
+        let tsMap = {};
+        let tsI = 0;
+        let tsStep = 0;
+        let tsState = 'INIT';
+
+        function tsReset() {
+            tsNums = document.getElementById('ts-nums').value.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
+            tsTarget = parseInt(document.getElementById('ts-target').value);
+            tsMap = {};
+            tsI = 0;
+            tsStep = 0;
+            tsState = 'INIT';
+            updateTSUI();
+            highlightCode('ts', null);
+            document.getElementById('ts-status').innerText = "Ready. Target is " + tsTarget + ".";
+        }
+
+        function highlightCode(prefix, line) {
+            document.querySelectorAll(`[id^="${prefix}-l"]`).forEach(l => l.classList.remove('active'));
+            if (line) document.getElementById(`${prefix}-l${line}`).classList.add('active');
+        }
+
+        function updateTSUI() {
+            const arrRow = document.getElementById('ts-array-row');
+            arrRow.innerHTML = '';
+            tsNums.forEach((n, i) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell' + (i === tsI ? ' scanning' : '');
+                cell.innerText = n;
+                arrRow.appendChild(cell);
+            });
+
+            const mapRow = document.getElementById('ts-map-row');
+            mapRow.innerHTML = '';
+            for (let key in tsMap) {
+                mapRow.innerHTML += `<div class="map-entry"><span class="map-key">${key}:</span> <span class="map-val">${tsMap[key]}</span></div>`;
+            }
+            document.getElementById('ts-step-text').innerText = `Step: ${tsStep}`;
+        }
+
+        function tsNextStep() {
+            if (tsI >= tsNums.length) {
+                document.getElementById('ts-status').innerText = "Traversal Complete. No pair found.";
+                return;
+            }
+
+            tsStep++;
+            const num = tsNums[tsI];
+            const complement = tsTarget - num;
+
+            switch (tsState) {
+                case 'INIT':
+                    highlightCode('ts', 1);
+                    tsState = 'COMPARE';
+                    break;
+                case 'COMPARE':
+                    highlightCode('ts', 3);
+                    document.getElementById('ts-status').innerText = `Current num: ${num}. Looking for complement: ${tsTarget} - ${num} = ${complement}.`;
+                    tsState = 'LOOKUP';
+                    break;
+                case 'LOOKUP':
+                    highlightCode('ts', 4);
+                    if (complement in tsMap) {
+                        document.getElementById('ts-status').innerHTML = `<span style="color:#10b981; font-weight:bold;">FOUND PAIR!</span> Complement ${complement} exists in Map at index ${tsMap[complement]}. Current index is ${tsI}.`;
+                        highlightCode('ts', 5);
+                        tsState = 'FOUND';
+                    } else {
+                        document.getElementById('ts-status').innerText = `${complement} not in Map. Adding ${num} to Map.`;
+                        tsState = 'ADD';
+                    }
+                    break;
+                case 'ADD':
+                    highlightCode('ts', 6);
+                    tsMap[num] = tsI;
+                    tsState = 'NEXT';
+                    break;
+                case 'NEXT':
+                    highlightCode('ts', 2);
+                    tsI++;
+                    tsState = 'COMPARE';
+                    break;
+            }
+            updateTSUI();
+        }
+
+        tsReset();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

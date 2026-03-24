@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Mastery: Backtracking (Animated)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        .mastery-container {
+            padding: 20px;
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .theory-highlight {
+            border-left: 5px solid #10b981;
+            background: #f0fdf4;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        /* Backtracking Animation Styles */
+        .bt-animation-container {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+
+        .tree-visual {
+            min-height: 300px;
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .bt-node {
+            padding: 5px 10px;
+            border: 1px solid #10b981;
+            background: #222;
+            position: absolute;
+            transition: all 0.4s ease;
+            font-size: 0.9rem;
+            border-radius: 4px;
+        }
+
+        .bt-node.active {
+            background: #10b981;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .bt-node.backtracking {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        pre {
+            background: #2d2d2d !important;
+            color: #ccc !important;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .code-tabs {
+            display: flex;
+            gap: 1px;
+            margin-bottom: -1px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #e1e4e8;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            border: 1px solid #d1d5da;
+            font-weight: bold;
+        }
+
+        .tab.active {
+            background: #2d2d2d;
+            color: white;
+            border-bottom: none;
+        }
+
+        .code-content {
+            display: none;
+        }
+
+        .code-content.active {
+            display: block;
+        }
+
+        svg line {
+            stroke: #333;
+            stroke-width: 1.5;
+            marker-end: url(#arrowhead);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Backtracking: The Decision Tree Explorer</h1>
+        <div class="subtitle">State Space Trees, Recursive Pruning, and the "Choose-Act-Undo" Loop</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="theory">
+            <h2>1. Technical Deep-Dive: DFS with Memory</h2>
+            <p>Backtracking is a systematic way to iterate through all configurations of a search space. It's built on a
+                "Brute Force" search but optimized with <strong>Pruning</strong>.</p>
+
+            <div class="theory-highlight">
+                <h3>The 3 Pillars: Choice, Constraint, Goal</h3>
+                <p>Every backtracking algorithm follows this blueprint:</p>
+                <ol>
+                    <li><strong>Choice:</strong> What decision do I make next? (e.g., Which number to put in a Sudoku
+                        cell?)</li>
+                    <li><strong>Constraint:</strong> Is the choice valid? (e.g., Is the number already in that row?)
+                    </li>
+                    <li><strong>Goal:</strong> Have I reached a solution? (e.g., Is the board full?)</li>
+                </ol>
+                <p><strong>The "Undo" Step:</strong> Because we pass state by reference (like a list in Python or Object
+                    in JS), you MUST remove your choice before returning from the recursion so the next branch starts
+                    with a clean slate.</p>
+            </div>
+        </section>
+
+        <section id="bt-animation">
+            <h2>2. Visualizing Decision Tree (Subsets of [1, 2])</h2>
+            <p>Watch how the algorithm explores the decision to "Include" or "Exclude" each number. Red indicates
+                <strong>Backtracking</strong> (returning upstairs).</p>
+
+            <div class="bt-animation-container" id="btAnim">
+                <div class="tree-visual" id="treeVisual">
+                    <svg style="position: absolute; top:0; left:0; width:100%; height:100%;" id="treeEdges">
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5"
+                                orientation="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+
+                <div class="explanation-text" id="statusText" style="margin-top:20px;">Click Next to begin exploring the
+                    state space.</div>
+
+                <div class="controls">
+                    <button class="btn-anim" id="btnNext">Explore Next State</button>
+                    <button class="btn-anim" id="btnReset">Reset Tree</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="patterns-code">
+            <h2>3. Master Patterns & Dual-Language Code</h2>
+
+            <div class="mastery-container">
+                <h3>A. Subsets (Power Set)</h3>
+                <p>Finding all possible combinations of elements from a set.</p>
+
+                <div class="code-tabs">
+                    <div class="tab active" onclick="showCode('sub', 'js')">JavaScript</div>
+                    <div class="tab" onclick="showCode('sub', 'py')">Python</div>
+                </div>
+
+                <div id="sub-js" class="code-content active">
+                    <pre><code>function subsets(nums) {
+    let result = [];
+    
+    function backtrack(start, currentPath) {
+        // Goal: Every path is a valid subset
+        result.push([...currentPath]);
+        
+        for (let i = start; i < nums.length; i++) {
+            // 1. Choose
+            currentPath.push(nums[i]);
+            // 2. Recurse
+            backtrack(i + 1, currentPath);
+            // 3. Undo (Backtrack)
+            currentPath.pop();
+        }
+    }
+    
+    backtrack(0, []);
+    return result;
+}</code></pre>
+                </div>
+
+                <div id="sub-py" class="code-content">
+                    <pre><code>def subsets(nums: List[int]) -> List[List[int]]:
+    res = []
+    
+    def backtrack(start, path):
+        # Goal: Capture the state at every node
+        res.append(list(path))
+        
+        for i in range(start, len(nums)):
+            # 1. Choose element
+            path.append(nums[i])
+            # 2. Recurse to next index
+            backtrack(i + 1, path)
+            # 3. Undo (POP) to explore others
+            path.pop()
+            
+    backtrack(0, [])
+    return res</code></pre>
+                </div>
+            </div>
+
+            <div class="mastery-container">
+                <h3>B. N-Queens (Constraint Logic)</h3>
+                <p>The classic visualization of pruning. If a queen is placed illegally, we don't even explore that
+                    entire subtree.</p>
+
+                <div class="code-tabs">
+                    <div class="tab active" onclick="showCode('queen', 'js')">JavaScript</div>
+                    <div class="tab" onclick="showCode('queen', 'py')">Python</div>
+                </div>
+
+                <div id="queen-js" class="code-content active">
+                    <pre><code>function solveNQueens(n) {
+    let board = Array.from({length: n}, () => '.'.repeat(n).split(''));
+    let res = [];
+
+    function backtrack(row) {
+        if (row === n) {
+            res.push(board.map(r => r.join('')));
+            return;
+        }
+        for (let col = 0; col < n; col++) {
+            if (isValid(row, col)) {
+                board[row][col] = 'Q';
+                backtrack(row + 1);
+                board[row][col] = '.'; // Backtrack
+            }
+        }
+    }
+    // isValid implementation omitted for brevity
+    backtrack(0);
+    return res;
+}</code></pre>
+                </div>
+
+                <div id="queen-py" class="code-content">
+                    <pre><code>def solveNQueens(n):
+    res = []
+    cols = set()
+    posDiag = set() # (r + c)
+    negDiag = set() # (r - c)
+    board = [["."] * n for _ in range(n)]
+
+    def backtrack(r):
+        if r == n:
+            res.append(["".join(row) for row in board])
+            return
+
+        for c in range(n):
+            if c in cols or (r+c) in posDiag or (r-c) in negDiag:
+                continue # Pruning: Skip invalid placements
+
+            cols.add(c); posDiag.add(r+c); negDiag.add(r-c)
+            board[r][c] = "Q"
+            backtrack(r + 1)
+            # Backtrack state
+            cols.remove(c); posDiag.remove(r+c); negDiag.remove(r-c)
+            board[r][c] = "."
+
+    backtrack(0)
+    return res</code></pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function showCode(section, lang) {
+            document.querySelectorAll(`#${section}-js, #${section}-py`).forEach(el => el.classList.remove('active'));
+            document.querySelector(`#${section}-${lang}`).classList.add('active');
+            event.target.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // --- BACKTRACKING ANIMATION (Subsets of [1, 2]) ---
+        const treeVisual = document.getElementById('treeVisual');
+        const statusText = document.getElementById('statusText');
+
+        let steps = [
+            { id: 0, text: "[]", x: 50, y: 10, msg: "Start with empty set." },
+            { id: 1, text: "[1]", x: 30, y: 40, pId: 0, msg: "Choose 1. Recurse down." },
+            { id: 2, text: "[1, 2]", x: 20, y: 70, pId: 1, msg: "Choose 2. Recurse down. Path reached end." },
+            { id: 3, text: "[1]", x: 30, y: 40, backtrack: true, msg: "Undo 2. Backtrack to [1]." },
+            { id: 4, text: "[]", x: 50, y: 10, backtrack: true, msg: "Undo 1. Backtrack to []." },
+            { id: 5, text: "[2]", x: 70, y: 40, pId: 0, msg: "Choose 2. Excluded 1 in this branch." },
+            { id: 6, text: "[]", x: 50, y: 10, backtrack: true, msg: "Undo 2. Entire exploration done!" }
+        ];
+
+        let currStepIdx = 0;
+
+        function initTree() {
+            treeVisual.innerHTML = `<svg style="position: absolute; top:0; left:0; width:100%; height:100%;" id="treeEdges"></svg>`;
+        }
+
+        document.getElementById('btnNext').addEventListener('click', () => {
+            if (currStepIdx >= steps.length) {
+                statusText.innerText = "Search Complete!";
+                return;
+            }
+
+            const step = steps[currStepIdx];
+            document.querySelectorAll('.bt-node').forEach(n => n.classList.remove('active', 'backtracking'));
+
+            if (step.backtracking) {
+                const node = document.getElementById(`bt-node-${step.text}`);
+                if (node) node.classList.add('backtracking');
+            } else {
+                const el = document.createElement('div');
+                el.className = 'bt-node active';
+                el.id = `bt-node-${step.text}-${currStepIdx}`; // unique ID to allow repeat labels
+                el.innerText = step.text;
+                el.style.left = `${step.x}%`;
+                el.style.top = `${step.y}%`;
+                treeVisual.appendChild(el);
+
+                if (step.hasOwnProperty('pId')) {
+                    const parent = steps[step.pId];
+                    // Logic to find actual DOM element of parent would be needed for complex tree, 
+                    // simple visualization for now.
+                }
+            }
+
+            statusText.innerText = step.msg;
+            currStepIdx++;
+        });
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            currStepIdx = 0;
+            initTree();
+            statusText.innerText = "Tree reset. Ready to explore.";
+        });
+
+        initTree();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

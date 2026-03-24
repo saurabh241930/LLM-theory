@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Mastery: Heaps & Priority Queues (Animated)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        .mastery-container {
+            padding: 20px;
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .theory-highlight {
+            border-left: 5px solid #f97316;
+            background: #fff7ed;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        /* Heap Animation Styles */
+        .heap-animation-container {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+
+        .heap-visual {
+            min-height: 250px;
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .heap-node {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #f97316;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #222;
+            position: absolute;
+            transition: all 0.5s ease;
+            z-index: 2;
+        }
+
+        .heap-node.swapping {
+            background: #f97316;
+            color: white;
+            transform: scale(1.2);
+        }
+
+        .array-repr {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-top: 20px;
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .array-item {
+            padding: 5px 10px;
+            background: #444;
+            border: 1px solid #f97316;
+            border-radius: 3px;
+        }
+
+        pre {
+            background: #2d2d2d !important;
+            color: #ccc !important;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .code-tabs {
+            display: flex;
+            gap: 1px;
+            margin-bottom: -1px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #e1e4e8;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            border: 1px solid #d1d5da;
+            font-weight: bold;
+        }
+
+        .tab.active {
+            background: #2d2d2d;
+            color: white;
+            border-bottom: none;
+        }
+
+        .code-content {
+            display: none;
+        }
+
+        .code-content.active {
+            display: block;
+        }
+
+        svg line {
+            stroke: #444;
+            stroke-width: 2;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Heaps & Priority Queues: The Extrema Engine</h1>
+        <div class="subtitle">Complete Binary Trees, Sift-Up/Down, and O(log N) Priority</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="theory">
+            <h2>1. Technical Deep-Dive: Complete Binary Trees</h2>
+            <p>A <strong>Binary Heap</strong> is a "Complete Binary Tree" stored efficiently in an
+                <strong>Array</strong>. In a <strong>Max-Heap</strong>, the parent is always greater than its children.
+            </p>
+
+            <div class="theory-highlight">
+                <h3>The Indexing Magic (No Pointers!)</h3>
+                <p>Because the tree is "Complete" (filled level-by-level), we don't need `next` pointers. For any
+                    element at index <code>i</code>:</p>
+                <ul>
+                    <li><strong>Parent:</strong> <code>Math.floor((i - 1) / 2)</code></li>
+                    <li><strong>Left Child:</strong> <code>2*i + 1</code></li>
+                    <li><strong>Right Child:</strong> <code>2*i + 2</code></li>
+                </ul>
+                <p><strong>Complexity:</strong> Get Min/Max is <strong>O(1)</strong>. Insertion and Extraction are
+                    <strong>O(log N)</strong>. Building a heap from a random array is <strong>O(N)</strong> (using
+                    Bottom-up heapify).</p>
+            </div>
+        </section>
+
+        <section id="heap-animation">
+            <h2>2. Visualizing Max-Heap Bubble-Up</h2>
+            <p>When you insert a new value, it goes to the end of the array and "Bubbles Up" until its parent is larger.
+            </p>
+
+            <div class="heap-animation-container" id="heapAnim">
+                <div class="heap-visual" id="heapVisual">
+                    <svg style="position: absolute; top:0; left:0; width:100%; height:100%;" id="heapEdges"></svg>
+                </div>
+
+                <div class="array-repr" id="arrayRepr">
+                    <span style="color:#888">Array: </span>
+                </div>
+
+                <div class="explanation-text" id="statusText" style="margin-top:20px;">Click Insert to add a value.
+                </div>
+
+                <div class="controls">
+                    <button class="btn-anim" id="btnInsert">Insert Random Value</button>
+                    <button class="btn-anim" id="btnReset">Reset Heap</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="patterns-code">
+            <h2>3. Master Patterns & Dual-Language Code</h2>
+
+            <div class="mastery-container">
+                <h3>A. Top K Elements (K-Way Selection)</h3>
+                <p>Finding the K largest or smallest elements without sorting the whole O(N log N) input.</p>
+
+                <div class="code-tabs">
+                    <div class="tab active" onclick="showCode('topk', 'js')">JavaScript</div>
+                    <div class="tab" onclick="showCode('topk', 'py')">Python</div>
+                </div>
+
+                <div id="topk-js" class="code-content active">
+                    <pre><code>// Note: JS doesn't have a built-in Heap. This uses a PriorityQueue abstraction.
+function findKthLargest(nums, k) {
+    let minHeap = new MinPriorityQueue();
+    for (let x of nums) {
+        minHeap.push(x);
+        // Keep heap size at K
+        if (minHeap.size() > k) minHeap.pop();
+    }
+    return minHeap.peek(); // Top of min-heap is the Kth largest
+}</code></pre>
+                </div>
+
+                <div id="topk-py" class="code-content">
+                    <pre><code>import heapq
+
+def find_kth_largest(nums: List[int], k: int) -> int:
+    # Python's heapq is a Min-Heap
+    heap = []
+    for x in nums:
+        heapq.heappush(heap, x)
+        if len(heap) > k:
+            heapq.heappop(heap)
+            
+    return heap[0] # Root of min-heap of size K is the Kth largest</code></pre>
+                </div>
+            </div>
+
+            <div class="mastery-container">
+                <h3>B. Merge K Sorted Lists</h3>
+                <p>The standard way to merge data from multiple sorted sources (like disparate database shards).</p>
+
+                <div class="code-tabs">
+                    <div class="tab active" onclick="showCode('mergek', 'js')">JavaScript</div>
+                    <div class="tab" onclick="showCode('mergek', 'py')">Python</div>
+                </div>
+
+                <div id="mergek-js" class="code-content active">
+                    <pre><code>function mergeKLists(lists) {
+    let heap = new MinPriorityQueue({ priority: x => x.val });
+    for (let l of lists) if (l) heap.enqueue(l);
+
+    let dummy = new ListNode(0), curr = dummy;
+    while (!heap.isEmpty()) {
+        let node = heap.dequeue().element;
+        curr.next = node;
+        curr = curr.next;
+        if (node.next) heap.enqueue(node.next);
+    }
+    return dummy.next;
+}</code></pre>
+                </div>
+
+                <div id="mergek-py" class="code-content">
+                    <pre><code>def merge_k_lists(lists: List[Optional[ListNode]]) -> Optional[ListNode]:
+    heap = []
+    for i, l in enumerate(lists):
+        if l:
+            # (value, list_index, node) to handle tie-breaking
+            heapq.heappush(heap, (l.val, i, l))
+            
+    dummy = curr = ListNode(0)
+    while heap:
+        val, i, node = heapq.heappop(heap)
+        curr.next = node
+        curr = curr.next
+        if node.next:
+            heapq.heappush(heap, (node.next.val, i, node.next))
+            
+    return dummy.next</code></pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function showCode(section, lang) {
+            document.querySelectorAll(`#${section}-js, #${section}-py`).forEach(el => el.classList.remove('active'));
+            document.querySelector(`#${section}-${lang}`).classList.add('active');
+            event.target.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // --- HEAP ANIMATION ---
+        let heap = [];
+        const heapVisual = document.getElementById('heapVisual');
+        const heapEdges = document.getElementById('heapEdges');
+        const arrayRepr = document.getElementById('arrayRepr');
+        const statusText = document.getElementById('statusText');
+
+        const coords = [
+            { x: 50, y: 15 },
+            { x: 30, y: 40 }, { x: 70, y: 40 },
+            { x: 15, y: 70 }, { x: 45, y: 70 }, { x: 55, y: 70 }, { x: 85, y: 70 }
+        ];
+
+        function initVisual() {
+            heapVisual.innerHTML = `<svg style="position: absolute; top:0; left:0; width:100%; height:100%;" id="heapEdges"></svg>`;
+            heap.forEach((val, i) => {
+                const el = document.createElement('div');
+                el.className = 'heap-node';
+                el.id = `node-${i}`;
+                el.innerText = val;
+                el.style.left = `${coords[i].x}%`;
+                el.style.top = `${coords[i].y}%`;
+                heapVisual.appendChild(el);
+
+                if (i > 0) {
+                    const pIdx = Math.floor((i - 1) / 2);
+                    drawEdge(coords[pIdx], coords[i]);
+                }
+            });
+            updateArrayRepr();
+        }
+
+        function drawEdge(p, c) {
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", `${p.x}%`); line.setAttribute("y1", `${p.y}%`);
+            line.setAttribute("x2", `${c.x}%`); line.setAttribute("y2", `${c.y}%`);
+            document.getElementById('heapEdges').appendChild(line);
+        }
+
+        async function bubbleUp(idx) {
+            if (idx === 0) return;
+            let parentIdx = Math.floor((idx - 1) / 2);
+
+            if (heap[idx] > heap[parentIdx]) {
+                statusText.innerText = `Bubble Up: ${heap[idx]} > parent ${heap[parentIdx]}. Swapping!`;
+                document.getElementById(`node-${idx}`).classList.add('swapping');
+                document.getElementById(`node-${parentIdx}`).classList.add('swapping');
+
+                await new Promise(r => setTimeout(r, 1000));
+
+                // Swap values
+                [heap[idx], heap[parentIdx]] = [heap[parentIdx], heap[idx]];
+                initVisual();
+                await bubbleUp(parentIdx);
+            } else {
+                statusText.innerText = `Stable: ${heap[idx]} <= parent ${heap[parentIdx]}.`;
+            }
+        }
+
+        document.getElementById('btnInsert').addEventListener('click', async () => {
+            if (heap.length >= coords.length) {
+                statusText.innerText = "Heap Limit! Clear to start over.";
+                return;
+            }
+            const val = Math.floor(Math.random() * 90) + 10;
+            heap.push(val);
+            initVisual();
+            await bubbleUp(heap.length - 1);
+        });
+
+        function updateArrayRepr() {
+            arrayRepr.innerHTML = '<span style="color:#888">Array: </span>';
+            heap.forEach(v => {
+                const item = document.createElement('div');
+                item.className = 'array-item';
+                item.innerText = v;
+                arrayRepr.appendChild(item);
+            });
+        }
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            heap = []; initVisual(); statusText.innerText = "Heap reset.";
+        });
+
+        initVisual();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Mastery: Trees (Series 3 - High Fidelity)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --accent: #10b981;
+            --bg-dark: #1a1a1a;
+            --cell-bg: #222;
+            --code-bg: #252525;
+            --highlight: rgba(59, 130, 246, 0.3);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .explanation-card {
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-left: 5px solid var(--primary);
+            padding: 25px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+
+        .complexity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .badge-time {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .badge-space {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        /* High-Fidelity Visualizer */
+        .visualizer-container {
+            background: var(--bg-dark);
+            color: #fff;
+            border-radius: 12px;
+            margin: 40px 0;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .viz-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 25px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .viz-body {
+            display: flex;
+            flex-wrap: wrap;
+            min-height: auto;
+        }
+
+        .viz-canvas-side {
+            flex: 1;
+            min-width: 350px;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid #333;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .viz-code-side {
+            flex: 0.8;
+            min-width: 300px;
+            background: var(--code-bg);
+            padding: 25px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.82rem;
+        }
+
+        /* Tree Structure */
+        .tree-viz {
+            width: 100%;
+            height: 300px;
+            position: relative;
+        }
+
+        .node {
+            width: 35px;
+            height: 35px;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            font-size: 0.75rem;
+            font-weight: bold;
+            background: #222;
+            z-index: 2;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .node.active {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px var(--primary);
+        }
+
+        .node.visited {
+            border-color: var(--accent);
+            color: var(--accent);
+            opacity: 0.8;
+        }
+
+        .edge {
+            position: absolute;
+            background: #444;
+            height: 2px;
+            transform-origin: 0 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .queue-viz {
+            width: 100%;
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-start;
+            min-height: 45px;
+            margin-top: 20px;
+            border: 1px dashed #555;
+            overflow-x: auto;
+        }
+
+        .queue-item {
+            padding: 4px 12px;
+            background: #444;
+            border: 1px solid var(--primary);
+            border-radius: 3px;
+            font-size: 0.75rem;
+            color: white;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .btn-viz {
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .status-box {
+            margin-top: 15px;
+            padding: 12px;
+            background: #2d2d2d;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 0.85rem;
+            width: 100%;
+            border-left: 4px solid #777;
+        }
+
+        .code-line {
+            padding: 2px 10px;
+            border-radius: 4px;
+            color: #888;
+            white-space: pre;
+            border-left: 3px solid transparent;
+        }
+
+        .code-line.active {
+            background: var(--highlight);
+            color: #fff;
+            border-left-color: var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="hero-section">
+        <h1>Binary Trees Masterclass</h1>
+        <p>Recursive Hierarchies and Level-by-Level Discovery</p>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="bfs">
+            <h2>1. Level Order Traversal (Breadth-First Search)</h2>
+
+            <div class="explanation-card">
+                <h3>Intuition</h3>
+                <p>Tree traversal usually follows a recursive, vertical depth-first pattern. However, certain problems
+                    (like finding the "view" of a tree or the shortest path in a graph-like tree) require
+                    <strong>Horizontal</strong> processing.
+                </p>
+                <p><strong>The Queue Strategy:</strong> BFS uses a First-In-First-Out (FIFO) Queue to maintain the
+                    "Discovery Order".</p>
+                <ul>
+                    <li>Start by pushing the <code>Root</code> into the Queue.</li>
+                    <li>While the Queue is not empty, dequeue a node, "visit" it, and immediately enqueue its
+                        <code>Left</code> and <code>Right</code> children.
+                    </li>
+                    <li>Because of the FIFO property, all nodes at distance <code>d</code> are processed before any node
+                        at distance <code>d+1</code>.</li>
+                </ul>
+
+                <div style="margin-top: 20px;">
+                    <span class="complexity-badge badge-time">Time Complexity: O(n)</span>
+                    <span class="complexity-badge badge-space">Space Complexity: O(w) (Max Width)</span>
+                </div>
+            </div>
+
+            <div class="visualizer-container" id="bfs-viz">
+                <div class="viz-header">
+                    <span>Algorithm Visualizer: BFS Queue Flow</span>
+                    <span id="bfs-step-text">Step: 0</span>
+                </div>
+                <div class="viz-body">
+                    <div class="viz-canvas-side">
+                        <div style="font-size:0.7rem; color:#888; margin-bottom:10px;">TIP: Click a node to visit its
+                            children in code</div>
+                        <div class="tree-viz" id="tree-canvas"></div>
+
+                        <div class="queue-viz" id="queue-row">
+                            <span style="color:#666; font-size:0.7rem; line-height:2;">Queue: </span>
+                        </div>
+
+                        <div style="display: flex; gap:10px; margin-top:30px;">
+                            <button class="btn-viz" onclick="bfsReset()">Reset</button>
+                            <button class="btn-viz" id="btn-next" onclick="bfsNextStep()">Next Step &rarr;</button>
+                        </div>
+
+                        <div class="status-box" id="bfs-status">
+                            Ready. Root node (50) is waiting for processing.
+                        </div>
+                    </div>
+                    <div class="viz-code-side">
+                        <div style="margin-bottom: 15px; color: #666; font-size: 0.7rem;">BFS (ITERATIVE)</div>
+                        <div class="code-line" id="bfs-l1">queue = [root]</div>
+                        <div class="code-line" id="bfs-l2">while queue:</div>
+                        <div class="code-line" id="bfs-l3"> node = queue.pop(0)</div>
+                        <div class="code-line" id="bfs-l4"> result.append(node.val)</div>
+                        <div class="code-line" id="bfs-l5"> if node.left: queue.append(node.left)</div>
+                        <div class="code-line" id="bfs-l6"> if node.right: queue.append(node.right)</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const treeNodes = [
+            { id: 1, val: 50, x: 50, y: 15, l: 2, r: 3 },
+            { id: 2, val: 30, x: 25, y: 45, l: 4, r: 5 },
+            { id: 3, val: 70, x: 75, y: 45, l: null, r: 6 },
+            { id: 4, val: 20, x: 15, y: 75 },
+            { id: 5, val: 40, x: 35, y: 75 },
+            { id: 6, val: 90, x: 85, y: 75 }
+        ];
+
+        let queue = [];
+        let bfsStep = 0;
+        let bfsState = 'INIT';
+
+        function bfsInit() {
+            const canvas = document.getElementById('tree-canvas');
+            canvas.innerHTML = '';
+            treeNodes.forEach(n => {
+                const el = document.createElement('div');
+                el.className = 'node';
+                el.id = `tn-${n.id}`;
+                el.innerText = n.val;
+                el.style.left = `${n.x}%`;
+                el.style.top = `${n.y}%`;
+                canvas.appendChild(el);
+
+                if (n.l) drawEdge(n, treeNodes.find(x => x.id === n.l));
+                if (n.r) drawEdge(n, treeNodes.find(x => x.id === n.r));
+            });
+        }
+
+        function drawEdge(p, c) {
+            const canvas = document.getElementById('tree-canvas');
+            const edge = document.createElement('div');
+            edge.className = 'edge';
+            const dx = (c.x - p.x) * 4;
+            const dy = (c.y - p.y) * 3;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            edge.style.width = `${dist}px`;
+            edge.style.left = `${p.x}%`;
+            edge.style.top = `${p.y}%`;
+            edge.style.transform = `rotate(${angle}deg)`;
+            canvas.appendChild(edge);
+        }
+
+        function highlightCode(prefix, line) {
+            document.querySelectorAll(`[id^="${prefix}-l"]`).forEach(l => l.classList.remove('active'));
+            if (line) document.getElementById(`${prefix}-l${line}`).classList.add('active');
+        }
+
+        function updateBFS() {
+            const qRow = document.getElementById('queue-row');
+            qRow.innerHTML = '<span style="color:#666; font-size:0.7rem; line-height:2;">Queue: </span>';
+            queue.forEach(n => {
+                const item = document.createElement('div');
+                item.className = 'queue-item';
+                item.innerText = n.val;
+                qRow.appendChild(item);
+            });
+            document.getElementById('bfs-step-text').innerText = `Step: ${bfsStep}`;
+        }
+
+        function bfsNextStep() {
+            if (bfsState === 'INIT') {
+                queue = [treeNodes[0]];
+                highlightCode('bfs', 1);
+                document.getElementById('bfs-status').innerText = "Initialized queue with root: 50.";
+                bfsState = 'COMPARE';
+                updateBFS();
+                return;
+            }
+
+            if (queue.length === 0) {
+                document.getElementById('bfs-status').innerText = "Traversal Complete! All nodes visited level-by-level.";
+                highlightCode('bfs', null);
+                return;
+            }
+
+            bfsStep++;
+
+            switch (bfsState) {
+                case 'COMPARE':
+                    highlightCode('bfs', 3);
+                    const curr = queue.shift();
+                    const el = document.getElementById(`tn-${curr.id}`);
+                    el.classList.add('active');
+                    document.getElementById('bfs-status').innerText = `Popped node ${curr.val} from queue.`;
+
+                    setTimeout(() => {
+                        highlightCode('bfs', 4);
+                        el.classList.remove('active');
+                        el.classList.add('visited');
+
+                        let added = [];
+                        if (curr.l) {
+                            const left = treeNodes.find(n => n.id === curr.l);
+                            queue.push(left); added.push(left.val);
+                        }
+                        if (curr.r) {
+                            const right = treeNodes.find(n => n.id === curr.r);
+                            queue.push(right); added.push(right.val);
+                        }
+
+                        setTimeout(() => {
+                            highlightCode('bfs', 5);
+                            if (added.length > 0) {
+                                document.getElementById('bfs-status').innerText = `Visited ${curr.val}. Enqueued children: [${added.join(', ')}].`;
+                            } else {
+                                document.getElementById('bfs-status').innerText = `Visited ${curr.val}. No children to enqueue.`;
+                            }
+                            updateBFS();
+                            bfsState = 'COMPARE';
+                        }, 500);
+                    }, 500);
+                    break;
+            }
+        }
+
+        function bfsReset() {
+            queue = [];
+            bfsStep = 0;
+            bfsState = 'INIT';
+            bfsInit();
+            updateBFS();
+            highlightCode('bfs', null);
+            document.getElementById('bfs-status').innerText = "Visualizer reset. Root (50) is ready.";
+        }
+
+        bfsInit();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

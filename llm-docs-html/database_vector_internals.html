@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masterclass: Vector DB Internals (Series 2)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        .theory-mastery {
+            border-left: 5px solid #10b981;
+            background: #ecfdf5;
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 30px;
+        }
+
+        .math-block {
+            background: #f8f9fa;
+            padding: 15px;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        /* HNSW Animation */
+        .hnsw-container {
+            height: 300px;
+            background: #1a1a1a;
+            border-radius: 12px;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .layer {
+            position: absolute;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 1s;
+        }
+
+        .layer-0 {
+            width: 280px;
+            height: 180px;
+        }
+
+        .layer-1 {
+            width: 180px;
+            height: 100px;
+        }
+
+        .v-node {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            margin: 5px;
+            position: relative;
+        }
+
+        .v-node.active {
+            background: #ef4444;
+            box-shadow: 0 0 10px #ef4444;
+            transform: scale(1.5);
+        }
+
+        .search-line {
+            position: absolute;
+            height: 2px;
+            background: #ef4444;
+            transform-origin: 0 50%;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .viz-label {
+            position: absolute;
+            bottom: 10px;
+            color: #888;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Masterclass: Vector DB Internals</h1>
+        <div class="subtitle">HNSW, IVF-Flat, and the Math of Approximate Nearest Neighbors (ANN)</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="hnsw">
+            <h2>1. HNSW: The Gold Standard Index</h2>
+            <p><strong>Hierarchical Navigable Small Worlds</strong> (HNSW) is the engine behind Pinecone, Milvus, and
+                pgvector. It treats the vector space as a graph where nodes represent embeddings.</p>
+
+            <div class="theory-mastery">
+                <h3>Why "Hierarchical"?</h3>
+                <p>Instead of searching every node, HNSW creates "shortcuts" in upper layers. We start at Layer 1
+                    (coarse), find the closest node, then drop down to Layer 0 (dense) to refine the search. This turns
+                    <code>O(N)</code> search into <code>O(log N)</code>.</p>
+            </div>
+
+            <div class="hnsw-container">
+                <div class="layer layer-0">
+                    <div class="v-node" style="top:20px; left:40px;"></div>
+                    <div class="v-node" id="target-node" style="top:80px; left:120px;"></div>
+                    <div class="v-node" style="top:50px; left:200px;"></div>
+                </div>
+                <div class="layer layer-1">
+                    <div class="v-node" id="entry-node" style="top:0px; left:30px;"></div>
+                </div>
+                <div class="search-line" id="hnsw-trail"></div>
+                <div class="viz-label">Visualizing Path: coarse entry point (L1) &rarr; dense cluster (L0)</div>
+            </div>
+            <div style="text-align:center;">
+                <button class="btn-anim" onclick="animateHNSW()">Animate Graph Navigation</button>
+            </div>
+        </section>
+
+        <section id="ivf">
+            <h2>2. IVF-Flat: Inverted File Index</h2>
+            <p>If HNSW is about <strong>connectivity</strong>, IVF-Flat is about <strong>neighborhoods</strong>. It uses
+                K-Means to cluster vectors into 'Voronoi cells'.</p>
+
+            <ul>
+                <li><strong>Indexing:</strong> Chops the space into <code>nlist</code> clusters.</li>
+                <li><strong>Search:</strong> Only searches the <code>nprobe</code> clusters closest to the query.</li>
+                <li><strong>Tradeoff:</strong> Uses significantly less memory than HNSW but is slightly slower and less
+                    accurate.</li>
+            </ul>
+        </section>
+
+        <section id="metrics">
+            <h2>3. The Geometry of Distance</h2>
+            <p>Different models require different distance metrics. Using the wrong one causes "Semantic Drift."</p>
+
+            <div class="math-block">
+                <strong>Cosine Similarity:</strong> $\cos(\theta) = \frac{A \cdot B}{\|A\|\|B\|}$ — Measures angular
+                distance. Industry standard for text. <br><br>
+                <strong>Euclidean (L2):</strong> $d = \sqrt{\sum(a_i - b_i)^2}$ — Measures actual spatial gap. Best for
+                image data. <br><br>
+                <strong>Inner Product (IP):</strong> $d = A \cdot B$ — Extremely fast but sensitive to vector magnitude.
+            </div>
+        </section>
+
+        <section id="tuning">
+            <h2>4. Index Tuning Parameters</h2>
+            <div style="background:#f0f4ff; padding:15px; border-radius:8px;">
+                <ul>
+                    <li><strong>M:</strong> Max number of edges per node in HNSW. Higher M = Higher accuracy, Higher
+                        Memory.</li>
+                    <li><strong>efConstruction:</strong> Search depth during index build.</li>
+                    <li><strong>efSearch:</strong> Search depth during query. High efSearch = Lower Recall errors but
+                        Higher Latency.</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function animateHNSW() {
+            const entry = document.getElementById('entry-node');
+            const target = document.getElementById('target-node');
+            const trail = document.getElementById('hnsw-trail');
+
+            entry.classList.add('active');
+            setTimeout(() => {
+                target.classList.add('active');
+                // Simple line visualize (fake logic for effect)
+                trail.style.opacity = '1';
+                trail.style.width = '120px';
+                trail.style.transform = 'rotate(45deg) translate(80px, 30px)';
+            }, 800);
+        }
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

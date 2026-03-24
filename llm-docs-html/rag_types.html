@@ -4,179 +4,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAG Types</title>
-    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <title>Evolution of RAG: From Naive to Agentic (Series 2)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
     <style>
-        .qa-container {
-            margin-bottom: 2em;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-left: 4px solid var(--wp-accent);
-            border-radius: 4px;
+        .evolution-step {
+            border: 1px solid #e1e4e8;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            background: #fff;
+            transition: transform 0.2s;
         }
 
-        .qa-container h3 {
-            margin-top: 0;
-            color: var(--wp-title-text);
+        .evolution-step:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
         }
 
-        .qa-container .answer {
-            margin-top: 10px;
-        }
-
-        .one-liner {
+        .step-label {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #3366cc;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.8rem;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .mermaid-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #eaecf0;
+        }
+
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .benefit-item {
+            font-size: 0.9rem;
+            color: #444;
+        }
+
+        .benefit-item i {
+            color: #3366cc;
+            margin-right: 8px;
+        }
+
+        .qa-container {
+            background: #fdfdfd;
+            border: 1px solid #d1d5da;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 40px;
+        }
+
+        .qa-item {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+        }
+
+        .qa-item:last-child {
+            border-bottom: none;
+        }
+
+        .question {
+            font-weight: bold;
+            color: #202122;
+            margin-bottom: 8px;
+        }
+
+        .answer {
+            color: #444;
+            line-height: 1.6;
         }
     </style>
 </head>
 
 <body>
     <header>
-        <h1>RAG Types</h1>
-        <div class="subtitle">Types of Retrieval-Augmented Generation</div>
+        <h1>Evolution of RAG Systems</h1>
+        <div class="subtitle">The Architectural Journey from Naive Retrieval to Autonomous Agents</div>
     </header>
+
     <div class="content-wrapper">
+        <p>Retrieval-Augmented Generation (RAG) is not a single architecture, but a spectrum of complexity. As
+            businesses move from "Proof of Concept" to "Production," the pipeline evolves to handle nuance, scale, and
+            multi-step reasoning.</p>
 
-        <section id="naive-rag">
-            <h2>1. Naive RAG (The Baseline)</h2>
-            <div class="qa-container">
-                <div class="answer">
-                    <div class="one-liner">The traditional "Index → Retrieve → Generate" linear pipeline.</div>
-                    <p><strong>Workflow:</strong> Documents are chunked, embedded into a Vector DB. At query time, the
-                        top-k most similar chunks are retrieved and sent to the LLM context.</p>
+        <section id="naive">
+            <div class="evolution-step">
+                <span class="step-label">Stage 1: Naive RAG</span>
+                <h2>The "Search and Stuff" Baseline</h2>
+                <p>The standard linear pipeline where a query is converted to a vector, the top-K chunks are retrieved,
+                    and they are "stuffed" into the LLM prompt.</p>
+                <div class="mermaid-container">
                     <div class="mermaid">
                         graph LR
-                        A[Documents] --> B[Chunk & Embed]
-                        B --> C[(Vector DB)]
-                        D[Query] --> E[Retrieve Top-K]
-                        C --> E
-                        E --> F[LLM Generation]
+                        Q[User Query] --> E[Embedder]
+                        E --> V[(Vector DB)]
+                        V --> K[Top-K Chunks]
+                        K --> LLM[LLM Generation]
                     </div>
-                    <p><strong>Example:</strong> A simple "Chat with PDF" app where users ask questions about a singular
-                        local document.</p>
-                    <div class="trap"><strong>Trap:</strong> Poor retrieval accuracy due to semantic shifts or bad
-                        chunking. LLM may hallucinate if provided irrelevant noise.</div>
+                </div>
+                <div class="benefit-grid">
+                    <div class="benefit-item">✅ <strong>Benefit:</strong> Extremely low latency and simple
+                        implementation.</div>
+                    <div class="benefit-item">❌ <strong>Limit:</strong> Highly sensitive to bad chunking and keyword
+                        mismatch.</div>
                 </div>
             </div>
         </section>
 
-        <section id="advanced-rag">
-            <h2>2. Advanced RAG (Optimization)</h2>
-            <div class="qa-container">
-                <div class="answer">
-                    <div class="one-liner">Solves Naive RAG issues by adding Pre-Retrieval and Post-Retrieval
-                        processing.</div>
-                    <ul>
-                        <li><strong>Pre-Retrieval:</strong> Query Rewriting, HyDE (Hypothetical Document Embeddings),
-                            and Multi-query expansion.</li>
-                        <li><strong>Post-Retrieval:</strong> Rerankers (Cross-encoders) to filter noise and Context
-                            Compression to fit long documents into tokens.</li>
-                    </ul>
+        <section id="advanced">
+            <div class="evolution-step">
+                <span class="step-label">Stage 2: Advanced RAG</span>
+                <h2>Pre-Retrieval & Post-Retrieval Optimization</h2>
+                <p>Adds "Intelligence" to the pipeline via Query Expansion (HyDE) and Reranking (Cross-Encoders) to
+                    ensure only gold-standard context reaches the LLM.</p>
+                <div class="mermaid-container">
                     <div class="mermaid">
                         graph TD
-                        Q[User Query] --> PRE[Pre-Processing: HyDE/Rewrite]
-                        PRE --> RET[Retrieval: Vector/Hybrid]
-                        RET --> POST[Post-Processing: Rerank/Compress]
-                        POST --> GEN[LLM Generation]
+                        Q[Query] --> TRAN[Translation: HyDE/Rewrite]
+                        TRAN --> RET[Retrieval: Vector + Keyword]
+                        RET --> RANK[Post-Retrieval: Rerank/Refine]
+                        RANK --> GEN[LLM Generation]
                     </div>
-                    <p><strong>Example:</strong> Enterprise search where the user's initial query "budget info" is
-                        expanded to "What is the 2024 marketing budget allocation?" for better vector matches.</p>
                 </div>
+                <div class="benefit-grid">
+                    <div class="benefit-item">✅ <strong>Benefit:</strong> Dramatically higher accuracy and "Grounding".
+                    </div>
+                    <div class="benefit-item">❌ <strong>Limit:</strong> Higher cost per query and increased TTFT.</div>
+                </div>
+                <p><a href="advanced_rag.html" style="color: #3366cc; font-weight: bold;">&rarr; Deep Dive into Advanced
+                        RAG Masterclass</a></p>
             </div>
         </section>
 
-        <section id="modular-rag">
-            <h2>3. Modular RAG (Flexibility)</h2>
-            <div class="qa-container">
-                <div class="answer">
-                    <div class="one-liner">Decouples components into specialized modules like "Routing", "Searching",
-                        and "Verifying".</div>
-                    <p>Unlike Advanced RAG's fixed pipeline, Modular RAG can skip certain steps or loop back based on
-                        the query complexity.</p>
+        <section id="modular">
+            <div class="evolution-step">
+                <span class="step-label">Stage 3: Modular & Graph RAG</span>
+                <h2>Domain-Specific Orchestration</h2>
+                <p>Decouples retrieval into specialized modules. <strong>Graph RAG</strong> adds relationships (Neo4j)
+                    to the mix, allowing for multi-hop reasoning that vector search alone misses.</p>
+                <div class="mermaid-container">
                     <div class="mermaid">
                         graph LR
-                        R[Router] --> SRCH[Search Module]
-                        R --> MEM[Memory Module]
-                        SRCH --> VRFY[Verify/Filter Module]
-                        VRFY --> GEN[Generation]
+                        R[Router] --> VEC[Vector: Facts]
+                        R --> KG[Graph: Relationship]
+                        VEC --> FUSE[Context Fusion]
+                        KG --> FUSE
+                        FUSE --> LLM
                     </div>
-                    <p><strong>Example:</strong> A system that first routes a query to "Memory" if it's a follow-up, or
-                        to "Search" if it's a new fact-based question.</p>
+                </div>
+                <div class="benefit-grid">
+                    <div class="benefit-item">✅ <strong>Benefit:</strong> Solves "Who is related to X?" complex queries.
+                    </div>
+                    <div class="benefit-item">❌ <strong>Limit:</strong> Significant maintenance overhead for the Graph.
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section id="graph-rag">
-            <h2>4. Graph RAG (Deep Relationships)</h2>
-            <div class="qa-container">
-                <div class="answer">
-                    <div class="one-liner">Combines Vector search with Knowledge Graphs (Neo4j/LangChain Graph).</div>
-                    <p><strong>Why:</strong> Vector search is great for semantic similarity but fails at multi-hop
-                        reasoning (e.g., "Who is the CEO of the company that bought the company founded by X?").</p>
+        <section id="agentic">
+            <div class="evolution-step">
+                <span class="step-label">Stage 4: Agentic RAG</span>
+                <h2>Autonomous Decision Loops</h2>
+                <p>The system is no longer a fixed pipeline. An LLM "Agent" decides which tools to use, when to search
+                    again, and when the answer is "Good Enough".</p>
+                <div class="mermaid-container">
                     <div class="mermaid">
                         graph TD
-                        NQ[Query] --> VEC[Vector Search: Entities]
-                        VEC --> KG[Graph Traversal: Relationships]
-                        KG --> CONT[Aggregated Context]
-                        CONT --> GEN[LLM Final Answer]
-                    </div>
-                    <p><strong>Example:</strong> Compliance auditing where you need to track relationships between
-                        financial entities across thousands of documents.</p>
-                </div>
-            </div>
-        </section>
-
-        <section id="agentic-rag">
-            <h2>5. Agentic RAG (Orchestration)</h2>
-            <div class="qa-container">
-                <div class="answer">
-                    <div class="one-liner">LLM agents act as autonomous researchers, iteratively searching and
-                        reasoning.</div>
-                    <p><strong>Behavior:</strong> The agent can decide to search again if the first results are
-                        insufficient, or use different tools (Google Search vs. Internal DB) depending on the gap in its
-                        knowledge.</p>
-                    <div class="mermaid">
-                        graph TD
-                        S[User Task] --> AG[Agentic Loop]
-                        AG --> TOOL{Tool Choice}
-                        TOOL --> DB[(Vector DB)]
-                        TOOL --> WEB[Web Search]
-                        DB --> EVAL[Evaluate Results]
+                        T[Task] --> AG[Agent Loop]
+                        AG --> TOOL{Search?}
+                        TOOL -- Yes --> DB[(Internal DB)]
+                        TOOL -- Yes --> WEB[Web Search]
+                        DB --> EVAL[Eval Results]
                         WEB --> EVAL
                         EVAL -- "Incomplete" --> AG
                         EVAL -- "Complete" --> ANS[Final Answer]
                     </div>
-                    <p><strong>Example:</strong> An AI Market Researcher that needs to combine stale internal reports
-                        with live stock market data to provide a "Market Heatmap".</p>
+                </div>
+                <div class="benefit-grid">
+                    <div class="benefit-item">✅ <strong>Benefit:</strong> Handles open-ended research tasks perfectly.
+                    </div>
+                    <div class="benefit-item">❌ <strong>Limit:</strong> Highest cost; requires strict recursion bounds.
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section id="senior-interview-rag">
-            <h2>Senior Interview Deep-Dive</h2>
-            <div class="qa-container">
-                <h3>Q: When should you choose Graph RAG over Vector RAG?</h3>
-                <div class="answer">
-                    <p>Choose Graph RAG when the primary challenge is **relationship density** rather than semantic
-                        overlap. If the answer requires traversing nodes (Person -> Works At -> Company -> Owns ->
-                        Project), a vector search will get "lost" in similar-sounding chunks, while a graph traversal
-                        follows the deterministic edges.</p>
-                </div>
+        <section class="qa-container">
+            <h3>Expert Interview: Senior RAG Design</h3>
+            <div class="qa-item">
+                <div class="question">Q: When is Naive RAG "enough" for a production app?</div>
+                <div class="answer">Naive RAG is sufficient when the data is homogeneous (e.g., all 1-page FAQs) and the
+                    queries have high keyword overlap with the content. If you are building a tool for engineers to
+                    search internal documentation, Naive RAG with good chunking often outperforms complex agents that
+                    "overthink" simple retrievals.</div>
             </div>
-            <div class="qa-container">
-                <h3>Q: What is the biggest drawback of Agentic RAG in production?</h3>
-                <div class="answer">
-                    <p><strong>Latency and Cost.</strong> Because agents are iterative, they might make 5-10 LLM calls
-                        for a single query. This creates high TTFT (Time to First Token) and consumes significant
-                        tokens. Scaling requires aggressive semantic caching and strict stop-conditions (recursion
-                        limits).</p>
-                </div>
+            <div class="qa-item">
+                <div class="question">Q: What is the "Silver Bullet" for RAG accuracy?</div>
+                <div class="answer"><strong>Reranking.</strong> If you could only implement one advanced feature, it
+                    should be a Cross-Encoder reranker. It consistently provides the highest ROI in accuracy versus
+                    implementation effort.</div>
             </div>
         </section>
-
     </div>
-    <script src="animations.js"></script>
+
     <script src="sidebar.js?v=2"></script>
 </body>
 

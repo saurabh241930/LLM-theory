@@ -4,299 +4,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced RAG - LLM Theory</title>
-    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <title>Masterclass: Advanced RAG Pipelines (Series 2)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
     <style>
-        /* Chapter-specific animations and styles */
-        .hybrid-viz {
-            display: flex;
-            gap: 20px;
+        .mastery-container {
+            padding: 20px;
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .theory-highlight {
+            border-left: 5px solid #ef4444;
+            background: #fef2f2;
+            padding: 20px;
             margin: 20px 0;
-            justify-content: space-around;
         }
 
-        .viz-box {
-            flex: 1;
-            padding: 15px;
-            border: 2px dashed var(--wp-border);
+        /* RAPTOR Tree Animation */
+        .raptor-viz-container {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 40px;
+            border-radius: 12px;
+            margin: 30px 0;
             text-align: center;
-            background: #f8f9fa;
         }
 
-        .viz-box.active {
-            border-style: solid;
-            border-color: var(--wp-accent);
-            background: #eef2ff;
+        .tree-level {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 40px;
+            position: relative;
         }
 
-        .fusion-arrow {
+        .node {
+            width: 80px;
+            height: 40px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            color: var(--wp-accent);
+            font-size: 0.7rem;
+            color: #888;
+            transition: all 0.5s;
+            cursor: pointer;
+            position: relative;
         }
 
-        .math-block {
-            background: #f1f3f4;
+        .node.active {
+            background: #ef4444;
+            color: white;
+            border-color: #f87171;
+            box-shadow: 0 0 15px #ef4444;
+        }
+
+        .node::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            height: 40px;
+            width: 2px;
+            background: #444;
+            z-index: -1;
+        }
+
+        .level-L0 .node::after {
+            display: none;
+        }
+
+        pre {
+            background: #2d2d2d !important;
+            color: #ccc !important;
             padding: 15px;
-            margin: 15px 0;
-            font-family: serif;
-            font-style: italic;
-            border-left: 4px solid var(--wp-accent);
+            border-radius: 8px;
+            overflow-x: auto;
         }
 
-        .wiki-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 0.9em;
+        .code-tabs {
+            display: flex;
+            gap: 1px;
+            margin-bottom: -1px;
         }
 
-        .wiki-table th,
-        .wiki-table td {
-            border: 1px solid #a2a9b1;
-            padding: 8px;
-            text-align: left;
-        }
-
-        .wiki-table th {
-            background-color: #f8f9fa;
+        .tab {
+            padding: 10px 20px;
+            background: #e1e4e8;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            border: 1px solid #d1d5da;
             font-weight: bold;
         }
 
-        .side-note {
-            background: #fff9db;
-            border-left: 4px solid #fab005;
-            padding: 10px;
-            margin: 15px 0;
-            font-size: 0.9em;
+        .tab.active {
+            background: #2d2d2d;
+            color: white;
+            border-bottom: none;
         }
 
-        .tech-tag {
-            font-size: 0.8em;
-            background: #eef2ff;
-            color: var(--wp-accent);
-            padding: 2px 6px;
-            border-radius: 4px;
+        .code-content {
+            display: none;
+        }
+
+        .code-content.active {
+            display: block;
+        }
+
+        .pipeline-card {
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            background: #fff;
+        }
+
+        .pipeline-title {
             font-weight: bold;
+            color: #ef4444;
+            border-bottom: 2px solid #ef4444;
+            display: inline-block;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 
 <body>
-
     <header>
-        <h1>Advanced RAG</h1>
-        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+        <h1>Masterclass: Advanced RAG Pipelines</h1>
+        <div class="subtitle">HyDE, RAG-Fusion, RAPTOR, and Multi-Agent Orchestration</div>
     </header>
 
     <div class="content-wrapper">
-        <!-- Infobox -->
-        <aside class="infobox">
-            <div class="infobox-title">Advanced RAG</div>
-            <div class="infobox-image">
-                <svg width="100" height="40" viewBox="0 0 100 40">
-                    <rect x="5" y="10" width="20" height="20" fill="#eef2ff" stroke="#36c" />
-                    <path d="M 25 20 L 45 20" stroke="#36c" stroke-width="1" />
-                    <rect x="45" y="10" width="20" height="20" fill="#eef2ff" stroke="#36c" />
-                    <path d="M 65 20 L 85 20" stroke="#36c" stroke-width="1" />
-                    <rect x="85" y="10" width="10" height="20" fill="#36c" />
-                </svg>
+        <section id="theory">
+            <h2>1. Technical Deep-Dive: Moving Beyond Similarity</h2>
+            <p>Similarity is not always <strong>Relevance</strong>. Naive RAG fails because a user query like "Pricing"
+                is too short to find a dense chunk about "Enterprise Subscription Tiers". Advanced pipelines fix this by
+                transforming the query or the document structure.</p>
+
+            <div class="theory-highlight">
+                <h3>The "Top 4" Professional Pipelines</h3>
+                <ul>
+                    <li><strong>HyDE (Hypothetical Doc Embeddings):</strong> Uses LLM to hallucinate an ideal answer. We
+                        embed the <em>answer</em> to find similar <em>real</em> docs. This bridges the task-gap between
+                        "Questions" and "Answers".</li>
+                    <li><strong>RAG-Fusion:</strong> Multi-query expansion + RRF (Reciprocal Rank Fusion). It searches
+                        for 4-5 variations of your question and ranks the results globally.</li>
+                    <li><strong>RAPTOR:</strong> Hierarchical tree retrieval. It summarizes chunks into high-level
+                        summaries, then summarizes those into higher-level ones. Allows answering "Overview" questions.
+                    </li>
+                    <li><strong>Agentic RAG:</strong> An autonomous loop (e.g., ReAct) that decides if it needs more
+                        tools (Web Search, SQL, Vector) until the query is satisfied.</li>
+                </ul>
             </div>
-            <div class="infobox-data">
-                <div class="infobox-row">
-                    <div class="infobox-label">Type</div>
-                    <div class="infobox-value">Multi-stage Retrieval</div>
+        </section>
+
+        <section id="viz">
+            <h2>2. Visualizing Hierarchical Retrieval (RAPTOR)</h2>
+            <p>Traditional RAG only searches the bottom-level chunks (L0). <strong>RAPTOR</strong> allows the system to
+                traverse up the tree to find "Global Summaries" (L2) for big-picture queries.</p>
+
+            <div class="raptor-viz-container">
+                <div class="tree-level level-L2">
+                    <div class="node" id="l2-1">Global Summary</div>
                 </div>
-                <div class="infobox-row">
-                    <div class="infobox-label">Core Logic</div>
-                    <div class="infobox-value">Rewriting & Hybrid Search</div>
+                <div class="tree-level level-L1">
+                    <div class="node" id="l1-1">Section A Sum</div>
+                    <div class="node" id="l1-2">Section B Sum</div>
                 </div>
-                <div class="infobox-row">
-                    <div class="infobox-label">Complexity</div>
-                    <div class="infobox-value">Intermediate to High</div>
+                <div class="tree-level level-L0">
+                    <div class="node" id="l0-1">Chunk 1</div>
+                    <div class="node" id="l0-2">Chunk 2</div>
+                    <div class="node" id="l0-3">Chunk 3</div>
+                    <div class="node" id="l0-4">Chunk 4</div>
                 </div>
-            </div>
-        </aside>
 
-        <div class="main-content">
-            <p><strong>Advanced Retrieval-Augmented Generation (Advanced RAG)</strong> refers to a suite of techniques
-                designed to overcome the limitations of the baseline "Naive" RAG pipeline. While Naive RAG relies purely
-                on direct vector similarity, Advanced RAG incorporates query pre-processing, hybrid search mechanisms,
-                and post-retrieval optimization to ensure that the context provided to the LLM is both precise and
-                semantically comprehensive.</p>
-
-            <h2>Query Pre-Processing & Translation</h2>
-            <p>The most common failure point in RAG is the user query itself, which may be ambiguous, shorthand, or
-                poorly aligned with the documentation style.</p>
-
-            <h3>Query Rewriting & Expansion</h3>
-            <p>To bridge the gap between user phrasing and technical documentation, advanced systems "translate" the
-                query into multiple variants.</p>
-            <ul>
-                <li><strong>Multi-Query:</strong> An LLM generates 3-5 variations of the user's question, retrieving
-                    chunks for all of them to maximize recall.</li>
-                <li><strong>Step-back Prompting:</strong> The LLM generates a broader, more "abstract" version of the
-                    question. (e.g., "How do I fix error 404?" → "What are the common causes of HTTP client errors?").
-                </li>
-                <li><strong>RAG-Fusion:</strong> Combines Multi-Query with RRF to find the most globally relevant chunks
-                    across all query variations.</li>
-                <li><strong>HyDE:</strong> Uses an LLM to generate a hypothetical ideal answer and embeds <em>that</em>
-                    for retrieval.</li>
-            </ul>
-
-            <h2>Intelligent Routing</h2>
-            <p>In production, data often resides in different silos (SQL for transactions, Vector for docs, Graph for
-                relationships). <strong>Routing</strong> ensures the query hits the right source.</p>
-            <div class="strategy-box">
-                <div class="strategy-header">Logical Routing</div>
-                <p>The LLM acts as a traffic controller, selecting the best tool or database based on the query's intent
-                    (Intent Classification).</p>
-                <div class="code-block">
-                    <span class="comment"># Pseudo-flow: Semantic Router</span><br>
-                    intent = llm.classify(query, [ <span class="string">"technical_docs"</span>, <span
-                        class="string">"user_orders"</span>, <span class="string">"general_faq"</span> ])<br>
-                    <span class="keyword">if</span> intent == <span class="string">"user_orders"</span>: <br>
-                    &nbsp;&nbsp;result = sql_db.search(query)<br>
-                    <span class="keyword">else</span>: <br>
-                    &nbsp;&nbsp;result = vector_db.search(query)
+                <div class="controls" style="margin-top:20px;">
+                    <button class="btn-anim" onclick="simulateSearch('specific')">Specific Query (L0 Search)</button>
+                    <button class="btn-anim" onclick="simulateSearch('global')">Global Query (L2 Search)</button>
+                </div>
+                <div id="statusText" style="margin-top:20px; color: #888;">Select a search type to see traversal depth.
                 </div>
             </div>
+        </section>
 
-            <h2>Hybrid Search</h2>
-            <p>Even the best embedding models can miss exact keyword matches (e.g., specific part numbers or acronyms).
-                Hybrid search combines two distinct retrieval methods:</p>
-            <div class="hybrid-viz animate-on-scroll">
-                <div class="viz-box">
-                    <div class="tech-tag">Sparse</div>
-                    <p>BM25 / Keywords<br>Finds exact matches.</p>
+        <section id="implementation">
+            <h2>3. Implementation & Benefits</h2>
+
+            <div class="mastery-container">
+                <h3>A. HyDE Execution Flow (Python & JS)</h3>
+                <p>Bridging the semantic gap via Hypothetical Answers.</p>
+
+                <div class="code-tabs">
+                    <div class="tab active" onclick="showCode('rag', 'py')">Python (LangChain)</div>
+                    <div class="tab" onclick="showCode('rag', 'js')">JavaScript (LangChain.js)</div>
                 </div>
-                <div class="fusion-arrow">+</div>
-                <div class="viz-box active">
-                    <div class="tech-tag">Dense</div>
-                    <p>Embeddings<br>Finds semantic meaning.</p>
+
+                <div id="rag-py" class="code-content active">
+                    <pre><code>from langchain.chains import HypotheticalDocumentEmbedder
+from langchain_openai import OpenAI, OpenAIEmbeddings
+
+# 1. Setup the HyDE generator
+embeddings = OpenAIEmbeddings()
+llm = OpenAI()
+
+# 2. Create the HyDE chain
+hyde_chain = HypotheticalDocumentEmbedder.from_llm(
+    llm, embeddings, "web_search"
+)
+
+# 3. Retrieve: This generates an answer internally first!
+query = "What is the ROI of GenAI in 2024?"
+vectors = hyde_chain.embed_query(query)</code></pre>
+                </div>
+
+                <div id="rag-js" class="code-content">
+                    <pre><code>import { MultiQueryRetriever } from "langchain/retrievers/multi_query";
+
+// Automatically expands 1 query into multiple variants
+const retriever = MultiQueryRetriever.fromLLM({
+  llm: model,
+  retriever: vectorStore.asRetriever(),
+  verbose: true,
+});
+
+const docs = await retriever.getRelevantDocuments(
+  "How to scale RAG to millions of docs?"
+);</code></pre>
                 </div>
             </div>
 
-            <h3>Mathematical Fusion: RRF</h3>
-            <p>To combine results from different retrieval methods, systems use <strong>Reciprocal Rank Fusion
-                    (RRF)</strong>, which rewards chunks that appear at the top of multiple search results.</p>
-            <div class="math-block">
-                Score(d) = Σ 1 / (k + rank_i(d))
+            <div class="pipeline-card">
+                <div class="pipeline-title">Benefit: Reranking (The Gold Standard)</div>
+                <p>The secret to production accuracy: Retrieve 50 chunks using <strong>Bi-Encoders</strong> (Fast), then
+                    use a <strong>Cross-Encoder</strong> (Slow but accurate) to re-order the top 5. This removes "Noisy"
+                    similarities that look mathematically close but are contextually wrong.</p>
             </div>
-            <p>Where <em>k</em> is a smoothing constant (typically 60). This ensures a robust final ranking that honors
-                both keyword precision and semantic depth.</p>
-
-            <h2>Post-Retrieval Optimization</h2>
-            <p>Once a set of potential chunks is retrieved, Advanced RAG applies further refinement before the
-                generation step.</p>
-            <ul>
-                <li><strong>Reranking:</strong> Using a high-precision but computationally expensive Cross-Encoder to
-                    re-score the top-50 retrieved chunks.</li>
-                <li><strong>Metadata Filtering:</strong> Constraining results based on attributes like date, author, or
-                    security tags.</li>
-                <li><strong>Context Compression:</strong> Summarizing or pruning retrieved chunks to fit more diverse
-                    information into the context window.</li>
-            </ul>
-
-            <h2>Technique Comparison Table</h2>
-            <table class="wiki-table">
-                <thead>
-                    <tr>
-                        <th>Technique</th>
-                        <th>Solves For...</th>
-                        <th>Relative Cost</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>Query Rewriting</strong></td>
-                        <td>Ambiguity</td>
-                        <td>Medium</td>
-                    </tr>
-                    <tr>
-                        <td><strong>HyDE</strong></td>
-                        <td>Sparse Queries</td>
-                        <td>Medium</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Hybrid Search</strong></td>
-                        <td>Keyword Accuracy</td>
-                        <td>Low</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Reranking</strong></td>
-                        <td>Noisy Similarity</td>
-                        <td>High</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Semantic Caching</strong></td>
-                        <td>Latency / API Cost</td>
-                        <td>Low</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h2>Implementation Decision Tree</h2>
-            <p>When should you move from Naive to Advanced RAG?</p>
-            <div class="decision-tree"
-                style="background: #f8f9fa; border: 1px solid var(--wp-border); padding: 15px; font-family: monospace;">
-                Query is ambiguous or short?<br>
-                ├─ YES → Add Query Rewriting / HyDE / Multi-Query<br>
-                └─ NO → Continue...<br><br>
-                Data exists in multiple formats (SQL + Vector)?<br>
-                ├─ YES → Add Intelligent Routing<br>
-                └─ NO → Continue...<br><br>
-                Retrieval misses exact keywords?<br>
-                ├─ YES → Add Hybrid Search (Dense + BM25)<br>
-                └─ NO → Continue...<br><br>
-                Accuracy is life-critical (Legal/Med)?<br>
-                ├─ YES → Add Cross-Encoder Reranking<br>
-                └─ NO → Baseline RAG is likely sufficient.
-            </div>
-
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>The <strong>RSA Sales QA Dashboard</strong> uses Advanced RAG to handle multi-faceted compliance audits.
-                When a manager asks, <em>"Did Advisor John Doe provide the correct pricing for RSA in California?"</em>,
-                the system uses <strong>Intelligent Routing</strong> to send the query to a SQL database for specific
-                price points (Actual Sales Data) and to a Vector DB for the latest California-specific disclosure
-                scripts (Compliance Docs). It then uses <strong>Hybrid Search</strong> to find exact legal terms within
-                the call transcript, ensuring that the auditor sees both the "What" (the price) and the "How" (the sales
-                approach) in one unified context.</p>
-
-            <div class="code-block">
-                <span class="comment"># RSA Case Study: Intelligent Hybrid Routing</span>
-                <span class="keyword">from</span> semantic_router <span class="keyword">import</span> Route, RouteLayer
-
-                policy_route = Route(name=<span class="string">"compliance"</span>, utterances=[<span
-                    class="string">"how much is RSA fee"</span>, <span class="string">"what is the refund
-                    policy"</span>])
-                sales_route = Route(name=<span class="string">"transactions"</span>, utterances=[<span
-                    class="string">"who sold the most"</span>, <span class="string">"show me John's records"</span>])
-
-                router = RouteLayer(encoder=encoder, routes=[policy_route, sales_route])
-                route = router(<span class="string">"Did John charge the correct $50 RSA fee?"</span>)
-
-                <span class="keyword">if</span> route.name == <span class="string">"compliance"</span>:
-                print(<span class="string">"Routing to Vector DB (Policy Documents)"</span>)
-                <span class="keyword">elif</span> route.name == <span class="string">"transactions"</span>:
-                print(<span class="string">"Routing to SQL DB (Sales Records)"</span>)
-            </div>
-
-            <h2>Key Takeaways</h2>
-            <div class="side-note">
-                ✅ Advanced RAG adds "Intelligence" to the retrieval phase.<br>
-                ✅ HyDE creates a "bridge" between short queries and dense documents.<br>
-                ✅ Hybrid search (BM25 + Dense) protects against vocabulary mismatch.<br>
-                ✅ RRF is the industry standard for merging disparate search results.
-            </div>
-        </div>
+        </section>
     </div>
 
-    <script src="animations.js"></script>
+    <script>
+        function showCode(section, lang) {
+            document.querySelectorAll(`#${section}-js, #${section}-py`).forEach(el => el.classList.remove('active'));
+            document.querySelector(`#${section}-${lang}`).classList.add('active');
+            event.target.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
 
-<script src="sidebar.js?v=2"></script>
+        function simulateSearch(type) {
+            document.querySelectorAll('.node').forEach(n => n.classList.remove('active'));
+            const status = document.getElementById('statusText');
+
+            if (type === 'specific') {
+                document.getElementById('l0-1').classList.add('active');
+                document.getElementById('l0-2').classList.add('active');
+                status.innerText = "Specific Query: Found matching local context in Leaf Nodes (L0).";
+            } else {
+                document.getElementById('l2-1').classList.add('active');
+                status.innerText = "Global Query: Search traversed to the Root Summary (L2) to provide thematic context.";
+            }
+        }
+    </script>
+    <script src="sidebar.js?v=2"></script>
 </body>
 
 </html>

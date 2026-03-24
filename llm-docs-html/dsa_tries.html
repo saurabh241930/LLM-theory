@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Mastery: Tries / Prefix Trees (Animated)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        .mastery-container {
+            padding: 20px;
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .theory-highlight {
+            border-left: 5px solid #2563eb;
+            background: #eff6ff;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        /* Trie Animation Styles */
+        .trie-animation-container {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+
+        .trie-visual {
+            min-height: 250px;
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .trie-node {
+            width: 35px;
+            height: 35px;
+            border: 1px solid #2563eb;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #222;
+            position: absolute;
+            transition: all 0.5s ease;
+            z-index: 2;
+            font-size: 0.9rem;
+        }
+
+        .trie-node.is-end {
+            border-width: 3px;
+            border-color: #10b981;
+        }
+
+        .trie-node.active {
+            background: #2563eb;
+            transform: scale(1.1);
+        }
+
+        svg line {
+            stroke: #333;
+            stroke-width: 1.5;
+        }
+
+        pre {
+            background: #2d2d2d !important;
+            color: #ccc !important;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .code-tabs {
+            display: flex;
+            gap: 1px;
+            margin-bottom: -1px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #e1e4e8;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            border: 1px solid #d1d5da;
+            font-weight: bold;
+        }
+
+        .tab.active {
+            background: #2d2d2d;
+            color: white;
+            border-bottom: none;
+        }
+
+        .code-content {
+            display: none;
+        }
+
+        .code-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Tries: The Prefix Oracle</h1>
+        <div class="subtitle">Retrieval Trees, Autocomplete Engines, and Space Complexity Trade-offs</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="theory">
+            <h2>1. Technical Deep-Dive: Fast String Retrieval</h2>
+            <p>A <strong>Trie</strong> (from "Re<em>trie</em>val") is an ordered tree-like structure used to store
+                strings. Each path from the root down to a node represents a common prefix.</p>
+
+            <div class="theory-highlight">
+                <h3>The Time-Space Paradox</h3>
+                <p><strong>Time:</strong> Searching for a word of length <code>L</code> is exactly
+                    <strong>O(L)</strong>. This is effectively constant time for human-readable words, regardless of how
+                    many million words are in the tree. Much faster than O(L * log N) for a sorted list.</p>
+                <p><strong>Space:</strong> Space is the weakness. Every node holds a map or array of 26 pointers (for
+                    English letters). Total space: <strong>O(ALPHABET_SIZE * N * L)</strong>. <em>Solution:</em> Use a
+                    <strong>Hash Map</strong> inside each node instead of an array to save space for sparse nodes.</p>
+            </div>
+
+            <h3>When to Use?</h3>
+            <ul>
+                <li><strong>Autocomplete:</strong> "Find all words starting with 'cat'".</li>
+                <li><strong>Spell Check:</strong> Instant "valid word" lookup.</li>
+                <li><strong>Longest Common Prefix:</strong> Finding shared roots efficiently.</li>
+            </ul>
+        </section>
+
+        <section id="trie-animation">
+            <h2>2. Visualizing Word Insertion ("CAT" & "CAP")</h2>
+            <p>Watch how common prefixes are shared. "CAT" and "CAP" both share the "C-A" path.</p>
+
+            <div class="trie-animation-container" id="trieAnim">
+                <div class="trie-visual" id="trieVisual">
+                    <svg style="position: absolute; top:0; left:0; width:100%; height:100%;" id="trieEdges"></svg>
+                </div>
+
+                <div class="explanation-text" id="statusText" style="margin-top:20px;">Click Next to insert 'CAT'.</div>
+
+                <div class="controls">
+                    <button class="btn-anim" id="btnNext">Step Insertion</button>
+                    <button class="btn-anim" id="btnReset">Reset Trie</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="patterns-code">
+            <h2>3. Master Patterns & Dual-Language Code</h2>
+
+            <div class="mastery-container">
+                <h3>A. Standard Trie Implementation</h3>
+                <p>The core building block with `insert`, `search`, and `startsWith` methods.</p>
+
+                <div class="code-tabs">
+                    <div class="tab active" onclick="showCode('trie', 'js')">JavaScript</div>
+                    <div class="tab" onclick="showCode('trie', 'py')">Python</div>
+                </div>
+
+                <div id="trie-js" class="code-content active">
+                    <pre><code>class TrieNode {
+    constructor() {
+        this.children = {}; // Map char to TrieNode
+        this.isEndOfWord = false;
+    }
+}
+
+class Trie {
+    constructor() { this.root = new TrieNode(); }
+
+    insert(word) {
+        let node = this.root;
+        for (let char of word) {
+            if (!node.children[char]) node.children[char] = new TrieNode();
+            node = node.children[char];
+        }
+        node.isEndOfWord = true;
+    }
+
+    search(word) {
+        let node = this.root;
+        for (let char of word) {
+            if (!node.children[char]) return false;
+            node = node.children[char];
+        }
+        return node.isEndOfWord;
+    }
+}</code></pre>
+                </div>
+
+                <div id="trie-py" class="code-content">
+                    <pre><code>class TrieNode:
+    def __init__(self):
+        self.children = {} # {char: TrieNode}
+        self.end = False
+
+class Trie:
+    def __init__(self):
+        self.root = TrieNode()
+
+    def insert(self, word: str):
+        node = self.root
+        for c in word:
+            if c not in node.children:
+                node.children[c] = TrieNode()
+            node = node.children[c]
+        node.end = True
+
+    def starts_with(self, prefix: str) -> bool:
+        node = self.root
+        for c in prefix:
+            if c not in node.children:
+                return False
+            node = node.children[c]
+        return True</code></pre>
+                </div>
+            </div>
+
+            <div class="mastery-container">
+                <h3>B. Word Search II (Backtracking + Trie)</h3>
+                <p>Finding words from a dictionary in a 2D board. A Trie lets us prune the search: "If 'CAT' prefix
+                    doesn't exist, don't look for 'CATAPULT'".</p>
+
+                <div class="code-tabs">
+                    <div class="tab active" onclick="showCode('ws', 'js')">JavaScript</div>
+                    <div class="tab" onclick="showCode('ws', 'py')">Python</div>
+                </div>
+
+                <div id="ws-js" class="code-content active">
+                    <pre><code>function findWords(board, words) {
+    let trie = buildTrie(words);
+    let res = new Set();
+    
+    function dfs(r, c, node, word) {
+        if (!node || node.children[board[r][c]]) return;
+        // ... recursive board exploration ...
+        // Only explore if node.children[board[r][c]] exists!
+    }
+}</code></pre>
+                </div>
+
+                <div id="ws-py" class="code-content">
+                    <pre><code>def findWords(board, words):
+    trie = Trie()
+    for w in words: trie.insert(w)
+    
+    res = set()
+    node = trie.root
+    
+    def dfs(r, c, node, path):
+        char = board[r][c]
+        if char not in node.children:
+            return
+        
+        node = node.children[char]
+        if node.end:
+            res.add(path + char)
+        
+        # DFS neighbors...
+    # ... grid traversal ...</code></pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function showCode(section, lang) {
+            document.querySelectorAll(`#${section}-js, #${section}-py`).forEach(el => el.classList.remove('active'));
+            document.querySelector(`#${section}-${lang}`).classList.add('active');
+            event.target.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // --- TRIE ANIMATION ---
+        const treeVisual = document.getElementById('trieVisual');
+        const statusText = document.getElementById('statusText');
+
+        let steps = [
+            { id: 0, char: 'ROOT', x: 50, y: 10 },
+            { id: 1, char: 'C', x: 50, y: 30, pId: 0, word: 'CAT' },
+            { id: 2, char: 'A', x: 50, y: 50, pId: 1, word: 'CAT' },
+            { id: 3, char: 'T', x: 50, y: 70, pId: 2, word: 'CAT', end: true },
+            { id: 1, char: 'C', x: 50, y: 30, pId: 0, already: true },
+            { id: 2, char: 'A', x: 50, y: 50, pId: 1, already: true },
+            { id: 4, char: 'P', x: 70, y: 70, pId: 2, word: 'CAP', end: true }
+        ];
+
+        let currStep = 0;
+
+        function initTrie() {
+            treeVisual.innerHTML = `<svg style="position: absolute; top:0; left:0; width:100%; height:100%;" id="trieEdges"></svg>`;
+            const root = document.createElement('div');
+            root.className = 'trie-node';
+            root.innerText = 'ROOT';
+            root.style.left = '50%'; root.style.top = '10%';
+            treeVisual.appendChild(root);
+        }
+
+        document.getElementById('btnNext').addEventListener('click', () => {
+            if (currStep >= steps.length) {
+                statusText.innerText = "All words inserted (CAT, CAP).";
+                return;
+            }
+
+            const step = steps[currStep];
+            document.querySelectorAll('.trie-node').forEach(n => n.classList.remove('active'));
+
+            if (step.id === 0) {
+                currStep++; return;
+            }
+
+            const existing = document.getElementById(`node-${step.id}`);
+            if (existing) {
+                existing.classList.add('active');
+                statusText.innerText = `Path '${step.char}' already exists. Re-using node.`;
+            } else {
+                const el = document.createElement('div');
+                el.className = 'trie-node active' + (step.end ? ' is-end' : '');
+                el.id = `node-${step.id}`;
+                el.innerText = step.char;
+                el.style.left = `${step.x}%`;
+                el.style.top = `${step.y}%`;
+                treeVisual.appendChild(el);
+
+                const parent = steps.find(s => s.id === step.pId);
+                drawEdge({ x: parent.x, y: parent.y }, { x: step.x, y: step.y });
+                statusText.innerText = `Adding '${step.char}' to path.`;
+            }
+
+            currStep++;
+        });
+
+        function drawEdge(p, c) {
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", `${p.x}%`); line.setAttribute("y1", `${p.y}%`);
+            line.setAttribute("x2", `${c.x}%`); line.setAttribute("y2", `${c.y}%`);
+            document.getElementById('trieEdges').appendChild(line);
+        }
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            currStep = 0;
+            initTrie();
+            statusText.innerText = "Trie reset.";
+        });
+
+        initTrie();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

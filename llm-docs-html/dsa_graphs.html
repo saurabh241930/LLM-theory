@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Mastery: Graphs (Series 3 - High Fidelity)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --accent: #10b981;
+            --bg-dark: #1a1a1a;
+            --cell-bg: #222;
+            --code-bg: #252525;
+            --highlight: rgba(139, 92, 246, 0.3);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #1f1f1f, #2d2d2d);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .explanation-card {
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-left: 5px solid var(--primary);
+            padding: 25px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+
+        .complexity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .badge-time {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .badge-space {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        /* High-Fidelity Visualizer */
+        .visualizer-container {
+            background: var(--bg-dark);
+            color: #fff;
+            border-radius: 12px;
+            margin: 40px 0;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .viz-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 25px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .viz-body {
+            display: flex;
+            flex-wrap: wrap;
+            min-height: auto;
+        }
+
+        .viz-canvas-side {
+            flex: 1;
+            min-width: 350px;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid #333;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .viz-code-side {
+            flex: 0.8;
+            min-width: 300px;
+            background: var(--code-bg);
+            padding: 25px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+
+        /* Graph Structure */
+        .graph-viz {
+            width: 100%;
+            height: 300px;
+            position: relative;
+        }
+
+        .node {
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: #222;
+            z-index: 2;
+            transition: all 0.3s;
+        }
+
+        .node.active {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 0 15px var(--primary);
+        }
+
+        .node.visited {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .dist-label {
+            position: absolute;
+            top: -20px;
+            font-size: 0.7rem;
+            color: #aaa;
+            font-family: monospace;
+        }
+
+        .edge {
+            position: absolute;
+            background: #444;
+            height: 2px;
+            transform-origin: 0 0;
+            z-index: 1;
+            pointer-events: none;
+            transition: background 0.5s;
+        }
+
+        .edge.relaxed {
+            background: var(--primary);
+            height: 3px;
+        }
+
+        .edge-weight {
+            position: absolute;
+            font-size: 0.7rem;
+            color: #888;
+            transform: translate(-50%, -100%);
+            background: #1a1a1a;
+            padding: 0 4px;
+        }
+
+        .struct-viz {
+            width: 100%;
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-start;
+            min-height: 45px;
+            margin-top: 20px;
+            border: 1px dashed #555;
+            overflow-x: auto;
+        }
+
+        .struct-item {
+            padding: 4px 12px;
+            background: #444;
+            border: 1px solid var(--primary);
+            border-radius: 3px;
+            font-size: 0.7rem;
+            color: white;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .btn-viz {
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .status-box {
+            margin-top: 15px;
+            padding: 12px;
+            background: #2d2d2d;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 0.85rem;
+            width: 100%;
+            border-left: 4px solid #777;
+        }
+
+        .code-line {
+            padding: 2px 10px;
+            border-radius: 4px;
+            color: #888;
+            white-space: pre;
+            border-left: 3px solid transparent;
+        }
+
+        .code-line.active {
+            background: var(--highlight);
+            color: #fff;
+            border-left-color: var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="hero-section">
+        <h1>Graphs & Shortest Path Masterclass</h1>
+        <p>Dynamic Connectivity and Greedy Edge Relaxation</p>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="dijkstra">
+            <h2>1. Dijkstra's Algorithm (Weighted Shortest Path)</h2>
+
+            <div class="explanation-card">
+                <h3>Intuition</h3>
+                <p>Simple BFS finds the shortest path in <em>unweighted</em> graphs by exploring "rings" of distance.
+                    However, when edges have weights (costs), a simple hop-count isn't enough.</p>
+                <p><strong>The Greedy Strategy:</strong> Dijkstra's always picks the "closest" node that hasn't been
+                    finalized yet.</p>
+                <ul>
+                    <li>Use a <strong>Priority Queue (PQ)</strong> to store nodes sorted by their current best-known
+                        distance from the start.</li>
+                    <li>Initialize <code>dist[start] = 0</code> and all others to <code>Infinity</code>.</li>
+                    <li>Repeatedly pop the node <code>u</code> with the smallest distance. For each neighbor
+                        <code>v</code>, check if passing through <code>u</code> offers a shorter path:
+                        <code>dist[u] + weight(u,v) < dist[v]</code>.
+                    </li>
+                    <li>If it does, "relax" the edge, update <code>dist[v]</code>, and push <code>v</code> back into the
+                        PQ.</li>
+                </ul>
+
+                <div style="margin-top: 20px;">
+                    <span class="complexity-badge badge-time">Time Complexity: O((V+E) log V)</span>
+                    <span class="complexity-badge badge-space">Space Complexity: O(V + E)</span>
+                </div>
+            </div>
+
+            <div class="visualizer-container" id="d-viz-box">
+                <div class="viz-header">
+                    <span>Algorithm Visualizer: Dijkstra Step-through</span>
+                    <span id="d-step-text">Step: 0</span>
+                </div>
+                <div class="viz-body">
+                    <div class="viz-canvas-side">
+                        <div class="graph-viz" id="d-canvas"></div>
+
+                        <div class="struct-viz" id="pq-row">
+                            <span style="color:#666; font-size:0.7rem; line-height:2.5;">Priority Queue (Min): </span>
+                        </div>
+
+                        <div style="display: flex; gap:10px; margin-top:30px;">
+                            <button class="btn-viz" onclick="dReset()">Reset</button>
+                            <button class="btn-viz" onclick="dNextStep()">Next Step &rarr;</button>
+                        </div>
+
+                        <div class="status-box" id="d-status">
+                            Click Next to start finding the shortest paths from Node A.
+                        </div>
+                    </div>
+                    <div class="viz-code-side">
+                        <div style="margin-bottom: 10px; color: #666; font-size: 0.7rem;">DIJKSTRA (PYTHON)</div>
+                        <div class="code-line" id="d-l1">pq = [(0, start)]</div>
+                        <div class="code-line" id="d-l2">while pq:</div>
+                        <div class="code-line" id="d-l3"> d, u = heappop(pq)</div>
+                        <div class="code-line" id="d-l4"> if d > dists[u]: continue</div>
+                        <div class="code-line" id="d-l5"> for v, weight in adj[u]:</div>
+                        <div class="code-line" id="d-l6"> new_dist = d + weight</div>
+                        <div class="code-line" id="d-l7"> if new_dist < dists[v]:</div>
+                                <div class="code-line" id="d-l8"> dists[v] = new_dist</div>
+                                <div class="code-line" id="d-l9"> heappush(pq, (new_dist, v))</div>
+                        </div>
+                    </div>
+                </div>
+        </section>
+    </div>
+
+    <script>
+        const nodes = [
+            { id: 'A', x: 15, y: 50 },
+            { id: 'B', x: 45, y: 20 },
+            { id: 'C', x: 45, y: 80 },
+            { id: 'D', x: 80, y: 50 }
+        ];
+        const edges = [
+            { u: 'A', v: 'B', w: 4 },
+            { u: 'A', v: 'C', w: 1 },
+            { u: 'C', v: 'B', w: 2 },
+            { u: 'B', v: 'D', w: 3 },
+            { u: 'C', v: 'D', w: 8 }
+        ];
+
+        let pq = [];
+        let dists = { A: 0, B: Infinity, C: Infinity, D: Infinity };
+        let dStep = 0;
+        let dState = 'INIT';
+
+        function dInit() {
+            const canvas = document.getElementById('d-canvas');
+            canvas.innerHTML = '';
+            nodes.forEach(n => {
+                const el = document.createElement('div');
+                el.className = 'node';
+                el.id = `dn-${n.id}`;
+                el.innerText = n.id;
+                el.style.left = `${n.x}%`;
+                el.style.top = `${n.y}%`;
+                el.innerHTML += `<div class="dist-label" id="dl-${n.id}">${dists[n.id] === Infinity ? '∞' : dists[n.id]}</div>`;
+                canvas.appendChild(el);
+            });
+            edges.forEach(e => {
+                const uNode = nodes.find(n => n.id === e.u);
+                const vNode = nodes.find(n => n.id === e.v);
+                drawEdge(uNode, vNode, e.w);
+            });
+        }
+
+        function drawEdge(u, v, w) {
+            const canvas = document.getElementById('d-canvas');
+            const edge = document.createElement('div');
+            edge.className = 'edge';
+            edge.id = `de-${u.id}-${v.id}`;
+            const dx = (v.x - u.x) * 4.5;
+            const dy = (v.y - u.y) * 3;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            edge.style.width = `${dist}px`;
+            edge.style.left = `${u.x}%`;
+            edge.style.top = `${u.y}%`;
+            edge.style.transform = `rotate(${angle}deg)`;
+
+            const weight = document.createElement('div');
+            weight.className = 'edge-weight';
+            weight.innerText = w;
+            weight.style.left = `${(u.x + v.x) / 2}%`;
+            weight.style.top = `${(u.y + v.y + 2) / 2}%`;
+            canvas.appendChild(edge);
+            canvas.appendChild(weight);
+        }
+
+        function highlightCode(prefix, line) {
+            document.querySelectorAll(`[id^="${prefix}-l"]`).forEach(l => l.classList.remove('active'));
+            if (line) document.getElementById(`${prefix}-l${line}`).classList.add('active');
+        }
+
+        function updatePQ() {
+            const pqRow = document.getElementById('pq-row');
+            pqRow.innerHTML = '<span style="color:#666; font-size:0.7rem; line-height:2.5;">Priority Queue (Min): </span>';
+            pq.sort((a, b) => a.d - b.d);
+            pq.forEach(n => {
+                const item = document.createElement('div');
+                item.className = 'struct-item';
+                item.innerText = `${n.id}(${n.d})`;
+                pqRow.appendChild(item);
+            });
+            document.getElementById('d-step-text').innerText = `Step: ${dStep}`;
+        }
+
+        function dNextStep() {
+            if (dState === 'INIT') {
+                pq = [{ id: 'A', d: 0 }];
+                highlightCode('d', 1);
+                document.getElementById('d-status').innerText = "Initialized PQ with start node: A (priority 0).";
+                dState = 'POP';
+                updatePQ();
+                return;
+            }
+
+            if (pq.length === 0) {
+                document.getElementById('d-status').innerText = "Shortest path algorithm finished! All nodes relaxed.";
+                highlightCode('d', null);
+                return;
+            }
+
+            dStep++;
+
+            switch (dState) {
+                case 'POP':
+                    highlightCode('d', 3);
+                    const curr = pq.shift();
+                    const el = document.getElementById(`dn-${curr.id}`);
+                    el.classList.add('active');
+                    document.getElementById('d-status').innerText = `Popped Node ${curr.id} with current dist ${curr.d}.`;
+
+                    setTimeout(() => {
+                        el.classList.remove('active');
+                        el.classList.add('visited');
+                        highlightCode('d', 5);
+
+                        let relevantEdges = edges.filter(e => e.u === curr.id || e.v === curr.id);
+                        document.getElementById('d-status').innerText = `Checking ${relevantEdges.length} neighbors of ${curr.id}...`;
+
+                        let updates = 0;
+                        relevantEdges.forEach(e => {
+                            const neighborId = (e.u === curr.id) ? e.v : e.u;
+                            const newDist = curr.d + e.w;
+                            if (newDist < dists[neighborId]) {
+                                dists[neighborId] = newDist;
+                                document.getElementById(`dl-${neighborId}`).innerText = newDist;
+                                document.getElementById(`de-${e.u}-${e.v}`).classList.add('relaxed');
+                                pq.push({ id: neighborId, d: newDist });
+                                updates++;
+                            }
+                        });
+
+                        setTimeout(() => {
+                            highlightCode('d', 9);
+                            document.getElementById('d-status').innerText = `Relaxation complete. ${updates} distances updated and pushed to PQ.`;
+                            updatePQ();
+                            dState = 'POP';
+                        }, 500);
+                    }, 500);
+                    break;
+            }
+        }
+
+        function dReset() {
+            pq = [];
+            dists = { A: 0, B: Infinity, C: Infinity, D: Infinity };
+            dStep = 0;
+            dState = 'INIT';
+            dInit();
+            updatePQ();
+            highlightCode('d', null);
+            document.getElementById('d-status').innerText = "Visualizer ready. Start node set to A.";
+        }
+
+        dInit();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

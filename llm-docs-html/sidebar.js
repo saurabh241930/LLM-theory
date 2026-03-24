@@ -136,6 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
             ]
         },
         {
+            category: 'AZURE AI & ENTERPRISE RAG',
+            links: [
+                { id: 'azure_ai_search_masterclass.html', title: '1. Azure AI Search' },
+                { id: 'azure_openai_masterclass.html', title: '2. Azure OpenAI & Security' }
+            ]
+        },
+        {
             category: 'Backend',
             links: [
                 { id: 'backend_core.html', title: 'Backend Core' },
@@ -168,10 +175,12 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             category: 'Database',
             links: [
-                { id: 'database_internals.html', title: 'Database Internals' },
-                { id: 'database_scaling.html', title: 'Database Scaling' },
-                { id: 'database_postgres_advanced.html', title: 'Advanced PostgreSQL' },
-                { id: 'database_mongodb_advanced.html', title: 'Advanced MongoDB' }
+                { id: 'database_internals.html', title: '1. ACID & Indexes' },
+                { id: 'database_scaling.html', title: '2. Database Scaling' },
+                { id: 'database_postgres_advanced.html', title: '3. PostgreSQL Mastery' },
+                { id: 'database_vector_internals.html', title: '4. Vector DB Internals' },
+                { id: 'database_vector_production.html', title: '5. Production Vector Ops' },
+                { id: 'database_mongodb_advanced.html', title: '6. Advanced MongoDB' }
             ]
         },
         {
@@ -193,7 +202,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'sysdesign_cqrs_splitting.html', title: 'S7. CQRS & Read Splitting' },
                 { id: 'sysdesign_service_mesh.html', title: 'S8. Service Mesh & API GW' },
                 { id: 'sysdesign_bloom_filters.html', title: 'S9. Bloom Filters' },
-                { id: 'sysdesign_distributed_transactions.html', title: 'S10. Distributed Transactions' }
+                { id: 'sysdesign_distributed_transactions.html', title: 'S10. Distributed Transactions' },
+                { id: 'sysdesign_discord_slack.html', title: 'S11. Discord / Slack Design' }
+            ]
+        },
+        {
+            category: 'DATA STRUCTURES & ALGORITHMS',
+            links: [
+                { id: 'dsa_arrays_strings.html', title: '1. Arrays & Strings' },
+                { id: 'dsa_hash_maps.html', title: '2. Hash Maps & Sets' },
+                { id: 'dsa_linked_lists.html', title: '3. Linked Lists' },
+                { id: 'dsa_trees.html', title: '4. Trees & Traversals' },
+                { id: 'dsa_graphs.html', title: '5. Graphs & Algorithms' },
+                { id: 'dsa_heaps.html', title: '6. Heaps & Priority Queues' },
+                { id: 'dsa_dp.html', title: '7. Dynamic Programming' },
+                { id: 'dsa_backtracking.html', title: '8. Backtracking Pattern' },
+                { id: 'dsa_tries.html', title: '9. Tries (Prefix Trees)' },
+                { id: 'dsa_union_find.html', title: '10. Union Find / DSU' }
             ]
         },
         {
@@ -299,5 +324,33 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 100);
         `;
         document.body.appendChild(mermaidScript);
+    }
+
+    // --- Inject "Next Page" Button Dynamically ---
+    const allLinks = menu.flatMap(section => section.links);
+    const currentIndex = allLinks.findIndex(link => link.id === currentPage);
+
+    if (currentIndex !== -1 && currentIndex < allLinks.length - 1) {
+        const nextLink = allLinks[currentIndex + 1];
+
+        const navContainer = document.createElement('div');
+        navContainer.style.cssText = 'margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--wp-border, #eaecf0); display: flex; justify-content: flex-end; margin-bottom: 40px;';
+
+        const nextBtn = document.createElement('a');
+        nextBtn.href = nextLink.id;
+        nextBtn.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background-color: var(--wp-accent, #3366cc); color: white; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 1.1em; transition: opacity 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+        nextBtn.innerHTML = `Next: ${nextLink.title} <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
+
+        nextBtn.addEventListener('mouseover', () => nextBtn.style.opacity = '0.85');
+        nextBtn.addEventListener('mouseout', () => nextBtn.style.opacity = '1');
+
+        navContainer.appendChild(nextBtn);
+
+        const contentWrapper = document.querySelector('.content-wrapper');
+        if (contentWrapper) {
+            contentWrapper.appendChild(navContainer);
+        } else {
+            document.body.appendChild(navContainer);
+        }
     }
 });
