@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XGBoost Cheatsheet - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .premium-btn {
+            background: #3366cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .premium-btn:hover {
+            background: #254a9c;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>XGBoost</h1>
+        <div class="subtitle">Extreme Gradient Boosting - The Kaggle Winner</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">XGBoost</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Ensemble (Boosting)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Bias/Variance</div>
+                    <div class="infobox-value">Low Bias</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Secret</div>
+                    <div class="infobox-value">Residual Learning</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>XGBoost</strong> builds trees <strong>sequentially</strong>. Instead of averaging random models,
+                it uses <strong>Gradient Boosting</strong>: each new tree tries to predict the
+                <strong>Residuals</strong>
+                (the difference between the actual value and the current ensemble's prediction).
+            </p>
+        </section>
+
+        <section id="flow">
+            <h2>2. Visual Flow</h2>
+            <div class="mermaid">
+                graph TD
+                A[Initial Prediction] --> B[Calculate Residuals]
+                B --> C[Train Tree 1 for Residuals]
+                C --> D[Update Prediction]
+                D --> E[Calculate New Residuals]
+                E --> F[Train Tree 2 for Residuals]
+                F --> G[Iterate...]
+            </div>
+        </section>
+
+        <section id="playground">
+            <h2>3. Interactive Playground (Gradient Boosting)</h2>
+            <p>Click the chart to add data points (Regression). The algorithm will start with an <strong>Initial
+                    Prediction</strong> (the mean). Click <strong>"Add Boosting Tree"</strong> to see how each new tree
+                focuses on the remaining error (Residuals) to converge to your points!</p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="xgbChart"></canvas>
+                </div>
+
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <button id="addTree" class="premium-btn" style="background: #109618;">Add Boosting Tree (Tree
+                        +1)</button>
+                    <button id="clearXgb" class="premium-btn" style="background: #666;">Clear All</button>
+                    <div style="flex-grow: 1; text-align: right; font-size: 1.1em;">
+                        <strong>Trees in Ensemble: <span id="numTrees" style="color: #3366cc;">0</span></strong> |
+                        <strong>Final Loss (MSE): <span id="xgbLoss" style="color: #666;">--</span></strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="secret-sauce">
+            <h2>4. The "Extreme" Secret Sauce</h2>
+            <ul>
+                <li><strong>Regularization:</strong> Penalizes complex trees (L1 and L2).</li>
+                <li><strong>Sparsity Awareness:</strong> Handles missing values automatically.</li>
+                <li><strong>Parallelization:</strong> Highly optimized for fast CPU processing.</li>
+            </ul>
+        </section>
+
+        <section id="case-study">
+            <h2>5. Real-World Case Study: High-Precision Credit Scoring</h2>
+            <div class="case-study-card"
+                style="background: #fffde7; padding: 20px; border-left: 5px solid #fbc02d; border-radius: 4px;">
+                <p><strong>The Problem:</strong> A FinTech startup wants to outperform traditional banks in predicting
+                    "willingness to pay" using alternative data (mobile app usage, utility bills).</p>
+                <p><strong>The Solution:</strong> <strong>XGBoost</strong> builds an ensemble of thousands of small
+                    trees that focus on "edge cases" the base models miss.</p>
+                <ul>
+                    <li>Features: Transaction frequency, late payment history, time of day for spending.</li>
+                    <li>Result: A highly granular risk score that captures complex non-linear interactions between
+                        features.</li>
+                </ul>
+                <p><strong>Why XGBoost?</strong> <strong>Gradient Boosting on Tabular Data</strong>. In Kaggle
+                    competitions and real-world finance, XGBoost is the gold standard for structured data because its
+                    <strong>Tree Pruning</strong> and <strong>Regularization</strong> prevent it from overfitting to
+                    noise in noisy financial datasets.</p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>6. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">import</span> xgboost <span class="keyword">as</span> xgb
+# Train Boosting model with 100 rounds
+bst = xgb.train(params, dtrain, num_boost_round=100)</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('xgbChart').getContext('2d');
+        let points = [];
+        let trees = [];
+        let learningRate = 0.5;
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'Data Points', data: [], backgroundColor: ML_COLORS.primary, pointRadius: 6 },
+                    { label: 'Ensemble Prediction', data: [], type: 'line', borderColor: ML_COLORS.secondary, borderWidth: 3, pointRadius: 0, fill: false, tension: 0.1 }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                onClick: (e) => {
+                    const pos = Chart.helpers.getRelativePosition(e, chart);
+                    const x = chart.scales.x.getValueForPixel(pos.x);
+                    const y = chart.scales.y.getValueForPixel(pos.y);
+                    points.push({ x, y });
+                    points.sort((a, b) => a.x - b.x);
+                    resetEnsemble();
+                },
+                scales: {
+                    x: { min: 0, max: 10 },
+                    y: { min: 0, max: 10 }
+                }
+            }
+        });
+
+        function getEnsemblePred(x) {
+            if (points.length === 0) return 5;
+            let pred = points.reduce((sum, p) => sum + p.y, 0) / points.length; // F0 (Mean)
+            trees.forEach(t => {
+                if (x < t.split) pred += learningRate * t.leftVal;
+                else pred += learningRate * t.rightVal;
+            });
+            return pred;
+        }
+
+        function addTree() {
+            if (points.length < 2) return;
+
+            // 1. Calculate Residuals
+            const residuals = points.map(p => ({ x: p.x, y: p.y - getEnsemblePred(p.x) }));
+
+            // 2. Simple Split search for Residuals (Tree with 1 split)
+            let bestMSE = Infinity;
+            let bestSplit = { split: 5, leftVal: 0, rightVal: 0 };
+
+            for (let x = 0.5; x < 10; x += 0.5) {
+                const left = residuals.filter(r => r.x < x);
+                const right = residuals.filter(r => r.x >= x);
+                if (left.length === 0 || right.length === 0) continue;
+
+                const lMean = left.reduce((sum, r) => sum + r.y, 0) / left.length;
+                const rMean = right.reduce((sum, r) => sum + r.y, 0) / right.length;
+
+                const mse = left.reduce((sum, r) => sum + Math.pow(r.y - lMean, 2), 0) +
+                    right.reduce((sum, r) => sum + Math.pow(r.y - rMean, 2), 0);
+
+                if (mse < bestMSE) {
+                    bestMSE = mse;
+                    bestSplit = { split: x, leftVal: lMean, rightVal: rMean };
+                }
+            }
+            trees.push(bestSplit);
+            updateUI();
+        }
+
+        function updateUI() {
+            chart.data.datasets[0].data = points;
+
+            const predLine = [];
+            for (let x = 0; x <= 10; x += 0.1) {
+                predLine.push({ x, y: getEnsemblePred(x) });
+            }
+            chart.data.datasets[1].data = predLine;
+
+            let mse = points.length ? points.reduce((sum, p) => sum + Math.pow(p.y - getEnsemblePred(p.x), 2), 0) / points.length : 0;
+
+            document.getElementById('numTrees').innerText = trees.length;
+            document.getElementById('xgbLoss').innerText = mse.toFixed(4);
+            chart.update();
+        }
+
+        function resetEnsemble() {
+            trees = [];
+            updateUI();
+        }
+
+        document.getElementById('addTree').addEventListener('click', addTree);
+        document.getElementById('clearXgb').addEventListener('click', () => {
+            points = [];
+            trees = [];
+            updateUI();
+        });
+    </script>
+</body>
+
+</html>

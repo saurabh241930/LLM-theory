@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Masterclass: Layering & Production Patterns (Series 5)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        :root {
+            --primary: #2496ed;
+            --accent: #1d63ed;
+            --bg-dark: #1a1a1a;
+            --layer-bg: #222;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #1d63ed, #2496ed);
+            color: white;
+            padding: 50px 20px;
+            text-align: center;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .explanation-card {
+            background: #fdfdfd;
+            border: 1px solid #e1e4e8;
+            border-left: 5px solid var(--primary);
+            padding: 25px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+
+        /* Layer Visualizer */
+        .viz-container {
+            background: var(--bg-dark);
+            color: #fff;
+            border-radius: 12px;
+            margin: 40px 0;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .layer-stack {
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 8px;
+            margin: 30px 0;
+            max-width: 500px;
+        }
+
+        .layer {
+            padding: 12px 20px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .layer.cached {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .layer.invalidated {
+            border-color: #f87171;
+            background: rgba(248, 113, 113, 0.1);
+        }
+
+        .layer::after {
+            content: 'CACHED';
+            position: absolute;
+            right: 15px;
+            font-size: 0.6rem;
+            color: #10b981;
+            opacity: 0;
+        }
+
+        .layer.cached::after {
+            opacity: 1;
+        }
+
+        .viz-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn-docker {
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .status-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2d2d2d;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="hero-section">
+        <h1>Docker Masterclass</h1>
+        <p>Beyond the Basics: Layering, Caching, and Multi-Stage Optimization</p>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="layering">
+            <h2>1. Image Layering (Union File System)</h2>
+            <p>Every instruction in a Dockerfile (<code>FROM</code>, <code>RUN</code>, <code>COPY</code>) creates a new
+                <strong>read-only layer</strong>. When you start a container, Docker adds a thin <strong>writable
+                    layer</strong> on top.</p>
+
+            <div class="explanation-card">
+                <h3>Why Order Matters?</h3>
+                <p>Docker uses a cache to speed up builds. If a layer changes, <strong>all subsequent layers are
+                        invalidated</strong> and must be rebuilt. This is why you should always copy your
+                    <code>package.json</code> or <code>requirements.txt</code> <em>before</em> copying the rest of your
+                    source code.</p>
+            </div>
+
+            <div class="viz-container">
+                <h3 style="margin-top:0;">Interactive Visualizer: Layer Invalidation</h3>
+                <p style="color:#aaa; font-size:0.8rem;">Change a line in the Dockerfile to see how the build cache
+                    behaves.</p>
+
+                <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+                    <div style="flex:1; min-width:300px;">
+                        <textarea id="dockerfile"
+                            style="width:100%; height:220px; background:#222; color:#fff; padding:15px; font-family:monospace; border:1px solid #444; border-radius:8px; line-height:1.6;">
+FROM node:18-alpine
+WORKDIR /app
+COPY package.json .
+RUN npm install
+COPY . .
+CMD ["npm", "start"]</textarea>
+                        <div class="viz-controls">
+                            <button class="btn-docker" onclick="buildDocker()"
+                                style="background:var(--primary); border-color:var(--primary);">Run Build</button>
+                            <button class="btn-docker" onclick="modifyCode('source')">Modify Source Code</button>
+                            <button class="btn-docker" onclick="modifyCode('deps')">Change Dependencies</button>
+                        </div>
+                    </div>
+                    <div style="flex:0.8; min-width:250px;">
+                        <div class="layer-stack" id="layer-stack">
+                            <!-- Layers generated here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="status-box" id="build-status">
+                    Building image... All layers cached. (Build time: 0.5s)
+                </div>
+            </div>
+        </section>
+
+        <section id="multi-stage">
+            <h2>2. Multi-Stage Builds (The Production Standard)</h2>
+            <p>Standard builds include compilers, source code, and development tools in the final image, making it huge
+                and vulnerable. <strong>Multi-stage builds</strong> solve this by using multiple <code>FROM</code>
+                statements.</p>
+
+            <div class="code-block">
+                <span class="comment"># Stage 1: Build</span>
+                <span class="keyword">FROM</span> node:18-alpine <span class="keyword">AS</span> builder
+                <span class="keyword">WORKDIR</span> /app
+                <span class="keyword">COPY</span> . .
+                <span class="keyword">RUN</span> npm install && npm run build
+
+                <span class="comment"># Stage 2: Production</span>
+                <span class="keyword">FROM</span> nginx:alpine
+                <span class="keyword">COPY</span> --from=builder /app/dist /usr/share/nginx/html
+            </div>
+            <p><strong>Result:</strong> Image size drops from ~800MB to ~20MB, and the attack surface is minimized.</p>
+        </section>
+
+        <div style="margin-top: 50px; text-align: center;">
+            <a href="devops_k8s.html" class="next-btn"
+                style="text-decoration:none; background: var(--primary); color:white; padding:12px 24px; border-radius:6px; font-weight:bold;">Next:
+                Kubernetes Masterclass &rarr;</a>
+        </div>
+    </div>
+
+    <script>
+        let previousLines = [];
+        let firstBuild = true;
+
+        function buildDocker() {
+            const lines = document.getElementById('dockerfile').value.trim().split('\n');
+            const stack = document.getElementById('layer-stack');
+            stack.innerHTML = '';
+
+            let invalidated = false;
+            let buildTime = 0.1;
+
+            lines.forEach((line, i) => {
+                const el = document.createElement('div');
+                el.className = 'layer';
+                el.innerText = line;
+
+                if (!invalidated && !firstBuild && lines[i] === previousLines[i]) {
+                    el.classList.add('cached');
+                } else if (firstBuild) {
+                    el.classList.add('new');
+                    buildTime += 5;
+                } else {
+                    invalidated = true;
+                    el.classList.add('invalidated');
+                    buildTime += 3;
+                }
+                stack.appendChild(el);
+            });
+
+            document.getElementById('build-status').innerHTML = invalidated
+                ? `Cache miss detected at line ${lines.findIndex((l, i) => l !== previousLines[i]) + 1}. Rebuilding layers... (Build time: ${buildTime}s)`
+                : (firstBuild ? `First build complete. All layers stored in cache. (Build time: ${buildTime}s)` : `All layers found in cache. (Build time: ${buildTime}s)`);
+
+            previousLines = [...lines];
+            firstBuild = false;
+        }
+
+        function modifyCode(type) {
+            const df = document.getElementById('dockerfile');
+            if (type === 'source') {
+                df.value = df.value.replace('COPY . .', 'COPY . . # v' + Math.floor(Math.random() * 100));
+            } else {
+                df.value = df.value.replace('COPY package.json .', 'COPY package.json . # new-dep');
+            }
+            buildDocker();
+        }
+
+        buildDocker();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

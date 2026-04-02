@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCA: Principal Component Analysis - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .premium-btn {
+            background: #3366cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .premium-btn:hover {
+            background: #254a9c;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>PCA (Principal Component Analysis)</h1>
+        <div class="subtitle">Complexity reduction via dimensionality projection</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">PCA</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Unsupervised (Feature Eng)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Goal</div>
+                    <div class="infobox-value">Maximize Variance Retention</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Technique</div>
+                    <div class="infobox-value">Eigen-Decomposition</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>PCA</strong> is used to reduce the number of features in a dataset while keeping as much
+                information (variance) as possible. It transforms original, correlated features into a new set of
+                uncorrelated features called <strong>Principal Components</strong>.</p>
+        </section>
+
+        <section id="flow">
+            <h2>2. Visual Flow</h2>
+            <div class="mermaid">
+                graph TD
+                A[Standardize Data] --> B[Calculate Covariance Matrix]
+                B --> C[Compute Eigenvectors & Eigenvalues]
+                C --> D[Identify Principal Components with highest Variance]
+                D --> E[Project Data onto Selected Components]
+            </div>
+        </section>
+
+        <section id="playground">
+            <h2>3. Interactive Playground</h2>
+            <p>Click on the chart to add points. The algorithm will instantly calculate the <strong>Principal Component
+                    (PC1)</strong>—the axis that captures the most variance. Watch how the line rotates to align with
+                the "stretch" of your data cloud!</p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="pcaChart"></canvas>
+                </div>
+
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <button id="clearPca" class="premium-btn" style="background: #666;">Clear All Points</button>
+                    <div style="flex-grow: 1; text-align: right; font-size: 0.9em; color: #666;">
+                        <em>Red Line: Principal Component 1 (Eigenvector)</em>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="math">
+            <h2>4. Intuition</h2>
+            <p>Imagine a cloud of data points. PCA finds the direction (axis) along which the data is most spread
+                out. This becomes "Principal Component 1." The second axis must be perpendicular to the first and
+                capture the next most variance.</p>
+        </section>
+
+        <section id="scenarios">
+            <h2>5. Scenarios & Use Cases</h2>
+            <div class="comparison-grid">
+                <div class="comparison-card" style="border-top: 4px solid #4caf50;">
+                    <h4>🌟 Benefits</h4>
+                    <ul>
+                        <li><strong>Data Compression:</strong> Reduces redundant features.</li>
+                        <li><strong>Visualization:</strong> Project high-dimensional data to 2D.</li>
+                        <li><strong>Denoising:</strong> Removes subtle noise.</li>
+                    </ul>
+                </div>
+                <div class="comparison-card" style="border-top: 4px solid #f44336;">
+                    <h4>🚩 Drawbacks</h4>
+                    <ul>
+                        <li>Requires scaling (Standardization).</li>
+                        <li>Assumes linear relationships.</li>
+                        <li>Loss of literal meaning for features.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="case-study">
+            <h2>6. Real-World Case Study: Image Compression & Facial Recognition</h2>
+            <div class="case-study-card"
+                style="background: #e8f5e9; padding: 20px; border-left: 5px solid #4caf50; border-radius: 4px;">
+                <p><strong>The Problem:</strong> A surveillance system needs to store 1 million faces but doesn't have
+                    the terabytes of storage required for raw high-res images.</p>
+                <p><strong>The Solution:</strong> <strong>PCA</strong> (Eigenfaces) reduces each face image from 10,000
+                    pixels down to just 50 principal components.</p>
+                <ul>
+                    <li>Input: 100x100 pixel grid (10k features).</li>
+                    <li>Output: 50 numerical values that represent the "core" features of that face.</li>
+                </ul>
+                <p><strong>Why PCA?</strong> <strong>Variance Retention</strong>. PCA identifies that most pixels in a
+                    face photo are redundant (e.g., background or skin texture). By keeping only the components with
+                    high variance, we can reconstruct the face with 95% accuracy using only 0.5% of the original data!
+                </p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>7. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> sklearn.decomposition <span class="keyword">import</span> PCA
+# Project to 2 Components
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_std)</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('pcaChart').getContext('2d');
+        let points = [];
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'Data Points', data: [], backgroundColor: ML_COLORS.primary + '88', pointRadius: 6 },
+                    { label: 'PC1 (Max Variance Axis)', data: [], type: 'line', borderColor: ML_COLORS.secondary, borderWidth: 3, pointRadius: 0, fill: false }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                onClick: (e) => {
+                    const pos = Chart.helpers.getRelativePosition(e, chart);
+                    const x = chart.scales.x.getValueForPixel(pos.x);
+                    const y = chart.scales.y.getValueForPixel(pos.y);
+                    points.push({ x, y });
+                    calculateAndDrawPCA();
+                },
+                scales: {
+                    x: { min: -10, max: 10 },
+                    y: { min: -10, max: 10 }
+                }
+            }
+        });
+
+        function calculateAndDrawPCA() {
+            if (points.length < 2) {
+                chart.data.datasets[0].data = points;
+                chart.update();
+                return;
+            }
+
+            // 1. Mean center
+            const meanX = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+            const meanY = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+            const centered = points.map(p => ({ x: p.x - meanX, y: p.y - meanY }));
+
+            // 2. Covariance Matrix elements
+            let xx = 0, xy = 0, yy = 0;
+            centered.forEach(p => {
+                xx += p.x * p.x;
+                xy += p.x * p.y;
+                yy += p.y * p.y;
+            });
+
+            // 3. Power Iteration for dominant eigenvector
+            let vx = 1, vy = 1;
+            for (let i = 0; i < 20; i++) {
+                let nx = xx * vx + xy * vy;
+                let ny = xy * vx + yy * vy;
+                let mag = Math.sqrt(nx * nx + ny * ny);
+                if (mag > 0) {
+                    vx = nx / mag;
+                    vy = ny / mag;
+                }
+            }
+
+            // 4. Update UI
+            chart.data.datasets[0].data = points;
+
+            // Draw line through mean in direction of eigenvector
+            const len = 15;
+            chart.data.datasets[1].data = [
+                { x: meanX - vx * len, y: meanY - vy * len },
+                { x: meanX + vx * len, y: meanY + vy * len }
+            ];
+
+            chart.update('none');
+        }
+
+        document.getElementById('clearPca').addEventListener('click', () => {
+            points = [];
+            chart.data.datasets[0].data = [];
+            chart.data.datasets[1].data = [];
+            chart.update();
+        });
+    </script>
+</body>
+
+</html>

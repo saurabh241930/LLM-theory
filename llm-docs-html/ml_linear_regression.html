@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Regression Cheatsheet - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .math-hero {
+            background: #fdf6e3;
+            border: 1px solid #d3af37;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.25em;
+            font-family: 'Times New Roman', serif;
+        }
+
+        .jupyter-cell {
+            background: #ffffff;
+            border: 1px solid #cfcfcf;
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .jupyter-input {
+            background: #f7f7f7;
+            padding: 10px;
+            border-bottom: 1px solid #cfcfcf;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Linear Regression</h1>
+        <div class="subtitle">Predicting continuous values using best-fit lines</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">Linear Regression</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Supervised (Regression)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Goal</div>
+                    <div class="infobox-value">Minimize Sum of Squared Residuals</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Parameters</div>
+                    <div class="infobox-value">Slope (w), Intercept (b)</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>Linear Regression</strong> is the simplest algorithm in machine learning. It assumes a linear
+                relationship between the input variable (X) and the output variable (y). The goal is to find the line
+                of "best fit" that minimizes the vertical distance between the actual data points and the predicted
+                line.</p>
+        </section>
+
+        <section id="flow">
+            <h2>2. Visual Flow</h2>
+            <div class="mermaid">
+                graph TD
+                A[Input Features X] --> B[Multiply by Weights w]
+                B --> C[Add Bias b]
+                C --> D[Predict Output y_hat]
+                D --> E[Calculate Loss - MSE]
+                E --> F[Optimize w and b via Gradient Descent]
+                F --> B
+            </div>
+        </section>
+
+        <section id="math">
+            <h2>3. Mathematics</h2>
+            <div class="math-hero">
+                y = wX + b
+            </div>
+            <p><strong>Loss Function (Mean Squared Error):</strong></p>
+            <div class="math-block">
+                MSE = (1/n) * Σ(y_actual - y_predicted)²
+            </div>
+        </section>
+
+        <section id="playground">
+            <h2>4. Interactive Playground</h2>
+            <p>Adjust the <strong>Slope (w)</strong> and <strong>Intercept (b)</strong> sliders to fit the line to the
+                synthetic data. Watch how the <strong>MSE (Loss)</strong> changes in real-time!</p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="regressionChart"></canvas>
+                </div>
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 25px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-weight: bold; min-width: 80px;">Slope (w):</label>
+                        <input type="range" id="slopeSlider" min="-2" max="6" step="0.1" value="0"
+                            style="width: 150px; cursor: pointer;">
+                        <span id="slopeVal"
+                            style="display: inline-block; min-width: 30px; font-family: monospace; font-weight: bold; color: #3366cc;">0</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-weight: bold; min-width: 100px;">Intercept (b):</label>
+                        <input type="range" id="interceptSlider" min="-10" max="20" step="0.5" value="0"
+                            style="width: 150px; cursor: pointer;">
+                        <span id="interceptVal"
+                            style="display: inline-block; min-width: 30px; font-family: monospace; font-weight: bold; color: #3366cc;">0</span>
+                    </div>
+                    <div style="flex-grow: 1; text-align: right; font-size: 1.1em;">
+                        <span style="color: #666;">MSE Loss:</span>
+                        <strong id="mseLabel"
+                            style="color: #dc3912; font-family: monospace; font-size: 1.2em;">0.00</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="case-study">
+            <h2>5. Real-World Case Study: Real Estate Valuation</h2>
+            <div class="case-study-card"
+                style="background: #f0f7ff; padding: 20px; border-left: 5px solid #3366cc; border-radius: 4px;">
+                <p><strong>The Problem:</strong> A property portal (like Zillow) needs to estimate the market price of
+                    50 million homes daily.</p>
+                <p><strong>The Solution:</strong> <strong>Multiple Linear Regression</strong> calculates price based on
+                    features like:</p>
+                <ul>
+                    <li>Square Footage (Size)</li>
+                    <li>Number of Bedrooms/Bathrooms</li>
+                    <li>Proximity to Schools (Location Index)</li>
+                </ul>
+                <p><strong>Why Linear Regression?</strong> Its <strong>Coefficients</strong> are highly interpretable.
+                    If the coefficient for "Square Feet" is 2.5, the company can explicitly state: <em>"Every extra
+                        square foot adds approximately $250 to the home value."</em></p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>6. Implementation</h2>
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <h4>👍 When to use</h4>
+                    <ul>
+                        <li>Predicting house prices or salaries (continuous values).</li>
+                        <li>Establishing relationships between variables (e.g., ad spend vs. sales).</li>
+                        <li>Baseline model - always start here.</li>
+                    </ul>
+                </div>
+                <div class="comparison-card">
+                    <h4>👎 Limitations</h4>
+                    <ul>
+                        <li>Assumes linearity - fails on non-linear data (like XOR).</li>
+                        <li>Sensitive to outliers (they pull the line significantly).</li>
+                        <li>Assumes independence of features.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>6. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> sklearn.linear_model <span class="keyword">import</span> LinearRegression
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="comment"># 1. Prepare Data</span>
+X = np.array([[1], [2], [3], [4]])
+y = np.array([2, 4, 6, 8])
+
+<span class="comment"># 2. Train Model</span>
+model = LinearRegression()
+model.fit(X, y)
+
+<span class="comment"># 3. Predict</span>
+prediction = model.predict([[5]])
+<span class="keyword">print</span>(<span class="string">f"Prediction for 5: {prediction[0]}"</span>) <span class="comment"># Output: 10.0</span></pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const data = generateRegressionData(40, 6);
+        const ctx = document.getElementById('regressionChart').getContext('2d');
+
+        let w = 0;
+        let b = 0;
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: 'Actual Data (Synthetic)',
+                        data: data,
+                        backgroundColor: ML_COLORS.primary,
+                        pointRadius: 5,
+                        pointHoverRadius: 8
+                    },
+                    {
+                        label: 'Predicted Line (Model)',
+                        data: [],
+                        type: 'line',
+                        borderColor: ML_COLORS.secondary,
+                        borderWidth: 4,
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0
+                    }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                scales: {
+                    x: { min: 0, max: 10, title: { display: true, text: 'Input Feature (X)' } },
+                    y: { min: 0, max: 30, title: { display: true, text: 'Target Value (y)' } }
+                }
+            }
+        });
+
+        function updateChart() {
+            w = parseFloat(document.getElementById('slopeSlider').value);
+            b = parseFloat(document.getElementById('interceptSlider').value);
+
+            document.getElementById('slopeVal').innerText = w.toFixed(1);
+            document.getElementById('interceptVal').innerText = b.toFixed(1);
+
+            // Update line
+            const lineData = [
+                { x: 0, y: w * 0 + b },
+                { x: 10, y: w * 10 + b }
+            ];
+            chart.data.datasets[1].data = lineData;
+
+            // Calculate MSE
+            let totalError = 0;
+            data.forEach(p => {
+                const pred = w * p.x + b;
+                totalError += Math.pow(p.y - pred, 2);
+            });
+            const mse = totalError / data.length;
+            document.getElementById('mseLabel').innerText = mse.toFixed(2);
+
+            chart.update('none');
+        }
+
+        document.getElementById('slopeSlider').addEventListener('input', updateChart);
+        document.getElementById('interceptSlider').addEventListener('input', updateChart);
+
+        window.addEventListener('load', updateChart);
+    </script>
+</body>
+
+</html>

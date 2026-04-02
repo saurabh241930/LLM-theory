@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QLoRA: Quantized Low-Rank Adaptation - Deep Dive</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .math-block {
+            background: #f8f9fa;
+            border-left: 5px solid #2e7d32;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: serif;
+            text-align: center;
+        }
+
+        .jupyter-cell {
+            background: #ffffff;
+            border: 1px solid #cfcfcf;
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .jupyter-input {
+            background: #f7f7f7;
+            padding: 10px;
+            border-bottom: 1px solid #cfcfcf;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+
+        .jupyter-output {
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>QLoRA: Quantized LoRA</h1>
+        <div class="subtitle">Efficient Fine-Tuning of large models on consumer hardware</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">QLoRA Factsheet</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Invented By</div>
+                    <div class="infobox-value">Dettmers et al. (2023)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Quantization</div>
+                    <div class="infobox-value">4-bit NormalFloat (NF4)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Memory Savings</div>
+                    <div class="infobox-value">~70% vs LoRA (FP16)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Tool</div>
+                    <div class="infobox-value">bitsandbytes</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="theory">
+            <h2>1. Motivation: Democratizing LLMs</h2>
+            <p>While LoRA reduces the number of <em>trainable</em> parameters, the <em>base model</em> still needs to be
+                loaded in 16-bit or 32-bit precision. For a 70B model, this requires >140GB of VRAM just to hold the
+                weights.</p>
+            <p><strong>QLoRA</strong> solves this by quantizing the base model to 4-bit precision, allowing a 33B model
+                to be tuned on a single 24GB consumer GPU (like an RTX 3090/4090).</p>
+        </section>
+
+        <section id="mathematics">
+            <h2>2. The Three Pillars of QLoRA</h2>
+            <h3>A. 4-bit NormalFloat (NF4)</h3>
+            <p>NF4 is an information-theoretically optimal quantization data type for normally distributed weights.
+                Instead of a linear scale, it uses a distribution-aware scale to ensure all 16 quantization bins are
+                used equally.</p>
+
+            <h3>B. Double Quantization</h3>
+            <p>QLoRA quantizes the <em>quantization constants</em> themselves. In a standard 4-bit model, each block of
+                64 weights has a 32-bit constant. Double quantization reduces this to an 8-bit constant, saving ~0.37
+                bits per parameter on average.</p>
+
+            <h3>C. Paged Optimizers</h3>
+            <p>To handle sudden memory spikes (e.g., during processing of long sequences), QLoRA can "page" optimizer
+                states from VRAM to CPU RAM, preventing out-of-memory (OOM) errors at the cost of slight latency.</p>
+        </section>
+
+        <section id="implementation">
+            <h2>3. Hands-on Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">import</span> torch
+<span class="keyword">from</span> transformers <span class="keyword">import</span> BitsAndBytesConfig, AutoModelForCausalLM
+
+<span class="comment"># 1. Setup 4-bit Configuration</span>
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=<span class="keyword">True</span>,
+    bnb_4bit_quant_type=<span class="string">"nf4"</span>,
+    bnb_4bit_use_double_quant=<span class="keyword">True</span>,
+    bnb_4bit_compute_dtype=torch.bfloat16
+)
+
+<span class="comment"># 2. Load Model in 4-bit</span>
+model = AutoModelForCausalLM.from_pretrained(
+    model_id,
+    quantization_config=bnb_config,
+    device_map=<span class="string">"auto"</span>
+)</pre>
+                </div>
+                <div class="jupyter-output">
+                    Model loaded in 4-bit precision. Memory usage: ~4.5GB (Llama-3-8B)
+                </div>
+            </div>
+        </section>
+
+        <section id="trade-offs">
+            <h2>4. Trade-offs</h2>
+            <ul>
+                <li><strong>Training Speed:</strong> QLoRA is typically 10-20% slower than LoRA because of the constant
+                    de-quantization and re-quantization steps during the forward and backward passes.</li>
+                <li><strong>Performance:</strong> Research shows that QLoRA with NF4 and double quantization matches
+                    16-bit LoRA performance on most benchmarks.</li>
+            </ul>
+        </section>
+    </div>
+
+    <section id="quantization-playground">
+        <h2>5. Interactive Playground: 4-bit NormalFloat (NF4)</h2>
+        <p>Experience how <strong>Quantization</strong> reduces memory. Adjust the value of a single weight (from a
+            Gaussian
+            distribution) and see where it "lands" in the 16 available bins of **NormalFloat4 (NF4)**.</p>
+
+        <div class="playground-container"
+            style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); text-align: center;">
+
+            <div class="stats-grid"
+                style="display: flex; justify-content: space-around; margin-bottom: 30px; font-family: monospace;">
+                <div class="prec-box">
+                    <div style="font-weight: bold; color: #666;">Float32</div>
+                    <div
+                        style="font-size: 1.2em; border: 2px solid #ccc; padding: 10px; border-radius: 4px; background: #eee;">
+                        32 Bits</div>
+                </div>
+                <div style="font-size: 2em; align-self: center;">→</div>
+                <div class="prec-box">
+                    <div style="font-weight: bold; color: #2196f3;">NormalFloat4</div>
+                    <div
+                        style="font-size: 1.2em; border: 2px solid #2196f3; padding: 10px; border-radius: 4px; background: #e3f2fd;">
+                        4 Bits (NF4)</div>
+                </div>
+            </div>
+
+            <div style="height: 250px; margin-bottom: 20px;">
+                <canvas id="quantChart"></canvas>
+            </div>
+
+            <div class="controls" style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                <label style="display: block; font-weight: bold; margin-bottom: 10px;">Select Weight Value: <span
+                        id="wVal" style="color: #2e7d32;">0.00</span></label>
+                <input type="range" id="wSlider" min="-3" max="3" step="0.1" value="0"
+                    style="width: 80%; max-width: 400px;">
+                <p style="font-size: 0.85em; color: #666; margin-top: 10px;">
+                    NF4 Bins are spaced to optimize the Normal Distribution (Mean 0, Var 1).
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="genai_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('quantChart').getContext('2d');
+        const wSlider = document.getElementById('wSlider');
+        const wVal = document.getElementById('wVal');
+
+        // NF4 Quantization points (simplified informational bins)
+        const nf4_bins = [-1.0, -0.69, -0.51, -0.39, -0.3, -0.22, -0.14, -0.07, 0.0, 0.07, 0.14, 0.22, 0.3, 0.39, 0.51, 1.0];
+
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: nf4_bins.map(b => b.toFixed(2)),
+                datasets: [{
+                    label: 'NF4 Quantization Bin Capacity',
+                    data: nf4_bins.map(() => 1),
+                    backgroundColor: nf4_bins.map(() => '#e0e0e0'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                ...GENAI_CHART_THEME,
+                scales: {
+                    y: { display: false }
+                }
+            }
+        });
+
+        function updateQuant() {
+            const val = parseFloat(wSlider.value);
+            wVal.innerText = val.toFixed(2);
+
+            // Find nearest bin
+            let minDiff = Infinity;
+            let bestIdx = 0;
+            nf4_bins.forEach((bin, i) => {
+                const diff = Math.abs(bin - (val / 3)); // Scale for viz
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    bestIdx = i;
+                }
+            });
+
+            chart.data.datasets[0].backgroundColor = nf4_bins.map((_, i) => i === bestIdx ? '#2e7d32' : '#e0e0e0');
+            chart.update();
+        }
+
+        wSlider.oninput = updateQuant;
+        updateQuant();
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

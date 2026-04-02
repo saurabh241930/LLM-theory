@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps & SRE Interview Q&A: Masterclass (Series 5)</title>
+    <link rel="stylesheet" href="wikipedia.css?v=3">
+    <style>
+        :root {
+            --primary: #475569;
+            --accent: #334155;
+            --qa-bg: #f8fafc;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #1e293b, #475569);
+            color: white;
+            padding: 50px 20px;
+            text-align: center;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .qa-container {
+            margin: 40px 0;
+        }
+
+        .qa-item {
+            background: var(--qa-bg);
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .qa-item:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .qa-question {
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .qa-answer {
+            color: #475569;
+            line-height: 1.6;
+            display: none;
+            margin-top: 15px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+        }
+
+        .qa-tag {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            color: #64748b;
+            font-weight: bold;
+        }
+
+        .toggle-btn {
+            padding: 5px 12px;
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="hero-section">
+        <h1>DevOps & SRE Interview Q&A</h1>
+        <p>50+ High-Impact Questions for Senior Infrastructure Roles</p>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="qa-foundations">
+            <h2>1. DevOps & SRE Foundations</h2>
+            <div class="qa-container">
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span class="qa-tag">CULTURAL</span>
+                        What is "Toil," and how do you manage it?
+                        <button class="toggle-btn" onclick="toggleQA(this)">Show Answer</button>
+                    </div>
+                    <div class="qa-answer">
+                        Toil is work that is manual, repetitive, automatable, tactical, and devoid of enduring value.
+                        SREs aim to cap toil at 50% of their time, spending the other 50% on project work (engineering)
+                        to improve the system so that toil is reduced.
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span class="qa-tag">SRE</span>
+                        You have an Error Budget of 0. What happens?
+                        <button class="toggle-btn" onclick="toggleQA(this)">Show Answer</button>
+                    </div>
+                    <div class="qa-answer">
+                        When the Error Budget is exhausted, all new feature releases are typically frozen until the
+                        service reliability is restored (back to SLO levels). Only "security" or "reliability-improving"
+                        changes are allowed.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="qa-containers">
+            <h2>2. Docker & Container Internals</h2>
+            <div class="qa-container">
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span class="qa-tag">DOCKER</span>
+                        Difference between CMD and ENTRYPOINT?
+                        <button class="toggle-btn" onclick="toggleQA(this)">Show Answer</button>
+                    </div>
+                    <div class="qa-answer">
+                        <strong>ENTRYPOINT</strong> defines the executable that runs when the container starts. It's
+                        difficult to override.<br>
+                        <strong>CMD</strong> defines the default arguments for the ENTRYPOINT. It is easily overridden
+                        by command line arguments.
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span class="qa-tag">SECURITY</span>
+                        How do you minimize the size of a Docker image?
+                        <button class="toggle-btn" onclick="toggleQA(this)">Show Answer</button>
+                    </div>
+                    <div class="qa-answer">
+                        Use lightweight base images (Alpine/Distroless), utilize multi-stage builds, combine RUN
+                        instructions to reduce layers, and use .dockerignore to skip unnecessary files.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="qa-k8s">
+            <h2>3. Kubernetes Orchestration</h2>
+            <div class="qa-container">
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span class="qa-tag">K8S</span>
+                        What is a Sidecar Pod, and why use it?
+                        <button class="toggle-btn" onclick="toggleQA(this)">Show Answer</button>
+                    </div>
+                    <div class="qa-answer">
+                        A Sidecar is a secondary container running in the same Pod as the main application container. It
+                        typically handles cross-cutting concerns like logging (Filebeat), monitoring (Prometheus
+                        exporter), or network proxying (Envoy/Istio).
+                    </div>
+                </div>
+
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span class="qa-tag">TROUBLESHOOTING</span>
+                        Explain "CrashLoopBackOff" and how to debug it.
+                        <button class="toggle-btn" onclick="toggleQA(this)">Show Answer</button>
+                    </div>
+                    <div class="qa-answer">
+                        CrashLoopBackOff occurs when a pod starts, crashes, and K8s tries to restart it repeatedly with
+                        an increasing delay. Debugging: Use `kubectl logs <pod>`, `kubectl describe pod <pod>`, and
+                                check for OOMKills, misconfigurations, or missing environment variables.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="qa-cicd">
+            <h2>4. CI/CD & Infrastructure as Code</h2>
+            <div class="qa-container">
+                <div class="qa-item">
+                    <div class="qa-question">
+                        <span class="qa-tag">GITOPS</span>
+                        What is GitOps, and how does it differ from traditional CI/CD?
+                        <button class="toggle-btn" onclick="toggleQA(this)">Show Answer</button>
+                    </div>
+                    <div class="qa-answer">
+                        GitOps is a practice where Git is the "single source of truth" for infrastructure. A controller
+                        (like ArgoCD) continuously monitors the Git repo and automatically updates the cluster state to
+                        match the repo, preventing "config drift."
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div style="margin-top: 50px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+            <p>Ready for more? Check out the individual masterclasses for deep-dives.</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleQA(btn) {
+            const answer = btn.parentElement.nextElementSibling;
+            if (answer.style.display === "block") {
+                answer.style.display = "none";
+                btn.innerText = "Show Answer";
+            } else {
+                answer.style.display = "block";
+                btn.innerText = "Hide Answer";
+            }
+        }
+    </script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

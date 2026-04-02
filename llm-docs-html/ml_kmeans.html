@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>k-Means Clustering Cheatsheet - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .premium-btn {
+            background: #3366cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .premium-btn:hover {
+            background: #254a9c;
+            transform: translateY(-1px);
+        }
+
+        .premium-btn:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>k-Means Clustering</h1>
+        <div class="subtitle">Finding patterns in unlabelled data</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">k-Means</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Unsupervised (Clustering)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Goal</div>
+                    <div class="infobox-value">Minimize WCSS</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Metric</div>
+                    <div class="infobox-value">Euclidean Distance</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>k-Means</strong> is the most popular unsupervised learning algorithm. It groups data points into
+                <strong>k</strong> clusters based on their proximity to a "centroid" (the center of a cluster). It is an
+                iterative algorithm that keeps shifting centroids until they converge.
+            </p>
+        </section>
+
+        <section id="flow">
+            <h2>2. Visual Flow</h2>
+            <div class="mermaid">
+                graph TD
+                A[Initialize k random centroids] --> B[Assign each point to nearest centroid]
+                B --> C[Calculate mean of assigned points]
+                C --> D[Update centroids to newly calculated mean]
+                D --> E{Centroids shifted?}
+                E -->|Yes| B
+                E -->|No| F[Converged!]
+            </div>
+        </section>
+
+        <section id="playground">
+            <h2>3. Interactive Playground</h2>
+            <p>Click <strong>"Randomize Data"</strong> to generate new points, then click <strong>"Run Step"</strong> to
+                see the <strong>Assign -> Update</strong> loop in action! Watch how the centroids (large rotated
+                squares) move to the center of their assigned clusters.</p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="kmeansChart"></canvas>
+                </div>
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <button id="randomBtn" class="premium-btn">Randomize Data</button>
+                    <button id="stepBtn" class="premium-btn" style="background: #109618;">Run Step</button>
+                    <div style="flex-grow: 1; text-align: right; font-size: 1.1em;">
+                        <span style="color: #666;">Step (Assign/Update): </span>
+                        <strong id="stepCount"
+                            style="color: #3366cc; font-family: monospace; font-size: 1.2em;">0</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="the-elbow">
+            <h2>4. The Elbow Method</h2>
+            <p>How do we choose the best "k"? We plot the <strong>WCSS</strong> (Within-Cluster Sum of Squares) for
+                different values of k. The point where the rate of decrease shifts significantly (the "elbow") is
+                usually the optimal number of clusters.</p>
+        </section>
+
+        <section id="scenarios">
+            <h2>5. Scenarios & Use Cases</h2>
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <h4>📂 Use Cases</h4>
+                    <ul>
+                        <li>Customer Segmentation (Marketing).</li>
+                        <li>Image Compression (Color quantization).</li>
+                        <li>Document Categorization.</li>
+                    </ul>
+                </div>
+                <div class="comparison-card">
+                    <h4>⚠️ Caveats</h4>
+                    <ul>
+                        <li>Sensitive to initialization (Random Centroid choice).</li>
+                        <li>Assumes spherical clusters - fails on complex shapes.</li>
+                        <li>Sensitive to outliers (they can pull centroids away).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="case-study">
+            <h2>6. Real-World Case Study: Marketing Customer Segmentation</h2>
+            <div class="case-study-card"
+                style="background: #fff3e0; padding: 20px; border-left: 5px solid #ff9800; border-radius: 4px;">
+                <p><strong>The Problem:</strong> A brand has 1 million customers but doesn't know how to tailor its
+                    email campaigns.</p>
+                <p><strong>The Solution:</strong> <strong>k-Means</strong> groups customers into 3 clusters:</p>
+                <ul>
+                    <li>Cluster 1: High Spenders (Luxury focus)</li>
+                    <li>Cluster 2: Frequent small buyers (Budget/Deal focus)</li>
+                    <li>Cluster 3: Lapsed customers (Re-engagement focus)</li>
+                </ul>
+                <p><strong>Why k-Means?</strong> When you have <strong>Unlabeled Data</strong> (you don't know who the
+                    "Luxury" buyers are beforehand), k-Means discovers these hidden structures automatically using
+                    distance-based grouping.</p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>7. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> sklearn.cluster <span class="keyword">import</span> KMeans
+
+<span class="comment"># 1. Initialize with 5 clusters</span>
+kmeans = KMeans(n_clusters=5, init=<span class="string">'k-means++'</span>, random_state=42)
+
+<span class="comment"># 2. Fit and predict</span>
+kmeans.fit(X)
+labels = kmeans.labels_
+centroids = kmeans.cluster_centers_</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('kmeansChart').getContext('2d');
+        let points = [];
+        let centroids = [];
+        let labels = [];
+        let step = 0;
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: 'Data Points',
+                        data: [],
+                        backgroundColor: '#999',
+                        pointRadius: 6
+                    },
+                    {
+                        label: 'Centroids',
+                        data: [],
+                        backgroundColor: [ML_COLORS.secondary, ML_COLORS.tertiary, ML_COLORS.primary],
+                        pointRadius: 12,
+                        pointStyle: 'rectRot',
+                        borderWidth: 2,
+                        borderColor: '#000'
+                    }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                scales: {
+                    x: { min: 0, max: 10, ticks: { display: false }, grid: { display: false } },
+                    y: { min: 0, max: 10, ticks: { display: false }, grid: { display: false } }
+                }
+            }
+        });
+
+        function randomize() {
+            points = [];
+            for (let i = 0; i < 80; i++) {
+                points.push({ x: Math.random() * 10, y: Math.random() * 10 });
+            }
+            centroids = [
+                { x: 2, y: 2 },
+                { x: 8, y: 8 },
+                { x: 5, y: 5 }
+            ];
+            labels = new Array(points.length).fill(-1);
+            step = 0;
+            updateUI();
+        }
+
+        function runStep() {
+            if (step % 2 === 0) {
+                // Assign Step
+                points.forEach((p, i) => {
+                    let minDist = Infinity;
+                    let closest = 0;
+                    centroids.forEach((c, ci) => {
+                        const d = Math.sqrt(Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2));
+                        if (d < minDist) {
+                            minDist = d;
+                            closest = ci;
+                        }
+                    });
+                    labels[i] = closest;
+                });
+            } else {
+                // Update Step
+                centroids.forEach((c, ci) => {
+                    const assigned = points.filter((_, i) => labels[i] === ci);
+                    if (assigned.length > 0) {
+                        c.x = assigned.reduce((sum, p) => sum + p.x, 0) / assigned.length;
+                        c.y = assigned.reduce((sum, p) => sum + p.y, 0) / assigned.length;
+                    }
+                });
+            }
+            step++;
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('stepCount').innerText = `${step} (${step % 2 === 0 ? 'Wait for Update' : 'Update Done'})`;
+
+            const colors = [ML_COLORS.secondary, ML_COLORS.tertiary, ML_COLORS.primary];
+            chart.data.datasets[0].backgroundColor = points.map((_, i) =>
+                labels[i] === -1 ? '#999' : colors[labels[i]] + 'cc'
+            );
+            chart.data.datasets[0].data = points;
+            chart.data.datasets[1].data = centroids;
+
+            chart.update();
+        }
+
+        document.getElementById('randomBtn').addEventListener('click', randomize);
+        document.getElementById('stepBtn').addEventListener('click', runStep);
+        window.addEventListener('load', randomize);
+    </script>
+</body>
+
+</html>

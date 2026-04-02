@@ -104,32 +104,137 @@
                     geometry in disguise</strong>.</p>
             <p>When the Transformer multiplies a Query Matrix by a Key Matrix, it is fundamentally computing the
                 <strong>Dot Product</strong> between two vectors. Geometrically, the Dot Product is calculating "How
-                much of the Query vector points in the exact same direction as the Key vector?"</p>
+                much of the Query vector points in the exact same direction as the Key vector?"
+            </p>
         </section>
 
-        <section class="b1b-panel">
-            <div class="instruction">DRAG the Blue Query Vector (Q) to change its alignment with Key (K)</div>
+        <section id="heatmap-playground">
+            <h2>2. Interactive Playground: Attention Heatmap (The "Head" View)</h2>
+            <p>In a real transformer layer, every token attends to every other token. <strong>Hover over a word</strong>
+                in the
+                sentence below to see how much weight it gives to other words. The intensity of the line and the
+                background
+                color represent the <strong>Attention Score</strong>.</p>
 
-            <div class="hud">
-                <div class="hud-line"><span class="color-q">Query (Q)</span> is what this token is looking for.</div>
-                <div class="hud-line"><span class="color-k">Key (K)</span> is what the other token contains.</div>
-                <div class="hud-line"><span class="color-dp">Dot Product</span> measures their alignment.</div>
-                <div class="hud-line">The Dot Product mathematically shrinks or grows <span class="color-v">Value
-                        (V)</span>.</div>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); color: #333; text-align: center;">
+
+                <div id="sentence-container"
+                    style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; position: relative;">
+                    <!-- tokens will be injected here -->
+                </div>
+
+                <div id="attn-viz-container"
+                    style="height: 300px; position: relative; border-top: 1px solid #eee; padding-top: 20px;">
+                    <svg id="attn-svg" width="100%" height="100%" style="overflow: visible;"></svg>
+                </div>
+
+                <div id="attn-stats" style="margin-top: 15px; font-family: monospace; font-size: 0.9em; color: #666;">
+                    <em>Hover over tokens to visualize relationship weights (Attention Heads).</em>
+                </div>
             </div>
+        </section>
 
-            <canvas id="attnCanvas" width="800" height="500"></canvas>
+        <script src="genai_visualizer.js"></script>
+        <script>
+            const sentence = ["The", "model", "processed", "the", "long", "sequence", "with", "precision"];
+            const container = document.getElementById('sentence-container');
+            const svg = document.getElementById('attn-svg');
 
-            <div class="math-blurb">
-                <p><strong>The "Aha!" Moment:</strong> The <span class="color-dp">Yellow Dashed Line</span> represents
-                    projecting the Query directly onto the Key. The length of this shadow is the Dot Product.</p>
-                <p>Notice the <span class="color-v">Green Value (V) Vector</span> sticking out on the right. <br>The
-                    Value vector is the <em>actual payload</em> containing the semantic meaning of the token. The
-                    Transformer takes the raw number from the Dot Product (how aligned Q and K are) and multiplies it
-                    against the V vector.</p>
-                <p>If you drag Q to point exactly opposite of K, the Dot Product becomes negative/zero, and the Green V
-                    vector shrinks to nothing. The network completely ignores it!</p>
-            </div>
+            // Create random but somewhat realistic attention weights for demonstration
+            const weights = sentence.map((_, i) => sentence.map((_, j) => {
+                if (i === j) return 0.4 + Math.random() * 0.4; // Self-attention is usually high
+                if (Math.abs(i - j) === 1) return 0.2 + Math.random() * 0.2; // Local attention
+                return Math.random() * 0.15; // Global/Random attention
+            }));
+
+            // Normalize weights (Softmax simulation)
+            const normalizedWeights = weights.map(row => {
+                const sum = row.reduce((a, b) => a + b, 0);
+                return row.map(v => v / sum);
+            });
+
+            sentence.forEach((word, i) => {
+                const span = document.createElement('span');
+                span.className = 'attn-token';
+                span.innerText = word;
+                span.style.padding = '8px 12px';
+                span.style.borderRadius = '4px';
+                span.style.border = '1px solid #ddd';
+                span.style.cursor = 'pointer';
+                span.style.transition = 'all 0.2s';
+                span.dataset.index = i;
+
+                span.onmouseover = () => drawWeights(i);
+                span.onmouseout = () => clearWeights();
+
+                container.appendChild(span);
+            });
+
+            function drawWeights(sourceIdx) {
+                svg.innerHTML = '';
+                const spans = container.querySelectorAll('.attn-token');
+                const sourceRect = spans[sourceIdx].getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+
+                const x1 = sourceRect.left + sourceRect.width / 2 - containerRect.left;
+                const y1 = 0;
+
+                normalizedWeights[sourceIdx].forEach((w, targetIdx) => {
+                    const targetRect = spans[targetIdx].getBoundingClientRect();
+                    const x2 = targetRect.left + targetRect.width / 2 - containerRect.left;
+                    const y2 = 250; // Bottom height
+
+                    // Draw Line
+                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    line.setAttribute("x1", x1);
+                    line.setAttribute("y1", y1);
+                    line.setAttribute("x2", x2);
+                    line.setAttribute("y2", y2);
+                    line.setAttribute("stroke", GENAI_COLORS.attention);
+                    line.setAttribute("stroke-width", w * 15);
+                    line.setAttribute("stroke-opacity", w + 0.1);
+                    svg.appendChild(line);
+
+                    // Highlight target label
+                    spans[targetIdx].style.background = `rgba(255, 153, 0, ${w})`;
+                    spans[targetIdx].style.borderColor = GENAI_COLORS.attention;
+                });
+                spans[sourceIdx].style.background = GENAI_COLORS.attention;
+                spans[sourceIdx].style.color = 'white';
+            }
+
+            function clearWeights() {
+                svg.innerHTML = '';
+                container.querySelectorAll('.attn-token').forEach(span => {
+                    span.style.background = 'transparent';
+                    span.style.color = '#333';
+                    span.style.borderColor = '#ddd';
+                });
+            }
+        </script>
+        <div class="instruction">DRAG the Blue Query Vector (Q) to change its alignment with Key (K)</div>
+
+        <div class="hud">
+            <div class="hud-line"><span class="color-q">Query (Q)</span> is what this token is looking for.</div>
+            <div class="hud-line"><span class="color-k">Key (K)</span> is what the other token contains.</div>
+            <div class="hud-line"><span class="color-dp">Dot Product</span> measures their alignment.</div>
+            <div class="hud-line">The Dot Product mathematically shrinks or grows <span class="color-v">Value
+                    (V)</span>.</div>
+        </div>
+
+        <canvas id="attnCanvas" width="800" height="500"></canvas>
+
+        <div class="math-blurb">
+            <p><strong>The "Aha!" Moment:</strong> The <span class="color-dp">Yellow Dashed Line</span> represents
+                projecting the Query directly onto the Key. The length of this shadow is the Dot Product.</p>
+            <p>Notice the <span class="color-v">Green Value (V) Vector</span> sticking out on the right. <br>The
+                Value vector is the <em>actual payload</em> containing the semantic meaning of the token. The
+                Transformer takes the raw number from the Dot Product (how aligned Q and K are) and multiplies it
+                against the V vector.</p>
+            <p>If you drag Q to point exactly opposite of K, the Dot Product becomes negative/zero, and the Green V
+                vector shrinks to nothing. The network completely ignores it!</p>
+        </div>
         </section>
     </div>
 

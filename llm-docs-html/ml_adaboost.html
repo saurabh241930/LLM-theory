@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdaBoost Cheatsheet - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .premium-btn {
+            background: #3366cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .premium-btn:hover {
+            background: #254a9c;
+            transform: translateY(-1px);
+        }
+
+        .class-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .class-btn {
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .class-btn.active[data-class="0"] {
+            border-color: #dc3912;
+            background: #dc391211;
+        }
+
+        .class-btn.active[data-class="1"] {
+            border-color: #109618;
+            background: #10961811;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>AdaBoost</h1>
+        <div class="subtitle">Adaptive Boosting: Turning weak learners into strong ensembles</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">AdaBoost</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Ensemble (Boosting)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Unit</div>
+                    <div class="infobox-value">Decision Stumps</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>AdaBoost</strong> (Adaptive Boosting) works by training "Weak Learners" (Decision Stumps)
+                sequentially. After each round, it <strong>increases the weights</strong> of misclassified points,
+                forcing the next stump to focus on the "harder" cases.</p>
+        </section>
+
+        <section id="playground">
+            <h2>2. Interactive Playground (Weighted Stumps)</h2>
+            <p>Add points for two different classes. Click <strong>"Train Next Stump"</strong>. Watch how points that
+                are misclassified become <strong>LARGER</strong> in the next round, and how the new stump adjusts its
+                split to try and fix those specific errors!</p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+
+                <div class="class-selector">
+                    <span>Add point for:</span>
+                    <button class="class-btn active" data-class="0" style="color: #dc3912;">Class A (Red)</button>
+                    <button class="class-btn" data-class="1" style="color: #109618;">Class B (Green)</button>
+                </div>
+
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="adaChart"></canvas>
+                </div>
+
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <button id="addStump" class="premium-btn" style="background: #109618;">Train Next Stump</button>
+                    <button id="clearAda" class="premium-btn" style="background: #666;">Clear All</button>
+                    <div style="flex-grow: 1; text-align: right; font-size: 1.1em; color: #666;">
+                        <strong>Round: <span id="roundNum" style="color: #3366cc;">0</span></strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="flow">
+            <h2>3. Visual Flow</h2>
+            <div class="mermaid">
+                graph TD
+                A[Equal weights for all points] --> B[Train Decision Stump]
+                B --> C[Calculate Error Rate]
+                C --> D[Increase weight of misclassified points]
+                D --> E[Train next stump on weighted data]
+                E --> F[Combine stumps via Weighted Voting]
+            </div>
+        </section>
+
+        <section id="case-study">
+            <h2>4. Real-World Case Study: Face Detection (Viola-Jones)</h2>
+            <div class="case-study-card"
+                style="background: #fbe9e7; padding: 20px; border-left: 5px solid #ff5722; border-radius: 4px;">
+                <p><strong>The Problem:</strong> Early digital cameras needed to find faces in a photo in real-time
+                    using very weak mobile processors.</p>
+                <p><strong>The Solution:</strong> <strong>AdaBoost</strong> combined thousands of "Weak Learners"
+                    (simple light/dark filters called Haar Features).</p>
+                <ul>
+                    <li>Stump 1: Is the eye region darker than the nose? (Yes/No)</li>
+                    <li>Stump 2: Is the mouth region darker than the chin? (Yes/No)</li>
+                </ul>
+                <p><strong>Why AdaBoost?</strong> <strong>Sequential Focus</strong>. AdaBoost allows the system to
+                    quickly discard "non-face" areas (like blank walls) using just a few stumps, and then spend more
+                    "mental energy" (weighted stumps) on complex areas like the eyes and nose to confirm a face exists.
+                </p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>5. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> sklearn.ensemble <span class="keyword">import</span> AdaBoostClassifier
+# Each round focuses on increasingly difficult points
+clf = AdaBoostClassifier(n_estimators=50)
+clf.fit(X_train, y_train)</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('adaChart').getContext('2d');
+        let points = [];
+        let weights = [];
+        let currentClass = 0;
+        let round = 0;
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'Class A', data: [], backgroundColor: ML_COLORS.secondary, pointRadius: [] },
+                    { label: 'Class B', data: [], backgroundColor: ML_COLORS.quaternary, pointRadius: [] },
+                    { label: 'Current Stump', data: [], type: 'line', borderColor: '#333', borderWidth: 2, fill: false, pointRadius: 0 }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                onClick: (e) => {
+                    const pos = Chart.helpers.getRelativePosition(e, chart);
+                    const x = chart.scales.x.getValueForPixel(pos.x);
+                    const y = chart.scales.y.getValueForPixel(pos.y);
+                    points.push({ x, y, label: currentClass });
+                    resetAda();
+                },
+                scales: {
+                    x: { min: 0, max: 10 },
+                    y: { min: 0, max: 10 }
+                }
+            }
+        });
+
+        function resetAda() {
+            round = 0;
+            weights = new Array(points.length).fill(1 / points.length);
+            updateUI();
+        }
+
+        function trainStump() {
+            if (points.length < 2) return;
+
+            let bestError = Infinity;
+            let bestSplit = null;
+
+            // Try all splits on X and Y
+            for (let axis of ['x', 'y']) {
+                for (let val = 0.5; val < 10; val += 0.5) {
+                    for (let dir of [0, 1]) { // Direction of class assignment
+                        let error = 0;
+                        points.forEach((p, i) => {
+                            const pred = (p[axis] < val) ? dir : 1 - dir;
+                            if (pred !== p.label) error += weights[i];
+                        });
+
+                        if (error < bestError) {
+                            bestError = error;
+                            bestSplit = { axis, val, dir, error };
+                        }
+                    }
+                }
+            }
+
+            if (bestSplit) {
+                // Update weights
+                const alpha = 0.5 * Math.log((1 - bestSplit.error) / (bestSplit.error + 0.0001));
+                points.forEach((p, i) => {
+                    const pred = (p[bestSplit.axis] < bestSplit.val) ? bestSplit.dir : 1 - bestSplit.dir;
+                    if (pred !== p.label) weights[i] *= Math.exp(alpha);
+                    else weights[i] *= Math.exp(-alpha);
+                });
+
+                // Normalize weights
+                const sum = weights.reduce((s, w) => s + w, 0);
+                weights = weights.map(w => w / sum);
+
+                round++;
+                updateUI(bestSplit);
+            }
+        }
+
+        function updateUI(stump) {
+            const ptsA = points.filter(p => p.label === 0);
+            const ptsB = points.filter(p => p.label === 1);
+
+            chart.data.datasets[0].data = ptsA;
+            chart.data.datasets[1].data = ptsB;
+
+            // Map weights to radius
+            const baseRadius = 6;
+            const maxWeight = Math.max(...weights) || 1;
+            chart.data.datasets[0].pointRadius = points.filter(p => p.label === 0).map((p, i) => {
+                const idx = points.indexOf(p);
+                return baseRadius + (weights[idx] / maxWeight) * 15;
+            });
+            chart.data.datasets[1].pointRadius = points.filter(p => p.label === 1).map((p, i) => {
+                const idx = points.indexOf(p);
+                return baseRadius + (weights[idx] / maxWeight) * 15;
+            });
+
+            if (stump) {
+                chart.data.datasets[2].data = stump.axis === 'x'
+                    ? [{ x: stump.val, y: 0 }, { x: stump.val, y: 10 }]
+                    : [{ x: 0, y: stump.val }, { x: 10, y: stump.val }];
+            } else {
+                chart.data.datasets[2].data = [];
+            }
+
+            document.getElementById('roundNum').innerText = round;
+            chart.update();
+        }
+
+        document.querySelectorAll('.class-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentClass = parseInt(btn.dataset.class);
+            });
+        });
+
+        document.getElementById('addStump').addEventListener('click', trainStump);
+        document.getElementById('clearAda').addEventListener('click', () => {
+            points = [];
+            resetAda();
+        });
+    </script>
+</body>
+
+</html>

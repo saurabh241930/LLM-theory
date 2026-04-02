@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistic Regression Cheatsheet - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .sigmoid-box {
+            background: #eef2ff;
+            border: 1px solid #c5d0f0;
+            padding: 20px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .math-hero {
+            background: #fdf6e3;
+            border: 1px solid #d3af37;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.25em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Logistic Regression</h1>
+        <div class="subtitle">The gateway to classification and Neural Networks</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">Logistic Regression</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Supervised (Classification)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Output</div>
+                    <div class="infobox-value">Probability (0 to 1)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Loss</div>
+                    <div class="infobox-value">Log-Loss / Binary Cross Entropy</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p>Despite its name, <strong>Logistic Regression</strong> is a classification algorithm. It takes a linear
+                combination of features and passes it through the <strong>Sigmoid function</strong> to squash the
+                output between 0 and 1. This output is interpreted as the probability of a data point belonging to a
+                certain class.</p>
+        </section>
+
+        <section id="flow">
+            <h2>2. Visual Flow</h2>
+            <div class="mermaid">
+                graph LR
+                A[Input X] --> B[Linear: z = wX + b]
+                B --> C[Activation: 1 / 1+e^-z]
+                C --> D[Probability P]
+                D --> E{Threshold: 0.5?}
+                E -->|Yes| F[Class 1]
+                E -->|No| G[Class 0]
+            </div>
+        </section>
+
+        <section id="math">
+            <h2>3. Mathematics</h2>
+            <div class="math-hero">
+                σ(z) = 1 / (1 + e<sup>-z</sup>)
+            </div>
+            <p><strong>Log-Loss:</strong> Penalizes confident wrong predictions exponentially.</p>
+            <div class="math-block">
+                Loss = -[y log(y_hat) + (1-y) log(1-y_hat)]
+            </div>
+        </section>
+
+        <section id="playground">
+            <h2>4. Interactive Playground</h2>
+            <p>Adjust the <strong>Weight (w)</strong> and <strong>Bias (b)</strong> to see how the <strong>Sigmoid
+                    Curve</strong>
+                squashes a linear function into probabilities. Watch how the decision boundary (P=0.5) shifts!</p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="logisticChart"></canvas>
+                </div>
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 25px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-weight: bold; min-width: 80px;">Weight (w):</label>
+                        <input type="range" id="wSlider" min="-5" max="5" step="0.1" value="1"
+                            style="width: 150px; cursor: pointer;">
+                        <span id="wVal"
+                            style="display: inline-block; min-width: 30px; font-family: monospace; font-weight: bold; color: #3366cc;">1.0</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-weight: bold; min-width: 100px;">Bias (b):</label>
+                        <input type="range" id="bSlider" min="-10" max="10" step="0.5" value="0"
+                            style="width: 150px; cursor: pointer;">
+                        <span id="bVal"
+                            style="display: inline-block; min-width: 30px; font-family: monospace; font-weight: bold; color: #3366cc;">0.0</span>
+                    </div>
+                    <div style="flex-grow: 1; text-align: right; font-size: 1.1em;">
+                        <span style="color: #666;">Sigmoid Output at 0:</span>
+                        <strong id="sigmoidOut"
+                            style="color: #dc3912; font-family: monospace; font-size: 1.2em;">0.50</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="scenarios">
+            <h2>5. Scenarios & Use Cases</h2>
+            <div class="comparison-grid">
+                <div class="comparison-card" style="border-top: 4px solid #4caf50;">
+                    <h4>✅ Use Cases</h4>
+                    <ul>
+                        <li>Email Spam Detection (Spam vs. Not Spam).</li>
+                        <li>Churn Prediction (Will the customer leave?).</li>
+                        <li>Medical Diagnosis (Disease vs. Healthy).</li>
+                    </ul>
+                </div>
+                <div class="comparison-card" style="border-top: 4px solid #f44336;">
+                    <h4>⚠️ Caveats</h4>
+                    <ul>
+                        <li>Requires labels to be independent.</li>
+                        <li>Assumes linear decision boundary between classes.</li>
+                        <li>Vulnerable to Multicollinearity (features being highly correlated).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="case-study">
+            <h2>5. Real-World Case Study: Banking Loan Approval</h2>
+            <div class="case-study-card"
+                style="background: #fff8e1; padding: 20px; border-left: 5px solid #ffc107; border-radius: 4px;">
+                <p><strong>The Problem:</strong> A commercial bank receives 10,000 credit card applications an hour and
+                    needs to decide "Approve" or "Reject".</p>
+                <p><strong>The Solution:</strong> <strong>Logistic Regression</strong> outputs a probability score
+                    between 0 and 1.</p>
+                <ul>
+                    <li>Features: Credit Score, Debt-to-Income ratio, Employment length.</li>
+                    <li>Result: If P(Default) &gt; 0.2, the application is automatically flagged for review.</li>
+                </ul>
+                <p><strong>Why Logistic Regression?</strong> In finance, models must be <strong>Regulatorily
+                        Compliant</strong>. Logistic regression provides a mathematical "reason" (Log-odds) for every
+                    rejection, satisfying transparency laws.</p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>6. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> sklearn.linear_model <span class="keyword">import</span> LogisticRegression
+<span class="keyword">from</span> sklearn.datasets <span class="keyword">import</span> make_classification
+
+<span class="comment"># 1. Synthetic Classification Data</span>
+X, y = make_classification(n_samples=100, n_features=2, random_state=42)
+
+<span class="comment"># 2. Train Model</span>
+clf = LogisticRegression()
+clf.fit(X, y)
+
+<span class="comment"># 3. Predict Probability</span>
+probs = clf.predict_proba(X[:2])
+<span class="keyword">print</span>(<span class="string">f"Probabilities: {probs}"</span>)</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('logisticChart').getContext('2d');
+        let w = 1.0;
+        let b = 0.0;
+
+        const chartData = [];
+        for (let x = -10; x <= 10; x += 0.5) {
+            chartData.push({ x: x, y: 0 });
+        }
+
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Sigmoid Probability P(y=1|x)',
+                        data: chartData,
+                        borderColor: ML_COLORS.primary,
+                        backgroundColor: ML_COLORS.background,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Decision Boundary (0.5)',
+                        data: [{ x: -10, y: 0.5 }, { x: 10, y: 0.5 }],
+                        borderColor: ML_COLORS.secondary,
+                        borderDash: [5, 5],
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                scales: {
+                    x: { min: -10, max: 10, title: { display: true, text: 'Input Feature (X)' } },
+                    y: { min: 0, max: 1, title: { display: true, text: 'Probability' } }
+                }
+            }
+        });
+
+        function updateChart() {
+            w = parseFloat(document.getElementById('wSlider').value);
+            b = parseFloat(document.getElementById('bSlider').value);
+
+            document.getElementById('wVal').innerText = w.toFixed(1);
+            document.getElementById('bVal').innerText = b.toFixed(1);
+
+            // Update Sigmoid line
+            chart.data.datasets[0].data = chartData.map(p => ({
+                x: p.x,
+                y: 1 / (1 + Math.exp(-(w * p.x + b)))
+            }));
+
+            // Output at 0
+            const out0 = 1 / (1 + Math.exp(-(w * 0 + b)));
+            document.getElementById('sigmoidOut').innerText = out0.toFixed(2);
+
+            chart.update('none');
+        }
+
+        document.getElementById('wSlider').addEventListener('input', updateChart);
+        document.getElementById('bSlider').addEventListener('input', updateChart);
+        window.addEventListener('load', updateChart);
+    </script>
+</body>
+
+</html>

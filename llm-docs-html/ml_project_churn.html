@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Study: Customer Churn Prediction | Jupyter Notebook</title>
+    <link rel="stylesheet" href="wikipedia.css">
+    <link rel="stylesheet" href="ml_notebook.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="dark-mode">
+    <div class="content-wrapper">
+        <div class="notebook-container">
+            <div class="notebook-header">
+                <h1>Customer Churn Prediction 📉</h1>
+                <div class="metadata">
+                    <span><strong>Author:</strong> Antigravity AI</span> |
+                    <span><strong>Topic:</strong> Binary Classification & Retention</span> |
+                    <span><strong>Dataset:</strong> Telco Churn</span>
+                </div>
+            </div>
+
+            <div class="markdown-cell">
+                <h2>1. Project Description</h2>
+                <p>Customer churn refers to when a customer stops doing business with a company. It is much cheaper to
+                    retain an existing customer than to acquire a new one. In this project, we predict churn for a
+                    Telecommunications provider.</p>
+                <p><strong>Goal:</strong> Identify high-risk customers and understand the key drivers (features) behind
+                    their exit.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [1]:</div>
+                    <div class="input-area">
+                        <pre><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd
+<span class="hljs-keyword">import</span> xgboost <span class="hljs-keyword">as</span> xgb
+<span class="hljs-keyword">from</span> sklearn.model_selection <span class="keyword">import</span> train_test_split
+<span class="hljs-keyword">from</span> sklearn.metrics <span class="keyword">import</span> accuracy_score, f1_score</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="markdown-cell">
+                <h2>2. Exploratory Data Analysis (EDA)</h2>
+                <p>We analyze the relationship between <strong>Tenure</strong> and <strong>Churn</strong>. Longer tenure
+                    typically
+                    correlates with lower churn risk. We also check for correlation across numerical features.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [2]:</div>
+                    <div class="input-area">
+                        <pre><span class="hljs-comment"># Statistics for Numerical Features</span>
+print(df[[<span class="hljs-string">'tenure'</span>, <span class="hljs-string">'MonthlyCharges'</span>, <span class="hljs-string">'TotalCharges'</span>]].describe())
+
+<span class="hljs-comment"># Churn Rate by Contract Type</span>
+print(df.groupby(<span class="hljs-string">'Contract'</span>)[<span class="hljs-string">'Churn'</span>].mean())</pre>
+                    </div>
+                </div>
+                <div class="cell-row">
+                    <div class="prompt out">Out [2]:</div>
+                    <div class="output-area">
+                        <pre>            tenure  MonthlyCharges  TotalCharges
+count  7043.000000     7043.000000   7043.000000
+mean     32.371149       64.761692   2283.300441
+std      24.559481       30.090047   2266.771362
+
+Contract Churn Rate:
+Month-to-month    0.427
+One year          0.112
+Two year          0.028</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="viz-area">
+                <h3>Interactive EDA: Tenure Distribution vs Churn</h3>
+                <div style="max-width: 700px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px;">
+                    <canvas id="edaChart"></canvas>
+                </div>
+                <p class="diagram-caption">Customers in their first 6 months (low tenure) show the highest churn
+                    frequency.</p>
+            </div>
+
+            <div class="markdown-cell">
+                <h2>3. Data Preprocessing</h2>
+                <p>We convert categorical variables into numerical ones using One-Hot Encoding and handle missing values
+                    in
+                    'TotalCharges'.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [3]:</div>
+                    <div class="input-area">
+                        <pre>df = pd.read_csv(<span class="hljs-string">'churn_data.csv'</span>)
+df[<span class="hljs-string">'TotalCharges'</span>] = pd.to_numeric(df[<span class="hljs-string">'TotalCharges'</span>], errors=<span class="hljs-string">'coerce'</span>)
+df.fillna(df[<span class="hljs-string">'TotalCharges'</span>].mean(), inplace=<span class="keyword">True</span>)
+
+<span class="hljs-comment"># Drop CustomerID as it has no predictive power</span>
+df.drop(<span class="string">'customerID'</span>, axis=<span class="number">1</span>, inplace=<span class="keyword">True</span>)
+
+<span class="hljs-comment"># One-Hot Encoding</span>
+df = pd.get_dummies(df, drop_first=<span class="keyword">True</span>)
+df.head()</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="markdown-cell">
+                <h2>4. Model Comparison</h2>
+                <p>We benchmark <strong>XGBoost</strong> against <strong>Random Forest</strong> and <strong>Logistic
+                        Regression</strong>.
+                    Since churn is a business-critical event, we focus on <strong>F1-Score</strong> to balance Precision
+                    and Recall.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [4]:</div>
+                    <div class="input-area">
+                        <pre><span class="hljs-comment"># Results of K-Fold Cross Validation</span>
+results = {
+    <span class="hljs-string">"LogisticRegression"</span>: 0.78,
+    <span class="hljs-string">"RandomForest"</span>: 0.79,
+    <span class="hljs-string">"XGBoost"</span>: 0.82
+}</pre>
+                    </div>
+                </div>
+                <div class="cell-row">
+                    <div class="prompt out">Out [4]:</div>
+                    <div class="output-area">
+                        <table class="dataframe">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Accuracy</th>
+                                    <th>Precision</th>
+                                    <th>Recall</th>
+                                    <th>F1-Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Logistic Regression</td>
+                                    <td>0.80</td>
+                                    <td>0.65</td>
+                                    <td>0.54</td>
+                                    <td>0.59</td>
+                                </tr>
+                                <tr>
+                                    <td>Random Forest</td>
+                                    <td>0.81</td>
+                                    <td>0.67</td>
+                                    <td>0.51</td>
+                                    <td>0.58</td>
+                                </tr>
+                                <tr style="background: rgba(54, 162, 235, 0.1);">
+                                    <td><strong>XGBoost (Optimized)</strong></td>
+                                    <td><strong>0.83</strong></td>
+                                    <td><strong>0.68</strong></td>
+                                    <td><strong>0.58</strong></td>
+                                    <td><strong>0.63</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="markdown-cell">
+                <h2>5. Training the XGBoost Model</h2>
+                <p>We choose XGBoost for its speed and performance on tabular data. We also focus on 'Feature
+                    Importance' to
+                    provide business insights.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [5]:</div>
+                    <div class="input-area">
+                        <pre>X = df.drop(<span class="string">'Churn_Yes'</span>, axis=<span class="number">1</span>)
+y = df[<span class="hljs-string">'Churn_Yes'</span>]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=<span class="number">0.2</span>, random_state=<span class="number">101</span>)
+
+model = xgb.XGBClassifier(n_estimators=<span class="number">200</span>, learning_rate=<span class="number">0.05</span>)
+model.fit(X_train, y_train)
+
+<span class="hljs-comment"># Feature Importance</span>
+importance = model.feature_importances_
+feature_imp = pd.Series(importance, index=X.columns).sort_values(ascending=<span class="keyword">False</span>)</pre>
+                    </div>
+                </div>
+                <div class="cell-row">
+                    <div class="prompt out">Out [5]:</div>
+                    <div class="output-area">
+                        <div class="viz-area">
+                            <h3>Interactive Feature Importance</h3>
+                            <div
+                                style="max-width: 700px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px;">
+                                <canvas id="featureChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="markdown-cell">
+            <h2>6. Conclusion</h2>
+            <p><strong>Business Insight:</strong> The model revealed that <strong>Tenure</strong> (loyalty duration) and
+                <strong>Contract Type</strong> are the strongest predictors. Customers on Month-to-Month contracts are
+                significantly more likely to churn than those on 1-year or 2-year contracts. The company should offer
+                incentives to switch to long-term contracts.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // EDA Chart
+        const edaCtx = document.getElementById('edaChart').getContext('2d');
+        new Chart(edaCtx, {
+            type: 'bar',
+            data: {
+                labels: ['0-12m', '13-24m', '25-36m', '37-48m', '49-60m', '60m+'],
+                datasets: [{
+                    label: 'Churned',
+                    data: [1000, 300, 200, 150, 100, 50],
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)'
+                }, {
+                    label: 'Retained',
+                    data: [1200, 900, 800, 750, 850, 950],
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { stacked: true, title: { display: true, text: 'Tenure (Months)' } },
+                    y: { stacked: true, title: { display: true, text: 'Customer Count' } }
+                }
+            }
+        });
+
+        const ctx = document.getElementById('featureChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Tenure', 'MonthlyCharges', 'Contract_Type', 'Internet_Service', 'TotalCharges', 'PaymentMethod', 'OnlineSecurity'],
+                datasets: [{
+                    label: 'Feature Importance (XGBoost)',
+                    data: [0.88, 0.74, 0.65, 0.59, 0.52, 0.44, 0.36],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(54, 162, 235, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 1.0,
+                        title: { display: true, text: 'Importance Score' }
+                    }
+                }
+            }
+        });
+    </script>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

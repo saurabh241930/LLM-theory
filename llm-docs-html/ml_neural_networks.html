@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Networks (MLP) Cheatsheet - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .premium-btn {
+            background: #3366cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .premium-btn:hover {
+            background: #254a9c;
+            transform: translateY(-1px);
+        }
+
+        .class-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .class-btn {
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .class-btn.active[data-class="0"] {
+            border-color: #dc3912;
+            background: #dc391211;
+        }
+
+        .class-btn.active[data-class="1"] {
+            border-color: #109618;
+            background: #10961811;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Neural Networks (MLP)</h1>
+        <div class="subtitle">Stacked layers for Universal Function Approximation</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">Neural Networks</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Deep Learning / Supervised</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Engine</div>
+                    <div class="infobox-value">Backpropagation</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Non-linearity</div>
+                    <div class="infobox-value">ReLU, Sigmoid, Tanh</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>Neural Networks</strong> consist of layers of interconnected "neurons." Each connection has a
+                <strong>weight</strong>. Errors are sent backward via <strong>Backpropagation</strong> to update these
+                weights.
+            </p>
+        </section>
+
+        <section id="playground">
+            <h2>2. Interactive Playground (Tiny MLP)</h2>
+            <p>Add points for Class A and Class B. This playground runs a <strong>3-Layer MLP</strong> (2 Inputs, 4
+                Hidden, 1 Output) with <strong>Sigmoid</strong> activation. Click <strong>"Train for 500
+                    Epochs"</strong> to see the network learn non-linear boundaries (try a XOR pattern)!</p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+
+                <div class="class-selector">
+                    <span>Add point:</span>
+                    <button class="class-btn active" data-class="0" style="color: #dc3912;">Class A</button>
+                    <button class="class-btn" data-class="1" style="color: #109618;">Class B</button>
+                    <button id="trainBtn" class="premium-btn" style="margin-left: auto; background: #109618;">Train (500
+                        Epochs)</button>
+                </div>
+
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="nnChart"></canvas>
+                </div>
+
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <button id="clearNn" class="premium-btn" style="background: #666;">Clear All</button>
+                    <div style="flex-grow: 1; text-align: right; font-size: 1.1em; color: #666;">
+                        <strong>Epochs Run: <span id="epochCount" style="color: #3366cc;">0</span></strong> |
+                        <strong>Loss: <span id="nnLoss">--</span></strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="math">
+            <h2>3. The "Secret" Non-linearity</h2>
+            <p><strong>Activation Functions</strong> like ReLU introduction non-linearity, allowing the network to solve
+                problems that a single linear line cannot (like XOR).</p>
+        </section>
+
+        <section id="case-study">
+            <h2>4. Real-World Case Study: Autonomous Driving Perception</h2>
+            <div class="case-study-card"
+                style="background: #eceff1; padding: 20px; border-left: 5px solid #607d8b; border-radius: 4px;">
+                <p><strong>The Problem:</strong> A self-driving car (like Tesla) needs to identify pedestrians, traffic
+                    lights, and stop signs from a raw video feed.</p>
+                <p><strong>The Solution:</strong> <strong>Deep Neural Networks (CNNs)</strong> extract features
+                    hierarchically.</p>
+                <ul>
+                    <li>Layer 1: Detects edges and lines.</li>
+                    <li>Layer 2: Detects shapes like circles (wheels) or hexagons (stop signs).</li>
+                    <li>Final Layer: Classifies the object as "Pedestrian" with 99.8% confidence.</li>
+                </ul>
+                <p><strong>Why Neural Networks?</strong> <strong>Universal Approximation</strong>. No human could write
+                    a manual "if-else" statement to describe every possible way a pedestrian might look. Neural Networks
+                    learn these complex, non-linear pixel patterns automatically through millions of training examples.
+                </p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>5. Implementation (PyTorch)</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn
+model = nn.Sequential(
+    nn.Linear(2, 4), 
+    nn.ReLU(),
+    nn.Linear(4, 1),
+    nn.Sigmoid()
+)</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('nnChart').getContext('2d');
+        let points = [];
+        let currentClass = 0;
+        let epochsRun = 0;
+
+        // Neural Network Variables
+        const inputNodes = 2;
+        const hiddenNodes = 4;
+        const outputNodes = 1;
+        let weights_ih = Array.from({ length: hiddenNodes }, () => Array.from({ length: inputNodes }, () => Math.random() * 2 - 1));
+        let weights_ho = Array.from({ length: outputNodes }, () => Array.from({ length: hiddenNodes }, () => Math.random() * 2 - 1));
+        let bias_h = Array.from({ length: hiddenNodes }, () => Math.random() * 2 - 1);
+        let bias_o = Array.from({ length: outputNodes }, () => Math.random() * 2 - 1);
+
+        const sigmoid = x => 1 / (1 + Math.exp(-x));
+        const dsigmoid = y => y * (1 - y);
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'Heatmap', data: [], backgroundColor: [], pointRadius: 4, pointStyle: 'rect' },
+                    { label: 'Class A', data: [], backgroundColor: ML_COLORS.secondary, pointRadius: 7, zIndex: 10 },
+                    { label: 'Class B', data: [], backgroundColor: ML_COLORS.quaternary, pointRadius: 7, zIndex: 10 }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                onClick: (e) => {
+                    const pos = Chart.helpers.getRelativePosition(e, chart);
+                    const x = chart.scales.x.getValueForPixel(pos.x);
+                    const y = chart.scales.y.getValueForPixel(pos.y);
+                    points.push({ x: (x - 5) / 5, y: (y - 5) / 5, label: currentClass }); // Normalize to -1 to 1
+                    updateUI();
+                },
+                scales: {
+                    x: { min: 0, max: 10 },
+                    y: { min: 0, max: 10 }
+                }
+            }
+        });
+
+        function predict(inputX, inputY) {
+            let hidden = bias_h.map((b, i) => sigmoid(b + inputX * weights_ih[i][0] + inputY * weights_ih[i][1]));
+            let output = bias_o.map((b, i) => sigmoid(b + hidden.reduce((sum, h, j) => sum + h * weights_ho[i][j], 0)));
+            return { hidden, output };
+        }
+
+        function train() {
+            if (points.length < 2) return;
+            const lr = 0.5;
+
+            for (let e = 0; e < 500; e++) {
+                points.forEach(p => {
+                    const inputs = [p.x, p.y];
+                    const target = [p.label];
+
+                    // Forward
+                    const { hidden, output } = predict(p.x, p.y);
+
+                    // Output Gradients
+                    const out_errors = target.map((t, i) => t - output[i]);
+                    const out_gradients = output.map((o, i) => out_errors[i] * dsigmoid(o) * lr);
+
+                    // Update HO weights
+                    weights_ho.forEach((row, i) => row.forEach((w, j) => weights_ho[i][j] += out_gradients[i] * hidden[j]));
+                    bias_o = bias_o.map((b, i) => b + out_gradients[i]);
+
+                    // Hidden Gradients
+                    const hid_errors = weights_ih.map((_, i) => weights_ho.reduce((sum, row, j) => sum + row[i] * out_errors[j], 0));
+                    const hid_gradients = hidden.map((h, i) => hid_errors[i] * dsigmoid(h) * lr);
+
+                    // Update IH weights
+                    weights_ih.forEach((row, i) => row.forEach((w, j) => weights_ih[i][j] += hid_gradients[i] * inputs[j]));
+                    bias_h = bias_h.map((b, i) => b + hid_gradients[i]);
+                });
+                epochsRun++;
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            chart.data.datasets[1].data = points.filter(p => p.label === 0).map(p => ({ x: p.x * 5 + 5, y: p.y * 5 + 5 }));
+            chart.data.datasets[2].data = points.filter(p => p.label === 1).map(p => ({ x: p.x * 5 + 5, y: p.y * 5 + 5 }));
+
+            // Heatmap
+            const heatData = [];
+            const heatColors = [];
+            for (let x = 0; x <= 10; x += 0.5) {
+                for (let y = 0; y <= 10; y += 0.5) {
+                    const { output } = predict((x - 5) / 5, (y - 5) / 5);
+                    const p = output[0];
+                    heatData.push({ x, y });
+                    heatColors.push(p < 0.5 ? ML_COLORS.secondary + '11' : ML_COLORS.quaternary + '11');
+                }
+            }
+            chart.data.datasets[0].data = heatData;
+            chart.data.datasets[0].backgroundColor = heatColors;
+
+            document.getElementById('epochCount').innerText = epochsRun;
+            chart.update('none');
+        }
+
+        document.querySelectorAll('.class-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentClass = parseInt(btn.dataset.class);
+            });
+        });
+
+        document.getElementById('trainBtn').addEventListener('click', train);
+        document.getElementById('clearNn').addEventListener('click', () => {
+            points = [];
+            epochsRun = 0;
+            updateUI();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Design: Designing a RSA NLP Dashboard - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .architecture-viz {
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .step-card {
+            border-left: 4px solid var(--wp-accent);
+            background: #fff;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .step-header {
+            font-weight: bold;
+            color: var(--wp-accent);
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .intent-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+
+        .intent-table th,
+        .intent-table td {
+            border: 1px solid #a2a9b1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .intent-table th {
+            background: #f8f9fa;
+        }
+
+        .model-layer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .model-layer-table th,
+        .model-layer-table td {
+            border: 1px solid #a2a9b1;
+            padding: 10px;
+        }
+
+        .tradeoff-block {
+            background: #eef2ff;
+            border: 1px solid #c5d0f0;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .tradeoff-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .tradeoff-item {
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #c5d0f0;
+            font-size: 0.9em;
+        }
+
+        .quote-box {
+            font-style: italic;
+            color: #54595d;
+            border-left: 3px solid #ccc;
+            padding-left: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Designing a RSA NLP Dashboard</h1>
+        <div class="subtitle">Agentic RAG Architecture for Enterprise Insurance Intelligence</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="the-question">
+            <h2>The Challenge</h2>
+            <div class="side-note">
+                🏗️ <strong>Scenario:</strong> Design an Agentic RAG platform for an RSA (Insurance) enterprise
+                dashboard
+                serving Sales, Policy, Customer, Compliance, and Financial Intelligence.
+                <br><br>
+                <strong>Requirements:</strong>
+                <ul>
+                    <li>Structured SQL (10GB+) & Unstructured docs.</li>
+                    <li>Excel generation, Email delivery, Real-time Reuters news.</li>
+                    <li>Cost constraints: No 100B+ models, no large GPU clusters.</li>
+                    <li>Handling both linguistic and precision queries.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="step-1-decompose">
+            <div class="step-card">
+                <div class="step-header">Step 1: Problem Decomposition</div>
+                <p>Break the system into 5 logical concern layers to signal structured thinking:</p>
+                <ol>
+                    <li><strong>Query Understanding:</strong> Intent classification and routing.</li>
+                    <li><strong>Data Retrieval:</strong> SQL vs. Document vs. News vs. Excel.</li>
+                    <li><strong>Agent Orchestration:</strong> Managing specialized tool-use.</li>
+                    <li><strong>Generation:</strong> Mid-size LLM for synthesis.</li>
+                    <li><strong>Delivery:</strong> Multi-modal output (Charts, Excel, Email).</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="step-2-architecture">
+            <h2>Step 2: Core Architecture</h2>
+            <div class="mermaid">
+                graph TD
+                User((Dashboard User)) --> Router[Intent Router - SLM 3B-7B]
+                Router -->|Classify| Agents{Specialist Agents}
+                Agents --> SQL[SQL Agent]
+                Agents --> RAG[Doc RAG Agent]
+                Agents --> Comp[Compliance Agent]
+                Agents --> Excel[Excel Agent]
+                Agents --> News[News Agent]
+                Agents --> Chart[Chart Agent]
+
+                SQL & RAG & Comp & News & Chart --> Synth[Synthesis LLM - 13B-34B]
+                Excel --> Output
+                Synth --> Output[Output Formatter]
+                Output --> Final((Chart / Excel / Email))
+            </div>
+        </section>
+
+        <section id="step-3-intent-router">
+            <div class="step-card">
+                <div class="step-header">Step 3: The Intent Router (SLM Strategy)</div>
+                <p><strong>Decision:</strong> Use a Small Language Model (SLM) like Phi-3-mini (3.8B) or Mistral-7B for
+                    routing.</p>
+                <ul>
+                    <li><strong>Why?</strong> Routing is classification, not creative generation. SLMs are fast (<100ms)
+                            and cheap.</li>
+                    <li><strong>Optimization:</strong> Fine-tune on 500-1000 labeled RSA domain examples.</li>
+                </ul>
+
+                <table class="intent-table">
+                    <thead>
+                        <tr>
+                            <th>Intent Class</th>
+                            <th>Example Query</th>
+                            <th>Route To</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>precision_sql</td>
+                            <td>"Exact Q3 sales for policy P-102"</td>
+                            <td>SQL Agent</td>
+                        </tr>
+                        <tr>
+                            <td>linguistic_sql</td>
+                            <td>"Which region had worst claim ratio?"</td>
+                            <td>SQL Agent + LLM</td>
+                        </tr>
+                        <tr>
+                            <td>doc_rag</td>
+                            <td>"What does our flood policy cover?"</td>
+                            <td>Doc RAG Agent</td>
+                        </tr>
+                        <tr>
+                            <td>hybrid</td>
+                            <td>"Compare Q3 sales vs industry news"</td>
+                            <td>SQL + News → Synth</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="step-4-data-layer">
+            <h2>Step 4: Data Layer Design</h2>
+
+            <h3>4a. SQL Layer (10GB Structured)</h3>
+            <p><strong>Strategy:</strong> Two-pass Schema-aware retrieval.</p>
+            <ul>
+                <li><strong>Pass 1:</strong> SLM (SQLCoder-7B) generates SQL.</li>
+                <li><strong>Pass 2:</strong> Validator dry-runs explain plan and enforces read-only constraints.</li>
+            </ul>
+
+            <h3>4b. Document RAG Layer</h3>
+            <ul>
+                <li><strong>Chunking:</strong> Semantic chunking for legal clauses (never split mid-sentence).</li>
+                <li><strong>Search:</strong> Hybrid (BM25 + Semantic) with CrossEncoder reranking.</li>
+                <li><strong>Metadata:</strong> Pre-filter by doc_type, region, or product_line.</li>
+            </ul>
+
+            <h3>4c. Reuters News & Excel</h3>
+            <ul>
+                <li><strong>News:</strong> Real-time tool-calling (Reuters API) cached for 15 mins.</li>
+                <li><strong>Excel:</strong> Deterministic execution using <code>pandas</code> and <code>openpyxl</code>,
+                    triggered by the Excel Agent.</li>
+            </ul>
+        </section>
+
+        <section id="step-5-context">
+            <div class="step-card">
+                <div class="step-header">Step 5: 3-Layer Memory Architecture</div>
+                <p>Solve the "Long Conversation" problem where models lose track of constraints over time.</p>
+                <ul>
+                    <li><strong>Working Memory:</strong> Most recent 3-5 turns in the LLM context.</li>
+                    <li><strong>Session Memory:</strong> Key entities (Region, Date range) stored in Redis.</li>
+                    <li><strong>Long-Term Memory:</strong> User preferences and past session summaries in Vector DB.
+                    </li>
+                </ul>
+                <div class="side-note">
+                    💡 <strong>Pro Tip:</strong> Every 5 turns, use an SLM to summarize the history, explicitly
+                    preserving "constraint tokens" (filters) that must never be lost.
+                </div>
+            </div>
+        </section>
+
+        <section id="step-6-models">
+            <h2>Step 6: Model Selection Strategy</h2>
+            <table class="model-layer-table">
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Model Choice</th>
+                        <th>Reasoning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Intent Router</strong></td>
+                        <td>Phi-3-mini (3.8B)</td>
+                        <td>Fast, low-cost classification.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL Gen</strong></td>
+                        <td>SQLCoder-7B</td>
+                        <td>Purpose-built, beats 70B models at SQL.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Synthesis</strong></td>
+                        <td>Llama-3-70B (4-bit)</td>
+                        <td>High-quality reasoning for final summary.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Predictions</strong></td>
+                        <td>GAN / ARIMA</td>
+                        <td>LLMs are bad at math; use proper ML models.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="implementation-details">
+            <h2>Step 7: Implementation Guide (Step-by-Step)</h2>
+
+            <div class="step-card">
+                <div class="step-header">Part 1: The Intent Router (Python)</div>
+                <p>We use a system prompt with few-shot examples to classify the request into specific tool categories.
+                </p>
+                <div class="jupyter-cell">
+                    <div class="jupyter-input">
+                        <pre><span class="keyword">from</span> litellm <span class="keyword">import</span> completion
+
+<span class="keyword">def</span> <span class="keyword">route_query</span>(user_query):
+    system_prompt = <span class="string">"""Classify the query into: [SQL, RAG, NEWS, EXCEL]. 
+    Respond only with the category name."""</span>
+    
+    response = completion(
+        model=<span class="string">"ollama/phi3"</span>, 
+        messages=[{<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: system_prompt},
+                  {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: user_query}]
+    )
+    <span class="keyword">return</span> response[<span class="string">'choices'</span>][0][<span class="string">'message'</span>][<span class="string">'content'</span>].strip()</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-header">Part 2: SQL Agent (Text-to-SQL)</div>
+                <p>Generating precise queries from the 10GB database schema.</p>
+                <div class="jupyter-cell">
+                    <div class="jupyter-input">
+                        <pre><span class="keyword">from</span> sqlalchemy <span class="keyword">import</span> create_engine
+
+<span class="keyword">def</span> <span class="keyword">generate_sql</span>(query, table_schema):
+    <span class="comment"># Using SQLCoder-7B via specialized prompt</span>
+    prompt = <span class="string">f"Schema: {table_schema}\nQuestion: {query}\nSQL:"</span>
+    sql_query = llm.generate(prompt)
+    
+    <span class="comment"># Safety Check</span>
+    <span class="keyword">if</span> <span class="string">"DROP"</span> <span class="keyword">in</span> sql_query <span class="keyword">or</span> <span class="string">"DELETE"</span> <span class="keyword">in</span> sql_query:
+        <span class="keyword">raise</span> PermissionError(<span class="string">"DML operations not allowed"</span>)
+        
+    <span class="keyword">return</span> engine.execute(sql_query).fetchall()</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-header">Part 3: Doc RAG (Vector Search)</div>
+                <p>Implementing hybrid search for compliance and policy documents.</p>
+                <div class="jupyter-cell">
+                    <div class="jupyter-input">
+                        <pre><span class="keyword">from</span> llama_index.core <span class="keyword">import</span> VectorStoreIndex
+
+<span class="keyword">def</span> <span class="keyword">doc_rag_retrieve</span>(query):
+    index = VectorStoreIndex.from_documents(compliance_docs)
+    query_engine = index.as_query_engine(similarity_top_k=5)
+    
+    <span class="comment"># Reranking for precision</span>
+    response = query_engine.query(query)
+    <span class="keyword">return</span> response.source_nodes</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-header">Part 4: Excel/Reporting Automation</div>
+                <p>Triggering deterministic Python tools for report generation.</p>
+                <div class="jupyter-cell">
+                    <div class="jupyter-input">
+                        <pre><span class="keyword">import</span> pandas <span class="keyword">as</span> pd
+
+<span class="keyword">def</span> <span class="keyword">generate_excel_report</span>(data_dict, output_path):
+    df = pd.DataFrame(data_dict)
+    <span class="keyword">with</span> pd.ExcelWriter(output_path, engine=<span class="string">'openpyxl'</span>) <span class="keyword">as</span> writer:
+        df.to_excel(writer, index=<span class="keyword">False</span>)
+        <span class="comment"># Add styling/charts here</span>
+    <span class="keyword">return</span> <span class="string">f"Report saved to {output_path}"</span></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="demo">
+            <h2>End Demo: Platform Preview</h2>
+            <div class="architecture-viz">
+                <div class="step-header">Demo 1: Strategic Recommendations Dashboard</div>
+                <img src="input_file_0.png" alt="Strategic Recommendations"
+                    style="width:100%; border-radius:4px; margin-bottom: 20px;">
+
+                <div class="step-header">Demo 2: Product Analytics & Gaps</div>
+                <img src="input_file_1.png" alt="Product Analytics Gaps" style="width:100%; border-radius:4px;">
+            </div>
+        </section>
+
+        <section id="tradeoffs">
+            <div class="tradeoff-block">
+                <h3>Decision Tradeoffs</h3>
+                <div class="tradeoff-grid">
+                    <div class="tradeoff-item"><strong>Model Size:</strong> Tiered (SLM + Mid-LLM) wins over one giant
+                        model for cost/latency.</div>
+                    <div class="tradeoff-item"><strong>SQL Approach:</strong> Schema embeddings win over full schema in
+                        context to save tokens.</div>
+                    <div class="tradeoff-item"><strong>News:</strong> Real-time tool-calls win over embedding news into
+                        DB (too dynamic).</div>
+                    <div class="tradeoff-item"><strong>Excel:</strong> LLM orchestration with Python execution wins over
+                        LLM cell-generation (prevents hallucinations).</div>
+                </div>
+            </div>
+
+            <div class="quote-box">
+                "I would never route a precision SQL query through a 70B model — that's waste. SLM handles SQL gen, 70B
+                only activates for synthesis and linguistic narration where quality matters."
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Forest Cheatsheet - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .premium-btn {
+            background: #3366cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .premium-btn:hover {
+            background: #254a9c;
+            transform: translateY(-1px);
+        }
+
+        .class-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .class-btn {
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .class-btn.active[data-class="0"] {
+            border-color: #dc3912;
+            background: #dc391211;
+        }
+
+        .class-btn.active[data-class="1"] {
+            border-color: #109618;
+            background: #10961811;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Random Forest</h1>
+        <div class="subtitle">Ensemble power through Bagging and Randomness</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">Random Forest</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Ensemble (Bagging)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Bias/Variance</div>
+                    <div class="infobox-value">Low Variance</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Handles</div>
+                    <div class="infobox-value">Non-linear data</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>Random Forest</strong> is an ensemble of many Decision Trees. It uses <strong>Bagging</strong>
+                (Bootstrap Aggregating) to create different subsets of data for each tree and <strong>Feature
+                    Randomness</strong> to ensure trees are decorrelated.</p>
+        </section>
+
+        <section id="flow">
+            <h2>2. Visual Flow</h2>
+            <div class="mermaid">
+                graph TD
+                A[Original Data] --> B[Bootstrap Sample 1]
+                A --> C[Bootstrap Sample 2]
+                A --> D[Bootstrap Sample N]
+                B --> E[Tree 1]
+                C --> F[Tree 2]
+                D --> G[Tree N]
+                E & F & G --> H[Aggregation: Voting/Average]
+                H --> I[Final Prediction]
+            </div>
+        </section>
+
+        <section id="playground">
+            <h2>3. Interactive Playground</h2>
+            <p>Add points and click <strong>"Build Forest"</strong>. The algorithm will train 10 tiny decision trees,
+                each on a random subset of your points (Bagging). Watch how the <strong>Ensemble Decision</strong> (the
+                average) is more stable than any single tree's split!</p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+
+                <div class="class-selector">
+                    <span>Add point for:</span>
+                    <button class="class-btn active" data-class="0" style="color: #dc3912;">Class A (Red)</button>
+                    <button class="class-btn" data-class="1" style="color: #109618;">Class B (Green)</button>
+                </div>
+
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="rfChart"></canvas>
+                </div>
+
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <button id="buildForest" class="premium-btn" style="background: #109618;">Build Forest (10
+                        Trees)</button>
+                    <button id="clearRf" class="premium-btn" style="background: #666;">Clear All</button>
+                    <div style="flex-grow: 1; text-align: right; font-size: 0.9em; color: #666;">
+                        <em>Dashed lines: Individual Trees | Thick lines: Average</em>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="why-it-works">
+            <h2>4. Why it Works</h2>
+            <p>While a single tree may overfit to noise, a "forest" of trees cancels out individual errors. This is
+                known
+                as reducing <strong>Variance</strong> without significantly increasing Bias.</p>
+        </section>
+
+        <section id="case-study">
+            <h2>5. Real-World Case Study: Customer Churn Prediction</h2>
+            <div class="case-study-card"
+                style="background: #fce4ec; padding: 20px; border-left: 5px solid #e91e63; border-radius: 4px;">
+                <p><strong>The Problem:</strong> A Telecom giant (like Verizon) wants to predict which subscribers will
+                    cancel their plan next month.</p>
+                <p><strong>The Solution:</strong> <strong>Random Forest</strong> analyzes hundreds of disparate signals:
+                </p>
+                <ul>
+                    <li>Contract type (Month-to-month vs 2-year)</li>
+                    <li>Total monthly charges</li>
+                    <li>Number of "Technical Support" calls made</li>
+                </ul>
+                <p><strong>Why Random Forest?</strong> Individual decision trees might over-focus on one signal (e.g.,
+                    just contract price). Random Forest <strong>Aggregates</strong> many trees to find the stable
+                    "signal" in the "noise" of complex customer behavior.</p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>6. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> sklearn.ensemble <span class="keyword">import</span> RandomForestClassifier
+# Train Forest with 100 Trees
+rf = RandomForestClassifier(n_estimators=100)
+rf.fit(X, y)</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('rfChart').getContext('2d');
+        let points = [];
+        let currentClass = 0;
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'Class A', data: [], backgroundColor: ML_COLORS.secondary, pointRadius: 6 },
+                    { label: 'Class B', data: [], backgroundColor: ML_COLORS.quaternary, pointRadius: 6 }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                onClick: (e) => {
+                    const pos = Chart.helpers.getRelativePosition(e, chart);
+                    const x = chart.scales.x.getValueForPixel(pos.x);
+                    const y = chart.scales.y.getValueForPixel(pos.y);
+                    points.push({ x, y, label: currentClass });
+                    updatePoints();
+                },
+                scales: {
+                    x: { min: 0, max: 10 },
+                    y: { min: 0, max: 10 }
+                }
+            }
+        });
+
+        function updatePoints() {
+            chart.data.datasets[0].data = points.filter(p => p.label === 0);
+            chart.data.datasets[1].data = points.filter(p => p.label === 1);
+            chart.update();
+        }
+
+        function calculateGini(pts) {
+            if (pts.length === 0) return 0;
+            const count0 = pts.filter(p => p.label === 0).length;
+            const p0 = count0 / pts.length;
+            const p1 = 1 - p0;
+            return 1 - (p0 * p0 + p1 * p1);
+        }
+
+        function findBestSplit(pts) {
+            let bestGini = Infinity;
+            let bestSplit = null;
+            for (let x = 0.5; x < 10; x += 0.5) {
+                const left = pts.filter(p => p.x < x);
+                const right = pts.filter(p => p.x >= x);
+                if (left.length === 0 || right.length === 0) continue;
+                const gini = (left.length / pts.length) * calculateGini(left) + (right.length / pts.length) * calculateGini(right);
+                if (gini < bestGini) { bestGini = gini; bestSplit = { axis: 'x', val: x }; }
+            }
+            for (let y = 0.5; y < 10; y += 0.5) {
+                const bottom = pts.filter(p => p.y < y);
+                const top = pts.filter(p => p.y >= y);
+                if (bottom.length === 0 || top.length === 0) continue;
+                const gini = (bottom.length / pts.length) * calculateGini(bottom) + (top.length / pts.length) * calculateGini(top);
+                if (gini < bestGini) { bestGini = gini; bestSplit = { axis: 'y', val: y }; }
+            }
+            return bestSplit;
+        }
+
+        function buildForest() {
+            if (points.length < 4) return;
+            chart.data.datasets = chart.data.datasets.slice(0, 2);
+
+            const numTrees = 10;
+            const treeSplits = [];
+            for (let i = 0; i < numTrees; i++) {
+                // Bootstrapping
+                const bootstrap = [];
+                for (let j = 0; j < points.length; j++) {
+                    bootstrap.push(points[Math.floor(Math.random() * points.length)]);
+                }
+                const split = findBestSplit(bootstrap);
+                if (split) treeSplits.push(split);
+            }
+
+            // Draw individual tree splits (thin dashed)
+            treeSplits.forEach(s => {
+                chart.data.datasets.push({
+                    type: 'line',
+                    data: s.axis === 'x' ? [{ x: s.val, y: 0 }, { x: s.val, y: 10 }] : [{ x: 0, y: s.val }, { x: 10, y: s.val }],
+                    borderColor: '#ccc',
+                    borderWidth: 1,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    fill: false,
+                    label: 'Tree Split'
+                });
+            });
+
+            // Calculate Ensemble Split (Average)
+            const avgX = treeSplits.filter(s => s.axis === 'x').reduce((sum, s) => sum + s.val, 0) / treeSplits.filter(s => s.axis === 'x').length || 0;
+            const avgY = treeSplits.filter(s => s.axis === 'y').reduce((sum, s) => sum + s.val, 0) / treeSplits.filter(s => s.axis === 'y').length || 0;
+
+            if (avgX > 0) {
+                chart.data.datasets.push({
+                    type: 'line',
+                    data: [{ x: avgX, y: 0 }, { x: avgX, y: 10 }],
+                    borderColor: ML_COLORS.primary,
+                    borderWidth: 4,
+                    pointRadius: 0,
+                    fill: false,
+                    label: 'Ensemble Mean (X)'
+                });
+            }
+            if (avgY > 0) {
+                chart.data.datasets.push({
+                    type: 'line',
+                    data: [{ x: 0, y: avgY }, { x: 10, y: avgY }],
+                    borderColor: ML_COLORS.primary,
+                    borderWidth: 4,
+                    pointRadius: 0,
+                    fill: false,
+                    label: 'Ensemble Mean (Y)'
+                });
+            }
+
+            chart.update();
+        }
+
+        document.querySelectorAll('.class-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentClass = parseInt(btn.dataset.class);
+            });
+        });
+
+        document.getElementById('buildForest').addEventListener('click', buildForest);
+        document.getElementById('clearRf').addEventListener('click', () => {
+            points = [];
+            chart.data.datasets = chart.data.datasets.slice(0, 2);
+            updatePoints();
+        });
+    </script>
+</body>
+
+</html>

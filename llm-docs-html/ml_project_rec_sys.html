@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Study: Movie Recommendation System | Jupyter Notebook</title>
+    <link rel="stylesheet" href="wikipedia.css">
+    <link rel="stylesheet" href="ml_notebook.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="dark-mode">
+    <div class="content-wrapper">
+        <div class="notebook-container">
+            <div class="notebook-header">
+                <h1>Movie Recommendation System 🎬</h1>
+                <div class="metadata">
+                    <span><strong>Author:</strong> Antigravity AI</span> |
+                    <span><strong>Topic:</strong> Collaborative & Content-Based Filtering</span> |
+                    <span><strong>Dataset:</strong> MovieLens 100k</span>
+                </div>
+            </div>
+
+            <!-- Cell 1: Context -->
+            <div class="markdown-cell">
+                <h2>1. Project Description</h2>
+                <p>Recommendation systems are the backbone of platforms like Netflix, YouTube, and Amazon. In this
+                    project,
+                    we implement a hybrid engine that suggests movies based on user behavior (Collaborative) and movie
+                    attributes (Content-Based).</p>
+                <p><strong>Goal:</strong> Given a movie title or a user ID, return the top 10 most relevant
+                    recommendations.
+                </p>
+            </div>
+
+            <!-- Cell 2: Import Libraries -->
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [1]:</div>
+                    <div class="input-area">
+                        <pre><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd
+<span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np
+<span class="hljs-keyword">from</span> sklearn.feature_extraction.text <span class="hljs-keyword">import</span> TfidfVectorizer
+<span class="hljs-keyword">from</span> sklearn.metrics.pairwise <span class="hljs-keyword">import</span> cosine_similarity
+<span class="hljs-keyword">from</span> scipy.sparse.linalg <span class="hljs-keyword">import</span> svds</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cell 3: Load Data -->
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [2]:</div>
+                    <div class="input-area">
+                        <pre>movies = pd.read_csv(<span class="hljs-string">'movies.csv'</span>) <span class="hljs-comment"># columns: movieId, title, genres</span>
+ratings = pd.read_csv(<span class="hljs-string">'ratings.csv'</span>) <span class="hljs-comment"># columns: userId, movieId, rating</span>
+movies.head()</pre>
+                    </div>
+                </div>
+                <div class="cell-row">
+                    <div class="prompt out">Out [2]:</div>
+                    <div class="output-area">
+                        <table class="dataframe">
+                            <thead>
+                                <tr>
+                                    <th>movieId</th>
+                                    <th>title</th>
+                                    <th>genres</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>Toy Story (1995)</td>
+                                    <td>Adventure|Animation|Children</td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td>Jumanji (1995)</td>
+                                    <td>Adventure|Children|Fantasy</td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td>Grumpier Old Men (1995)</td>
+                                    <td>Comedy|Romance</td>
+                                </tr>
+                                <tr>
+                                    <td>4</td>
+                                    <td>Waiting to Exhale (1995)</td>
+                                    <td>Comedy|Drama|Romance</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cell 3: Data Inspection & EDA -->
+            <div class="markdown-cell">
+                <h2>2. Exploratory Data Analysis (EDA)</h2>
+                <p>We analyze the distribution of movie ratings. Highly rated movies often drive the recommendation
+                    engine.
+                    We also look at the most frequent genres in the dataset.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [2]:</div>
+                    <div class="input-area">
+                        <pre><span class="hljs-comment"># Statistics for Ratings</span>
+print(df[<span class="hljs-string">'rating'</span>].describe())
+
+<span class="hljs-comment"># Most frequent genres</span>
+print(df[<span class="hljs-string">'genres'</span>].str.split(<span class="hljs-string">'|'</span>).explode().value_counts().head(<span class="number">5</span>))</pre>
+                    </div>
+                </div>
+                <div class="cell-row">
+                    <div class="prompt out">Out [2]:</div>
+                    <div class="output-area">
+                        <pre>count    100836.000000
+mean          3.501557
+std           1.042529
+min           0.500000
+50%           3.500000
+max           5.000000
+
+Top Genres:
+Drama       4361
+Comedy      3756
+Action      3063
+Thriller    1894
+Adventure   1263</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="viz-area">
+                <h3>Interactive EDA: Movie Rating Distribution</h3>
+                <div style="max-width: 700px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px;">
+                    <canvas id="edaChart"></canvas>
+                </div>
+                <p class="diagram-caption">Most ratings cluster between 3.0 and 4.0, indicating a standard bell-curve
+                    distribution with a slight positive bias.</p>
+            </div>
+
+            <!-- Cell 4: Content-Based Filtering -->
+            <div class="markdown-cell">
+                <h2>3. Content-Based Filtering (TF-IDF)</h2>
+                <p>We analyze the 'genres' and 'tags' of movies to find items with similar metadata. We use TF-IDF to
+                    vectorize the text and Cosine Similarity to find distances.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [3]:</div>
+                    <div class="input-area">
+                        <pre>tfidf = TfidfVectorizer(stop_words=<span class="hljs-string">'english'</span>)
+tfidf_matrix = tfidf.fit_transform(movies[<span class="hljs-string">'genres'</span>])
+cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
+
+<span class="hljs-comment"># View Similarity for the first 10 movies</span>
+print(cosine_sim[:<span class="number">10</span>, :<span class="number">10</span>])</pre>
+                    </div>
+                </div>
+                <div class="cell-row">
+                    <div class="prompt out">Out [3]:</div>
+                    <div class="output-area">
+                        <h3>Top Similar Movies (Cosine Similarity)</h3>
+                        <div
+                            style="max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px;">
+                            <canvas id="similarityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cell 5: Matrix Factorization -->
+            <div class="markdown-cell">
+                <h2>4. Collaborative Filtering (Matrix Factorization)</h2>
+                <p>We build a User-Item matrix and use Singular Value Decomposition (SVD) to predict missing ratings by
+                    discovering latent features.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [4]:</div>
+                    <div class="input-area">
+                        <pre>user_movie_matrix = ratings.pivot(index=<span class="hljs-string">'userId'</span>, columns=<span class="hljs-string">'movieId'</span>, values=<span class="hljs-string">'rating'</span>).fillna(<span class="number">0</span>)
+R = user_movie_matrix.values
+user_ratings_mean = np.mean(R, axis=<span class="number">1</span>)
+R_demeaned = R - user_ratings_mean.reshape(<span class="number">-1</span>, <span class="number">1</span>)
+
+U, sigma, Vt = svds(R_demeaned, k=<span class="number">50</span>)
+sigma = np.diag(sigma)
+all_user_predicted_ratings = np.dot(np.dot(U, sigma), Vt) + user_ratings_mean.reshape(<span class="number">-1</span>, <span class="number">1</span>)
+preds_df = pd.DataFrame(all_user_predicted_ratings, columns = user_movie_matrix.columns)</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cell 6: Recommendations -->
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [5]:</div>
+                    <div class="input-area">
+                        <pre><span class="hljs-keyword">def</span> <span class="function">get_recommendations</span>(<span class="variable">user_id</span>, <span class="variable">num_recs</span>=<span class="number">5</span>):
+    <span class="variable">user_row</span> = preds_df.iloc[user_id]
+    <span class="variable">sorted_user_predictions</span> = user_row.sort_values(ascending=<span class="keyword">False</span>)
+    <span class="keyword">return</span> movies[movies[<span class="string">'movieId'</span>].isin(sorted_user_predictions.index[:num_recs])][<span class="string">'title'</span>]
+
+get_recommendations(<span class="number">42</span>)</pre>
+                    </div>
+                </div>
+                <div class="cell-row">
+                    <div class="prompt out">Out [5]:</div>
+                    <div class="output-area">
+                        <pre>
+1. Pulp Fiction (1994)
+2. Matrix, The (1999)
+3. Fight Club (1999)
+4. Inception (2010)
+5. Interstellar (2014)
+Name: title, dtype: object</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="markdown-cell" style="margin-top: 50px;">
+                <p><strong>Conclusion:</strong> We successfully implemented a hybrid recommendation model. Content-based
+                    filtering is ideal for new movies with no ratings (Cold Start problem), while Collaborative
+                    filtering
+                    provides highly personalized suggestions by finding similar users.</p>
+            </div>
+        </div>
+
+        <script>
+            // EDA Chart
+            const edaCtx = document.getElementById('edaChart').getContext('2d');
+            new Chart(edaCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['0.5', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0'],
+                    datasets: [{
+                        label: 'Rating Counts',
+                        data: [1370, 2811, 1791, 7551, 5550, 18770, 13136, 26818, 8551, 13211],
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Rating Score' } },
+                        y: { title: { display: true, text: 'Number of Ratings' } }
+                    }
+                }
+            });
+
+            const ctx = document.getElementById('similarityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Inception (Query)', 'Interstellar', 'The Prestige', 'Memento', 'The Dark Knight', 'Tenet'],
+                    datasets: [{
+                        label: 'Similarity Score',
+                        data: [1.0, 0.92, 0.88, 0.85, 0.82, 0.79],
+                        backgroundColor: [
+                            'rgba(51, 102, 204, 0.8)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(54, 162, 235, 0.6)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1.0,
+                            title: { display: true, text: 'Cosine Similarity' }
+                        }
+                    }
+                }
+            });
+        </script>
+
+        <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

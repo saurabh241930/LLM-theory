@@ -25,21 +25,99 @@
             margin-bottom: 10px;
         }
 
-        .code-block {
-            background-color: #202122;
-            color: #f8f9fa;
+        pre.code-block {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
             padding: 15px;
-            border-radius: 4px;
-            font-family: 'Courier New', Courier, monospace;
-            margin-top: 10px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            margin: 10px 0;
             overflow-x: auto;
+            white-space: pre;
+            line-height: 1.5;
+            font-size: 0.9rem;
         }
+
+        .keyword {
+            color: #C586C0;
+        }
+
+        /* Purple: async, def, from, import */
+        .function {
+            color: #DCDCAA;
+        }
+
+        /* Yellow: function names */
+        .string {
+            color: #CE9178;
+        }
+
+        /* Terra Cotta: strings */
+        .comment {
+            color: #6A9955;
+            font-style: italic;
+        }
+
+        /* Green: comments */
+        .number {
+            color: #B5CEA8;
+        }
+
+        /* Light Green: numbers */
+        .decorator {
+            color: #DCDCAA;
+        }
+
+        /* Yellow: @app.get */
+        .variable {
+            color: #9CDCFE;
+        }
+
+        /* Light Blue: variables */
+        .type {
+            color: #4EC9B0;
+        }
+
+        /* Teal: types like str, int, Depends */
 
         .depth {
             background-color: #e2e3e5;
             padding: 10px;
             border-left: 4px solid #6c757d;
             margin-top: 10px;
+        }
+
+        .qa-tag {
+            float: right;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .tag-hot {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .tag-core {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #bbdefb;
+        }
+
+        .tag-trap {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            border: 1px solid #ffe0b2;
+        }
+
+        .tag-scale {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
         }
     </style>
 </head>
@@ -54,7 +132,8 @@
         <section id="architecture">
             <h2>1. Architecture: The Starlette & Pydantic Stack</h2>
             <p>FastAPI is based on two core libraries: <strong>Starlette</strong> for web routing/async and
-                <strong>Pydantic</strong> for data validation.</p>
+                <strong>Pydantic</strong> for data validation.
+            </p>
             <div class="mermaid">
                 graph TD
                 A[User Request] --> B[FastAPI Wrapper]
@@ -85,35 +164,750 @@
                 <div class="answer">
                     <div class="one-liner">It handles the lifecycle and caching of dependencies (like DB sessions or
                         Auth users) automatically for each request.</div>
-                    <div class="code-block">
-                        <span style="color: #6a9955;"># Advanced DI with sub-dependencies</span><br>
-                        async def get_db_session(): ...<br><br>
-                        async def get_current_user(db: Annotated[Session, Depends(get_db_session)]): ...<br><br>
-                        @app.get("/")<br>
-                        async def read_root(user: Annotated[User, Depends(get_current_user)]): ...
+                    <pre
+                        class="code-block"><span class="comment"># Advanced DI with sub-dependencies</span>
+<span class="keyword">async def</span> <span class="function">get_db_session</span>(): ...
+
+<span class="keyword">async def</span> <span class="function">get_current_user</span>(<span class="variable">db</span>: <span class="type">Annotated</span>[<span class="type">Session</span>, <span class="type">Depends</span>(get_db_session)]): ...
+
+<span class="decorator">@app.get</span>(<span class="string">"/"</span>)
+<span class="keyword">async def</span> <span class="function">read_root</span>(<span class="variable">user</span>: <span class="type">Annotated</span>[<span class="type">User</span>, <span class="type">Depends</span>(get_current_user)]): ...</pre>
+                </div>
+            </div>
+    </div>
+    </section>
+
+    <section id="interview-masterclass">
+        <h2>4. Senior FastAPI & Python Interview Masterclass (50+ Questions)</h2>
+        <p>This section covers the most frequently asked questions in high-level FastAPI and Python interviews,
+            ranging from event loop internals to production scaling patterns.</p>
+
+        <div class="masterclass-controls" style="margin-bottom: 25px;">
+            <div class="category-tabs" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                <button class="tab-btn active" data-category="all">All Questions</button>
+                <button class="tab-btn" data-category="fastapi">FastAPI</button>
+                <button class="tab-btn" data-category="python">Python</button>
+                <button class="tab-btn" data-category="scale">Scale & Design</button>
+                <button class="tab-btn" data-category="genai">FastAPI + GenAI</button>
+            </div>
+            <div class="search-container">
+                <input type="text" id="qaSearch" placeholder="Search 50+ questions (e.g. 'GIL', 'Async', 'Pydantic')..."
+                    style="width: 100%; padding: 12px; border: 1px solid #ccc; border-top: none; border-left: none; border-right: none; font-size: 1rem; background: transparent; outline: none; border-bottom: 2px solid #eee; transition: border-color 0.3s;">
+            </div>
+        </div>
+
+        <style>
+            .tab-btn {
+                padding: 8px 16px;
+                border: 1px solid #ccc;
+                background: #f8f9fa;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+
+            .tab-btn:hover {
+                background: #eee;
+            }
+
+            .tab-btn.active {
+                background: #333;
+                color: white;
+                border-color: #333;
+            }
+
+            #qaSearch:focus {
+                border-bottom-color: var(--wp-accent);
+            }
+        </style>
+
+        <div id="qa-list">
+            <!-- Question 1: Generators -->
+            <div class="qa-container" data-category="python">
+                <span class="qa-tag tag-hot">Hot</span>
+                <h3>Q1: Explain generators and when you'd use them in a backend context.</h3>
+                <div class="answer">
+                    <p>Generators are data streams that use <code>yield</code> to produce values lazily. They
+                        maintain their internal state without loading everything into memory (O(1) space).</p>
+                    <p><strong>Backend usage:</strong> Handling massive database cursors, streaming large file
+                        uploads, or processing paginated API results without hitting VRAM or RAM limits.</p>
+                    <pre
+                        class="code-block"><span class="keyword">def</span> <span class="function">stream_logs</span>():
+    <span class="keyword">with</span> open(<span class="string">"large_log.txt"</span>) <span class="keyword">as</span> <span class="variable">f</span>:
+        <span class="keyword">for</span> <span class="variable">line</span> <span class="keyword">in</span> <span class="variable">f</span>:
+            <span class="keyword">yield</span> <span class="variable">line</span> <span class="comment"># Processed one by one</span></pre>
+                </div>
+            </div>
+
+            <!-- Question 2: GIL and FastAPI -->
+            <div class="qa-container" data-category="python">
+                <span class="qa-tag tag-hot">Hot</span>
+                <h3>Q2: What's GIL and how does it affect your FastAPI service under load?</h3>
+                <div class="answer">
+                    <p>The Global Interpreter Lock (GIL) ensures only one thread executes Python bytecode at a time.
+                        While it's fine for <strong>I/O-bound</strong> tasks (where Threads wait for DBs), it
+                        severely hurts <strong>CPU-bound</strong> tasks (encryption, ML inference).</p>
+                    <p><strong>Effect under load:</strong> Multiple workers (Gunicorn) bypass this by using separate
+                        processes, but within a single worker, multi-threading won't speed up CPU calculation.</p>
+                </div>
+            </div>
+
+            <!-- Question 3 -->
+            <div class="qa-container" data-category="fastapi">
+                <span class="qa-tag tag-hot">Hot</span>
+                <h3>Q3: How does FastAPI handle async vs sync route handlers? When would you use each?</h3>
+                <div class="answer">
+                    <p>FastAPI handles <code>async def</code> and regular <code>def</code> differently to maximize
+                        throughput:</p>
+                    <ul>
+                        <li><strong>async def:</strong> Runs directly on the <strong>Event Loop</strong>. Use this
+                            for non-blocking I/O (DB queries, API calls using <code>httpx</code>).</li>
+                        <li><strong>def:</strong> Runs in an external <strong>Threadpool</strong>. Use this for
+                            blocking I/O (libraries like <code>requests</code> or <code>bs4</code>) or CPU-bound
+                            tasks, so they don't freeze the Event Loop.</li>
+                    </ul>
+                    <pre
+                        class="code-block"><span class="decorator">@app.get</span>(<span class="string">"/async"</span>)
+<span class="keyword">async def</span> <span class="function">async_route</span>():
+    <span class="keyword">await</span> asyncio.sleep(<span class="number">1</span>) <span class="comment"># Non-blocking</span>
+    <span class="keyword">return</span> {<span class="string">"message"</span>: <span class="string">"Async"</span>}
+
+<span class="decorator">@app.get</span>(<span class="string">"/sync"</span>)
+<span class="keyword">def</span> <span class="function">sync_route</span>():
+    time.sleep(<span class="number">1</span>) <span class="comment"># Blocking, but run in threadpool</span>
+    <span class="keyword">return</span> {<span class="string">"message"</span>: <span class="string">"Sync"</span>}</pre>
+                </div>
+            </div>
+
+            <!-- Question 4 -->
+            <div class="qa-container" data-tags="async">
+                <h3>Q4: What happens if you block the event loop in an `async def` route?</h3>
+                <div class="answer">
+                    <div class="one-liner">The entire application stops responding to ALL users until the blocking
+                        task is finished.</div>
+                    <p>Example: Using <code>time.sleep(10)</code> instead of <code>await asyncio.sleep(10)</code>
+                        inside an <code>async def</code> will freeze the server.</p>
+                </div>
+            </div>
+
+            <!-- Question 5 -->
+            <div class="qa-container" data-tags="di">
+                <span class="qa-tag tag-core">Core</span>
+                <h3>Q5: Explain Depends() — how does dependency injection work in FastAPI?</h3>
+                <div class="answer">
+                    <p>FastAPI's DI system uses <code>Depends()</code> to declare requirements for a route. It
+                        handles the <strong>lifecycle</strong> and <strong>caching</strong> of shared resources like
+                        database sessions or security context.</p>
+                    <pre class="code-block"><span class="keyword">async def</span> <span class="function">get_db</span>():
+    <span class="variable">db</span> = SessionLocal()
+    <span class="keyword">try</span>:
+        <span class="keyword">yield</span> <span class="variable">db</span>
+    <span class="keyword">finally</span>:
+        <span class="variable">db</span>.close()
+
+<span class="decorator">@app.get</span>(<span class="string">"/items"</span>)
+<span class="keyword">async def</span> <span class="function">read_items</span>(<span class="variable">db</span>: <span class="type">Session</span> = <span class="type">Depends</span>(get_db)):
+    <span class="keyword">return</span> <span class="variable">db</span>.query(Item).all()</pre>
+                </div>
+            </div>
+
+            <!-- Question 6 -->
+            <div class="qa-container" data-tags="pydantic">
+                <span class="qa-tag tag-trap">Trap</span>
+                <h3>Q6: What's the difference between Pydantic v1 and v2, and how does it affect FastAPI?</h3>
+                <div class="answer">
+                    <p>Pydantic v2 was a complete rewrite in Rust, focusing on performance and strictness. For
+                        FastAPI users:</p>
+                    <ul>
+                        <li><strong>Performance:</strong> Serialization and validation are up to 20x faster.</li>
+                        <li><strong>Breaking Changes:</strong> <code>.dict()</code> is now
+                            <code>.model_dump()</code>, and <code>schema()</code> is
+                            <code>model_json_schema()</code>.
+                        </li>
+                        <li><strong>Native Serialization:</strong> V2 handles JSON serialization natively, removing
+                            the need for <code>jsonable_encoder</code> in many cases.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 7 -->
+            <div class="qa-container" data-tags="di">
+                <h3>Q7: Can dependencies be cached in FastAPI?</h3>
+                <div class="answer">
+                    <p>Yes, by default, FastAPI caches the result of a dependency for the duration of a single
+                        request. If multiple routes/sub-dependencies use the same <code>Depends(get_db)</code>, the
+                        function only runs once.</p>
+                </div>
+            </div>
+
+            <!-- Question 8 -->
+            <div class="qa-container" data-tags="prod">
+                <h3>Q8: Gunicorn vs Uvicorn — What is the production standard?</h3>
+                <div class="answer">
+                    <p>Run <strong>Gunicorn</strong> as a process manager with <strong>Uvicorn workers</strong>
+                        (<code>uvicorn.workers.UvicornWorker</code>). Gunicorn provides process management
+                        (restarts, signals), while Uvicorn handles the ASGI protocol.</p>
+                </div>
+            </div>
+
+            <!-- Question 9 -->
+            <div class="qa-container" data-tags="params">
+                <h3>Q9: How do you differentiate between a Path and Query parameter?</h3>
+                <div class="answer">
+                    <p>Path parameters are part of the URL (<code>/items/{id}</code>). Query parameters are appended
+                        after the <code>?</code> (<code>/items?start=0&limit=10</code>). In FastAPI, you declare
+                        them as function arguments.</p>
+                </div>
+            </div>
+
+            <!-- Question 10 -->
+            <div class="qa-container" data-tags="security">
+                <span class="qa-tag tag-core">Core</span>
+                <h3>Q10: How do you implement JWT auth with OAuth2PasswordBearer in FastAPI?</h3>
+                <div class="answer">
+                    <p>Use <code>OAuth2PasswordBearer</code> to define the token URL. FastAPI will automatically
+                        check the <code>Authorization: Bearer <token></code> header. You then manually decode and
+                        validate the JWT using libraries like <code>pyjwt</code> or <code>python-jose</code>.</p>
+                    <pre class="code-block"><span class="keyword">from</span> fastapi.security <span class="keyword">import</span> <span class="type">OAuth2PasswordBearer</span>
+<span class="variable">oauth2_scheme</span> = OAuth2PasswordBearer(tokenUrl=<span class="string">"token"</span>)
+
+<span class="decorator">@app.get</span>(<span class="string">"/users/me"</span>)
+<span class="keyword">async def</span> <span class="function">read_users_me</span>(<span class="variable">token</span>: <span class="type">str</span> = <span class="type">Depends</span>(oauth2_scheme)):
+    <span class="variable">user</span> = decode_jwt(<span class="variable">token</span>)
+    <span class="keyword">return</span> <span class="variable">user</span></pre>
+                </div>
+            </div>
+
+            <!-- Question 11-20 (Batching for Brevity in this thought) -->
+            <div class="qa-container">
+                <h3>Q11: What is a Paged Optimizer in the context of persistence?</h3>
+                <div class="answer">
+                    <p>While usually an LLM term, in FastAPI datasets, this refers to using cursors/offsets to
+                        prevent loading huge tables into RAM at once.</p>
+                </div>
+            </div>
+            <!-- Question 12.1: Methods -->
+            <div class="qa-container" data-category="python">
+                <span class="qa-tag tag-core">Core</span>
+                <h3>Q12.1: Difference between @staticmethod, @classmethod, and instance method.</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>Instance Method:</strong> Takes <code>self</code>; accesses instance data.</li>
+                        <li><strong>@classmethod:</strong> Takes <code>cls</code>; used for Factory patterns or
+                            modifying class state.</li>
+                        <li><strong>@staticmethod:</strong> No extra args; just a function scoped to a class for
+                            organization.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 12.2: Async/Await Under the Hood -->
+            <div class="qa-container" data-category="python">
+                <span class="qa-tag tag-hot">Hot</span>
+                <h3>Q12.2: How does Python's async/await work under the hood? What is an event loop?</h3>
+                <div class="answer">
+                    <p>Python uses <strong>Generators</strong> and <strong>Coroutines</strong>. When
+                        <code>await</code> is hit, it pauses the coroutine and yields control back to the
+                        <strong>Event Loop</strong> (an infinite loop that checks for ready sockets/I/O).
+                    </p>
+                    <div class="depth"><strong>Senior Signal:</strong> The event loop uses <code>select()</code> or
+                        <code>epoll()</code> (on Linux) to efficiently wait for multiple file descriptors
+                        simultaneously.
                     </div>
                 </div>
             </div>
-        </section>
+            <div class="qa-container">
+                <span class="qa-tag tag-core">Core</span>
+                <h3>Q13: Middleware vs Dependencies — when do you use which?</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>Middleware:</strong> Runs on <em>every</em> request/response. Best for logging,
+                            CORS, or global headers. Cannot easily access route-specific dependencies.</li>
+                        <li><strong>Dependencies:</strong> More granular. Can be applied to specific routes,
+                            routers, or globally. Have access to the route's parameters and DI graph.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="qa-container">
+                <h3>Q14: Explain `Annotated` in FastAPI 0.95+.</h3>
+                <div class="answer">
+                    <p>Allows combining types with metadata: <code>db: Annotated[Session, Depends(get_db)]</code>.
+                        It is now the recommended standard.</p>
+                </div>
+            </div>
+            <div class="qa-container" data-tags="async">
+                <span class="qa-tag tag-hot">Hot</span>
+                <h3>Q15: How do you handle background tasks without blocking the response?</h3>
+                <div class="answer">
+                    <p>FastAPI provides a <code>BackgroundTasks</code> class. You add a function and its arguments
+                        to the task list; FastAPI will return the response to the client first and then execute the
+                        function.</p>
+                    <pre
+                        class="code-block"><span class="keyword">from</span> fastapi <span class="keyword">import</span> <span class="type">BackgroundTasks</span>
 
-        <section id="interview-questions">
-            <h2>4. Senior FastAPI Interview Q&A</h2>
-            <div class="qa-container">
-                <h3>Q: What is the difference between `async def` and `def` routes in FastAPI?</h3>
-                <div class="answer">
-                    <p>FastAPI runs <code>async def</code> functions directly on the event loop. It runs regular
-                        <code>def</code> functions in an external <strong>ThreadPool</strong>. Use <code>def</code> for
-                        legacy blocking code and <code>async def</code> for modern non-blocking libraries.</p>
+<span class="keyword">def</span> <span class="function">write_log</span>(<span class="variable">message</span>: <span class="type">str</span>):
+    <span class="keyword">with</span> open(<span class="string">"log.txt"</span>, <span class="string">"a"</span>) <span class="keyword">as</span> <span class="variable">f</span>:
+        <span class="variable">f</span>.write(<span class="variable">message</span>)
+
+<span class="decorator">@app.post</span>(<span class="string">"/send-notification/{email}"</span>)
+<span class="keyword">async def</span> <span class="function">send_notification</span>(<span class="variable">email</span>: <span class="type">str</span>, <span class="variable">background_tasks</span>: <span class="type">BackgroundTasks</span>):
+    <span class="variable">background_tasks</span>.add_task(write_log, <span class="string">f"notification sent to {email}"</span>)
+    <span class="keyword">return</span> {<span class="string">"message"</span>: <span class="string">"Notification sent in the background"</span>}</pre>
                 </div>
             </div>
             <div class="qa-container">
-                <h3>Q: How do you handle middleware performance bottlenecks?</h3>
+                <h3>Q16: How to handle Global Exception Handlers?</h3>
                 <div class="answer">
-                    <div class="one-liner">Middleware runs on every request. Keep logic light (auth, headers). For heavy
-                        lifting, use Dependencies or Background Tasks.</div>
+                    <p>Use <code>@app.exception_handler(MyException)</code>. It allows catching custom business
+                        exceptions and returning clean JSON.</p>
                 </div>
             </div>
-        </section>
+            <div class="qa-container">
+                <h3>Q17: What is Pydantic `BaseModel` vs `TypeAdapter`?</h3>
+                <div class="answer">
+                    <p><code>BaseModel</code> is for objects (classes). <code>TypeAdapter</code> (V2) is for
+                        validating generic types like <code>List[str]</code> or <code>Dict</code> without a class
+                        wrapper.</p>
+                </div>
+            </div>
+            <div class="qa-container">
+                <h3>Q18: Explain `TestClient` vs `httpx.AsyncClient`.</h3>
+                <div class="answer">
+                    <p><code>TestClient</code> is sync (based on requests). Use <code>httpx.AsyncClient</code> with
+                        <code>pytest-asyncio</code> for testing async routes effectively.
+                    </p>
+                </div>
+            </div>
+            <div class="qa-container">
+                <h3>Q19: How to protect against SQL Injection in FastAPI?</h3>
+                <div class="answer">
+                    <p>Use Pydantic for validation and an ORM (SQLAlchemy/SQLModel) that uses parameterized queries.
+                        Never use f-strings to build SQL.</p>
+                </div>
+            </div>
+            <!-- Question 20.1: Dataclasses vs Pydantic -->
+            <div class="qa-container" data-category="python">
+                <span class="qa-tag tag-core">Core</span>
+                <h3>Q20.1: What are Python dataclasses vs Pydantic models? When to use which?</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>Dataclasses:</strong> Built-in, light, minimal validation. Best for internal
+                            data structures inside the domain.</li>
+                        <li><strong>Pydantic:</strong> Validation-first, parses JSON/Envs. Best for <strong>Boundary
+                                Objects</strong> (API inputs/outputs).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 20.2: Context Managers -->
+            <div class="qa-container" data-category="python">
+                <span class="qa-tag tag-trap">Trap</span>
+                <h3>Q20.2: Explain context managers and how yield works in them.</h3>
+                <div class="answer">
+                    <p>Used for resource management (DBs, files). With <code>@contextmanager</code>, code before
+                        <code>yield</code> is the setup, and code after <code>yield</code> is the teardown
+                        (cleanup).
+                    </p>
+                    <pre class="code-block"><span class="decorator">@contextmanager</span>
+<span class="keyword">def</span> <span class="function">transaction</span>():
+    print(<span class="string">"BEGIN"</span>)
+    <span class="keyword">try</span>:
+        <span class="keyword">yield</span>
+    <span class="keyword">finally</span>:
+        print(<span class="string">"COMMIT/ROLLBACK"</span>)</pre>
+                </div>
+            </div>
+            <!-- Question 21 -->
+            <div class="qa-container">
+                <span class="qa-tag tag-scale">Scale</span>
+                <h3>Q21: How do you handle database connection pooling in a FastAPI app?</h3>
+                <div class="answer">
+                    <p>Use an async engine with a built-in pooler (like SQLAlchemy's <code>AsyncEngine</code> or
+                        <code>tortoise-orm</code>). Initialize the pool in the <strong>lifespan</strong> event to
+                        ensure it's created once and shared across all workers.
+                    </p>
+                    <pre
+                        class="code-block"><span class="keyword">from</span> sqlalchemy.ext.asyncio <span class="keyword">import</span> create_async_engine
+<span class="variable">engine</span> = create_async_engine(DATABASE_URL, pool_size=<span class="number">20</span>, max_overflow=<span class="number">0</span>)</pre>
+                </div>
+            </div>
+            <!-- Question 22 -->
+            <div class="qa-container">
+                <h3>Q22: How to handle CORS in FastAPI?</h3>
+                <div class="answer">
+                    <p>Use <code>CORSMiddleware</code>. You must specify <code>allow_origins</code>,
+                        <code>allow_methods</code>, and <code>allow_headers</code> to allow frontend apps to call
+                        your API.
+                    </p>
+                </div>
+            </div>
+            <!-- Question 23 -->
+            <div class="qa-container">
+                <h3>Q23: What are Pydantic Generic Models?</h3>
+                <div class="answer">
+                    <p>Models that use <code>typing.Generic</code>. Useful for standardizing API responses:
+                        <code>ResponseModel[T]</code> where <code>data</code> is of type <code>T</code>.
+                    </p>
+                </div>
+            </div>
+            <!-- Question 24 -->
+            <div class="qa-container">
+                <h3>Q24: Explain `UploadFile` vs `bytes` for file uploads.</h3>
+                <div class="answer">
+                    <p><code>bytes</code> loads the whole file into RAM (bad for large files).
+                        <code>UploadFile</code> uses a spooled file (stored on disk if it exceeds a memory limit),
+                        which is much safer.
+                    </p>
+                </div>
+            </div>
+            <!-- Question 25 -->
+            <div class="qa-container">
+                <h3>Q25: How to use `Form` data?</h3>
+                <div class="answer">
+                    <p>Import <code>Form</code> from <code>fastapi</code>. Unlike JSON, form data is sent as
+                        <code>application/x-www-form-urlencoded</code>. You need <code>python-multipart</code>
+                        installed.
+                    </p>
+                </div>
+            </div>
+            <!-- Question 26 -->
+            <div class="qa-container">
+                <h3>Q26: What is `HTTPBasic`?</h3>
+                <div class="answer">
+                    <p>A security scheme for Basic Auth (Username/Password in headers). FastAPI provides a helper to
+                        parse and validate it automatically.</p>
+                </div>
+            </div>
+            <!-- Question 27 -->
+            <div class="qa-container">
+                <h3>Q27: How to implement Rate Limiting?</h3>
+                <div class="answer">
+                    <p>FastAPI doesn't have it built-in. Use <code>slowapi</code> or a custom middleware with
+                        **Redis** to track request counts per IP/API key.</p>
+                </div>
+            </div>
+            <!-- Question 28 -->
+            <div class="qa-container">
+                <h3>Q28: Explain `StreamingResponse`.</h3>
+                <div class="answer">
+                    <p>Used to stream content (like video or large CSVs) to the client without loading it all into
+                        memory first.</p>
+                </div>
+            </div>
+            <!-- Question 29 -->
+            <div class="qa-container">
+                <h3>Q29: What is `Field` in Pydantic?</h3>
+                <div class="answer">
+                    <p>Used to add extra validation or metadata to model attributes, like <code>ge=0</code> (greater
+                        than zero) or <code>description="The user's age"</code>.</p>
+                </div>
+            </div>
+            <!-- Question 30 -->
+            <div class="qa-container">
+                <h3>Q30: How to use `ConfigDict` in V2?</h3>
+                <div class="answer">
+                    <p>In Pydantic V2, the internal <code>Config</code> class is replaced by
+                        <code>model_config = ConfigDict(...)</code>. It controls behavior like
+                        <code>extra='forbid'</code> or <code>from_attributes=True</code>.
+                    </p>
+                </div>
+            </div>
+            <!-- Question 31 -->
+            <div class="qa-container">
+                <span class="qa-tag tag-core">Core</span>
+                <h3>Q31: How do you structure a production FastAPI project?</h3>
+                <div class="answer">
+                    <p>Follow a modular structure using <code>APIRouter</code> to separate business domains. Common
+                        pattern:</p>
+                    <pre class="code-block">app/
+├── main.py <span class="comment"># App initialization</span>
+├── api/ <span class="comment"># Routes</span>
+│   ├── v1/
+│   │   ├── endpoints/
+├── core/ <span class="comment"># Config, Security</span>
+├── crud/ <span class="comment"># DB operations</span>
+├── models/ <span class="comment"># SQLAlchemy models</span>
+├── schemas/ <span class="comment"># Pydantic models</span>
+└── db/ <span class="comment"># Session management</span></pre>
+                </div>
+            </div>
+            <!-- Question 32 -->
+            <div class="qa-container">
+                <h3>Q32: How to mount Static Files?</h3>
+                <div class="answer">
+                    <p>Use <code>StaticFiles</code> from <code>fastapi.staticfiles</code> and
+                        <code>app.mount("/static", ...)</code>. Useful for serving CSS/JS if you aren't using a CDN.
+                    </p>
+                </div>
+            </div>
+            <!-- Question 33 -->
+            <div class="qa-container">
+                <h3>Q33: What is a Sub-dependency?</h3>
+                <div class="answer">
+                    <p>A dependency that itself has dependencies. FastAPI resolves the entire tree automatically:
+                        <code>User -> Current_User -> DB_Session</code>.
+                    </p>
+                </div>
+            </div>
+            <!-- Question 34 -->
+            <div class="qa-container">
+                <h3>Q34: How to use `Request` object directly?</h3>
+                <div class="answer">
+                    <p>Inject <code>request: Request</code> into your route. Useful for accessing raw headers,
+                        client IP, or the app state directly.</p>
+                </div>
+            </div>
+            <!-- Question 35 -->
+            <div class="qa-container">
+                <h3>Q35: Explain `WebSockets` in FastAPI.</h3>
+                <div class="answer">
+                    <p>FastAPI supports two-way real-time communication. Use <code>@app.websocket("/ws")</code> and
+                        <code>await websocket.accept()</code>.
+                    </p>
+                </div>
+            </div>
+            <!-- Question 36 -->
+            <div class="qa-container">
+                <h3>Q36: What is `RedirectResponse`?</h3>
+                <div class="answer">
+                    <p>Returns a 301/302/307 status code to redirect the user to another URL, either internal or
+                        external.</p>
+                </div>
+            </div>
+            <!-- Question 37 -->
+            <div class="qa-container">
+                <h3>Q37: How to handle `RequestValidationError`?</h3>
+                <div class="answer">
+                    <p>Override the default handler to return custom JSON instead of the standard 422 Unprocessable
+                        Entity error.</p>
+                </div>
+            </div>
+            <!-- Question 38 -->
+            <div class="qa-container">
+                <h3>Q38: Explain `Security` vs `Depends`.</h3>
+                <div class="answer">
+                    <p><code>Security</code> is like <code>Depends</code> but it also takes <strong>Scopes</strong>.
+                        Useful for fine-grained OAuth2 permissions (e.g., "read", "write").</p>
+                </div>
+            </div>
+            <!-- Question 39 -->
+            <div class="qa-container">
+                <h3>Q39: What is `OAuth2PasswordRequestForm`?</h3>
+                <div class="answer">
+                    <p>A helper that parses <code>username</code> and <code>password</code> from a standard
+                        form-post, which is required by the OAuth2 specification.</p>
+                </div>
+            </div>
+            <!-- Question 40 -->
+            <div class="qa-container">
+                <h3>Q40: How to use `Cookie` and `Header` params?</h3>
+                <div class="answer">
+                    <p>Import them from <code>fastapi</code>. They work like <code>Query</code> or
+                        <code>Path</code>, extracting data from specific parts of the request.
+                    </p>
+                </div>
+            </div>
+            <!-- Question 41 -->
+            <div class="qa-container">
+                <h3>Q41: Explain `Starlette`'s `TestClient` internals.</h3>
+                <div class="answer">
+                    <p>It uses <code>requests</code> to make calls against the ASGI app without actually running a
+                        network server, making tests very fast.</p>
+                </div>
+            </div>
+            <!-- Question 42 -->
+            <div class="qa-container">
+                <h3>Q42: How to handle `Multi-part` forms?</h3>
+                <div class="answer">
+                    <p>When sending both files and JSON, you must use <code>Form</code> fields. You cannot send a
+                        raw JSON body alongside <code>multipart/form-data</code> easily without a wrapper.</p>
+                </div>
+            </div>
+            <!-- Question 43 -->
+            <div class="qa-container">
+                <h3>Q43: What is `Recursive Models`?</h3>
+                <div class="answer">
+                    <p>Pydantic models that reference themselves (e.g., a <code>Comment</code> with a list of
+                        <code>replies: List['Comment']</code>). Use <code>model_rebuild()</code> in V2.
+                    </p>
+                </div>
+            </div>
+            <!-- Question 44 -->
+            <div class="qa-container">
+                <h3>Q44: How to use `Computed Field` in Pydantic V2?</h3>
+                <div class="answer">
+                    <p>Use the <code>@computed_field</code> decorator on a property. It will be included in the
+                        serialized output (JSON).</p>
+                </div>
+            </div>
+            <!-- Question 45: Scaling LLM Endpoint -->
+            <div class="qa-container" data-category="scale">
+                <span class="qa-tag tag-hot">Hot</span>
+                <h3>Q45: Your FastAPI LLM endpoint gets 1000 req/s. How do you scale it?</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>Horizontal Scaling:</strong> Use Kubernetes HPA to scale replicas based on
+                            CPU/Custom Metrics (like queue depth).</li>
+                        <li><strong>Load Balancing:</strong> Use Nginx or AWS ALB with Least Connections strategy.
+                        </li>
+                        <li><strong>Caching:</strong> Use Redis to cache common prompts/responses (Semantic Cache).
+                        </li>
+                        <li><strong>Batching:</strong> Implement Continuous Batching at the inference engine level
+                            (vLLM/TGI).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Question 46: Rate Limiting -->
+            <div class="qa-container" data-category="scale">
+                <span class="qa-tag tag-scale">Scale</span>
+                <h3>Q46: How do you implement rate limiting in FastAPI without a third-party service?</h3>
+                <div class="answer">
+                    <p>Use an in-memory <strong>Fixed Window</strong> or <strong>Token Bucket</strong> algorithm
+                        using a <code>dict</code> (for single worker) or <strong>Redis</strong> (shared across
+                        workers) inside a FastAPI dependency.</p>
+                    <pre class="code-block"><span class="keyword">from</span> fastapi <span class="keyword">import</span> <span class="type">HTTPException</span>, <span class="type">Request</span>
+<span class="keyword">import</span> time
+
+<span class="variable">_rates</span> = {}
+<span class="keyword">def</span> <span class="function">rate_limit</span>(<span class="variable">request</span>: <span class="type">Request</span>):
+    <span class="variable">ip</span> = <span class="variable">request</span>.client.host
+    <span class="variable">now</span> = time.time()
+    <span class="keyword">if</span> <span class="variable">ip</span> <span class="keyword">in</span> <span class="variable">_rates</span> <span class="keyword">and</span> <span class="variable">now</span> - <span class="variable">_rates</span>[<span class="variable">ip</span>] < <span class="number">1</span>:
+        <span class="keyword">raise</span> <span class="type">HTTPException</span>(status_code=<span class="number">429</span>)
+    <span class="variable">_rates</span>[<span class="variable">ip</span>] = <span class="variable">now</span></pre>
+                </div>
+            </div>
+
+            <!-- Question 47: SSE Streaming -->
+            <div class="qa-container" data-category="genai">
+                <span class="qa-tag tag-hot">Hot</span>
+                <h3>Q47: How do you implement streaming LLM responses via Server-Sent Events in FastAPI?</h3>
+                <div class="answer">
+                    <p>Use <code>EventSourceResponse</code> from <code>sse_starlette</code> or a custom generator
+                        with <code>StreamingResponse</code> and <code>text/event-stream</code> header.</p>
+                    <pre
+                        class="code-block"><span class="keyword">async def</span> <span class="function">streamer</span>():
+    <span class="keyword">for</span> <span class="variable">chunk</span> <span class="keyword">in</span> [<span class="string">"data: chunk1\n\n"</span>, <span class="string">"data: chunk2\n\n"</span>]:
+        <span class="keyword">yield</span> <span class="variable">chunk</span>
+<span class="keyword">return</span> <span class="type">StreamingResponse</span>(streamer(), media_type=<span class="string">"text/event-stream"</span>)</pre>
+                </div>
+            </div>
+
+            <!-- Question 48: Circuit Breaker -->
+            <div class="qa-container" data-category="scale">
+                <span class="qa-tag tag-scale">Scale</span>
+                <h3>Q48: Explain the Circuit Breaker pattern — how would you implement it in a FastAPI GenAI
+                    service?</h3>
+                <div class="answer">
+                    <p>Prevents a failing service (like an OpenAI API timeout) from cascading. If error rates exceed
+                        a threshold, the "circuit opens" and immediately returns a fallback/error for a cooldown
+                        period.</p>
+                    <p><strong>Implementation:</strong> Use the <code>pybreaker</code> library or a custom decorator
+                        around your LLM call dependency.</p>
+                </div>
+            </div>
+
+            <!-- Question 49: Multi-tenant Isolation -->
+            <div class="qa-container" data-category="scale">
+                <span class="qa-tag tag-scale">Scale</span>
+                <h3>Q49: How do you handle multi-tenant isolation in a FastAPI + PostgreSQL app?</h3>
+                <div class="answer">
+                    <ul>
+                        <li><strong>Shared Schema:</strong> Every table has a <code>tenant_id</code> column (RLS in
+                            Postgres is recommended).</li>
+                        <li><strong>Dynamic Schema:</strong> Every tenant has its own Postgres Schema.</li>
+                        <li><strong>Dynamic DB:</strong> Every tenant has a separate database.</li>
+                    </ul>
+                    <div class="depth"><strong>FastAPI Implementation:</strong> Inject <code>tenant_id</code> via a
+                        dependency that extracts it from the JWT or Header.</div>
+                </div>
+            </div>
+
+            <!-- Question 50: Job Queue -->
+            <div class="qa-container" data-category="scale">
+                <span class="qa-tag tag-hot">Hot</span>
+                <h3>Q50: How would you design a job queue for async LLM processing at scale?</h3>
+                <div class="answer">
+                    <p>Use <strong>Celery</strong> or <strong>ARQ</strong> with <strong>Redis</strong> as a broker.
+                        The FastAPI route submits the task and returns a <code>task_id</code>. A separate set of
+                        GPU-enabled workers consumes the queue.</p>
+                    <pre
+                        class="code-block"><span class="decorator">@app.post</span>(<span class="string">"/v1/process"</span>)
+<span class="keyword">async def</span> <span class="function">process</span>():
+    <span class="variable">task</span> = llm_worker.delay(prompt) <span class="comment"># Offload</span>
+    <span class="keyword">return</span> {<span class="string">"task_id"</span>: <span class="variable">task</span>.id}</pre>
+                </div>
+            </div>
+
+            <!-- Question 51 -->
+            <div class="qa-container" data-category="genai">
+                <span class="qa-tag tag-hot">Hot</span>
+                <h3>Q51: How do you stream LLM tokens using FastAPI's StreamingResponse?</h3>
+                <div class="answer">
+                    <p>Yield tokens from your generator and return a <code>StreamingResponse</code> with the
+                        <code>text/event-stream</code> media type for Server-Sent Events (SSE).
+                    </p>
+                    <pre
+                        class="code-block"><span class="decorator">@app.post</span>(<span class="string">"/generate"</span>)
+<span class="keyword">async def</span> <span class="function">generate</span>():
+    <span class="keyword">async def</span> <span class="function">token_generator</span>():
+        <span class="keyword">for</span> <span class="variable">token</span> <span class="keyword">in</span> [<span class="string">"Hello"</span>, <span class="string">" from"</span>, <span class="string">" FastAPI!"</span>]:
+            <span class="keyword">yield</span> <span class="variable">token</span>
+    <span class="keyword">return</span> <span class="type">StreamingResponse</span>(token_generator(), media_type=<span class="string">"text/plain"</span>)</pre>
+                </div>
+            </div>
+
+            <!-- Question 52 -->
+            <div class="qa-container" data-category="genai">
+                <span class="qa-tag tag-hot">Hot</span>
+                <h3>Q52: What are the best practices for handling long-running inference in FastAPI?</h3>
+                <div class="answer">
+                    <p>Offload the inference to a <strong>Worker Process</strong> (Celery/Ray) and use a
+                        <strong>Task ID</strong> pattern. The client polls the status, or the server sends a webhook
+                        upon completion. Never run heavy models directly on the FastAPI event loop thread.
+                    </p>
+                </div>
+            </div>
+        </div>
+        </div>
+    </section>
+
+    <script>
+        // Search and Category filtering
+        const qaSearch = document.getElementById('qaSearch');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const qaCards = document.querySelectorAll('.qa-container');
+        let activeCategory = 'all';
+
+        function filterQuestions() {
+            const term = qaSearch.value.toLowerCase();
+
+            qaCards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                const category = card.getAttribute('data-category') || 'all';
+
+                const matchesSearch = text.includes(term);
+                const matchesCategory = activeCategory === 'all' || category === activeCategory;
+
+                card.style.display = (matchesSearch && matchesCategory) ? 'block' : 'none';
+            });
+        }
+
+        qaSearch.addEventListener('input', filterQuestions);
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update active state
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                activeCategory = btn.getAttribute('data-category');
+                filterQuestions();
+            });
+        });
+    </script>
     </div>
 
     <script src="sidebar.js?v=2"></script>

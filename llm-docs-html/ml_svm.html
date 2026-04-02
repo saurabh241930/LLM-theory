@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Vector Machines (SVM) - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .premium-btn {
+            background: #3366cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .premium-btn:hover {
+            background: #254a9c;
+            transform: translateY(-1px);
+        }
+
+        .class-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .class-btn {
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .class-btn.active[data-class="0"] {
+            border-color: #dc3912;
+            background: #dc391211;
+        }
+
+        .class-btn.active[data-class="1"] {
+            border-color: #109618;
+            background: #10961811;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>SVM (Support Vector Machines)</h1>
+        <div class="subtitle">Maximizing margins and the Kernel Trick</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">SVM</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Supervised (Classification)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Key Math</div>
+                    <div class="infobox-value">Hyperplanes, Margins</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Trick</div>
+                    <div class="infobox-value">Kernel Transformation</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>SVM</strong> seeks to find the <strong>Hyperplane</strong> that best separates two classes with
+                the "maximum margin." The data points closest to this hyperplane are called <strong>Support
+                    Vectors</strong>—they are the critical points that define the boundary.</p>
+        </section>
+
+        <section id="flow">
+            <h2>2. Visual Flow</h2>
+            <div class="mermaid">
+                graph LR
+                A[Mixed Data Points] --> B[Search for Hyperplane]
+                B --> C[Maximize Distance to Nearest Points]
+                C --> D[Optimal Decision Boundary]
+                D --> E[Support Vectors Identified]
+            </div>
+        </section>
+
+        <section id="playground">
+            <h2>3. Interactive Playground</h2>
+            <p>Select a class and <strong>Click the Chart</strong> to add data points. The SVM will instantly
+                recalculate the <strong>Optimal Hyperplane</strong> and the <strong>Gutter (Margins)</strong>. Try
+                to add points that make the classes non-separable!</p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+
+                <div class="class-selector">
+                    <span>Add point for:</span>
+                    <button class="class-btn active" data-class="0" style="color: #dc3912;">Class A (Red)</button>
+                    <button class="class-btn" data-class="1" style="color: #109618;">Class B (Green)</button>
+                </div>
+
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="svmChart"></canvas>
+                </div>
+
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <button id="clearSvm" class="premium-btn" style="background: #666;">Clear All Points</button>
+                    <div style="flex-grow: 1; text-align: right; font-size: 0.9em; color: #666;">
+                        <em>Tip: Points closest to the dashed lines are your Support Vectors.</em>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="kernel-trick">
+            <h2>4. The Kernel Trick</h2>
+            <p>When data is not linearly separable in 2D, SVM uses a <strong>Kernel function</strong> to project it
+                into a higher-dimensional space where a linear split *is* possible.</p>
+        </section>
+
+        <section id="case-study">
+            <h2>5. Real-World Case Study: Handwriting Recognition (OCR)</h2>
+            <div class="case-study-card"
+                style="background: #f3e5f5; padding: 20px; border-left: 5px solid #9c27b0; border-radius: 4px;">
+                <p><strong>The Problem:</strong> A postal service needs to automatically read zip codes on envelopes to
+                    sort mail.</p>
+                <p><strong>The Solution:</strong> <strong>SVM</strong> classifies pixel grids of handwritten digits
+                    (0-9).</p>
+                <ul>
+                    <li>Features: Intensity of each pixel in an 8x8 grid.</li>
+                    <li>Decision: Is this character an '8' or a 'B'?</li>
+                </ul>
+                <p><strong>Why SVM?</strong> Hand-drawn characters often have very subtle differences. SVM is excellent
+                    at finding the <strong>Maximum Margin</strong> between similar-looking classes in high-dimensional
+                    space (64 pixels), making it highly robust to varying handwriting styles.</p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>6. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> sklearn.svm <span class="keyword">import</span> SVC
+
+<span class="comment"># 1. Initialize with RBF Kernel (Non-linear)</span>
+clf = SVC(kernel=<span class="string">'linear'</span>, C=1.0)
+clf.fit(X, y)</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('svmChart').getContext('2d');
+        let points = [];
+        let currentClass = 0;
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'Class A', data: [], backgroundColor: ML_COLORS.secondary, pointRadius: 6 },
+                    { label: 'Class B', data: [], backgroundColor: ML_COLORS.quaternary, pointRadius: 6 },
+                    { label: 'Hyperplane', data: [], type: 'line', borderColor: '#333', borderWidth: 2, fill: false, pointRadius: 0 },
+                    { label: 'Margin +', data: [], type: 'line', borderColor: '#999', borderDash: [5, 5], borderWidth: 1, fill: false, pointRadius: 0 },
+                    { label: 'Margin -', data: [], type: 'line', borderColor: '#999', borderDash: [5, 5], borderWidth: 1, fill: false, pointRadius: 0 }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                onClick: (e) => {
+                    const pos = Chart.helpers.getRelativePosition(e, chart);
+                    const x = chart.scales.x.getValueForPixel(pos.x);
+                    const y = chart.scales.y.getValueForPixel(pos.y);
+                    points.push({ x, y, label: currentClass });
+                    solveAndStore();
+                },
+                scales: {
+                    x: { min: -10, max: 10 },
+                    y: { min: -10, max: 10 }
+                }
+            }
+        });
+
+        function solveAndStore() {
+            if (points.length < 2) {
+                updateUI({ w: { x: 0, y: 0 }, b: 0 });
+                return;
+            }
+
+            // Simple SGD Linear SVM
+            let w = { x: 0, y: 0.1 };
+            let b = 0;
+            let lr = 0.1;
+            let C = 10;
+
+            for (let i = 0; i < 2000; i++) {
+                points.forEach(p => {
+                    let y = p.label === 0 ? -1 : 1;
+                    if (y * (w.x * p.x + w.y * p.y + b) < 1) {
+                        w.x = (1 - 1 / (i + 1)) * w.x + lr * C * y * p.x;
+                        w.y = (1 - 1 / (i + 1)) * w.y + lr * C * y * p.y;
+                        b += lr * C * y;
+                    } else {
+                        w.x = (1 - 1 / (i + 1)) * w.x;
+                        w.y = (1 - 1 / (i + 1)) * w.y;
+                    }
+                });
+            }
+            updateUI(w, b);
+        }
+
+        function updateUI(w, b) {
+            chart.data.datasets[0].data = points.filter(p => p.label === 0);
+            chart.data.datasets[1].data = points.filter(p => p.label === 1);
+
+            if (Math.abs(w.y) > 0.001) {
+                const getLine = (offset) => [
+                    { x: -10, y: (-w.x * -10 - b + offset) / w.y },
+                    { x: 10, y: (-w.x * 10 - b + offset) / w.y }
+                ];
+                chart.data.datasets[2].data = getLine(0);
+                chart.data.datasets[3].data = getLine(1);
+                chart.data.datasets[4].data = getLine(-1);
+            }
+
+            chart.update('none');
+        }
+
+        document.querySelectorAll('.class-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentClass = parseInt(btn.dataset.class);
+            });
+        });
+
+        document.getElementById('clearSvm').addEventListener('click', () => {
+            points = [];
+            chart.data.datasets.forEach(d => d.data = []);
+            chart.update();
+        });
+    </script>
+</body>
+
+</html>

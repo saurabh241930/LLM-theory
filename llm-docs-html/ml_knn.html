@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>k-Nearest Neighbors (k-NN) Cheatsheet - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .playground-container {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .prediction-overlay {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #3366cc;
+            font-weight: bold;
+            display: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>k-Nearest Neighbors (k-NN)</h1>
+        <div class="subtitle">Lazy learning based on proximity</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">k-NN</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Instance-based (Lazy)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Memory</div>
+                    <div class="infobox-value">High (stores data)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Metric</div>
+                    <div class="infobox-value">Euclidean / Manhattan</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>k-NN</strong> is a "lazy" algorithm because it doesn't learn a model. Instead, it stores the
+                entire dataset and, at prediction time, finds the <strong>k</strong> closest training points to the new
+                input. The output is decided by a majority vote of these neighbors.</p>
+        </section>
+
+        <section id="flow">
+            <h2>2. Visual Flow</h2>
+            <div class="mermaid">
+                graph TD
+                A[New Data Point] --> B[Calculate distance to ALL training points]
+                B --> C[Sort distances ascending]
+                C --> D[Identify top 'k' neighbors]
+                D --> E[Majority class of k neighbors]
+                E --> F[Assign prediction]
+            </div>
+        </section>
+
+        <section id="playground">
+            <h2>3. Interactive Playground</h2>
+            <p>Click anywhere on the chart to add a <strong>Testing Point (X)</strong>. The algorithm will instantly
+                find the <strong>k</strong> nearest neighbors and predict its class! Adjust <strong>k</strong> to see
+                how the decision changes.</p>
+            <div class="playground-container">
+                <div id="predictionOverlay" class="prediction-overlay">
+                    Predicted Class: <span id="predClass" style="color: #3366cc;">?</span>
+                </div>
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="knnChart"></canvas>
+                </div>
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 25px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-weight: bold;">Neighbor Count (k):</label>
+                        <input type="range" id="kSlider" min="1" max="15" step="2" value="3"
+                            style="width: 150px; cursor: pointer;">
+                        <span id="kVal"
+                            style="display: inline-block; min-width: 20px; font-family: monospace; font-weight: bold; color: #3366cc;">3</span>
+                    </div>
+                    <button id="resetKnn"
+                        style="background: #666; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Clear
+                        Points</button>
+                    <div style="flex-grow: 1; text-align: right; color: #666; font-style: italic;">
+                        Classes: <span style="color: #dc3912;">● Red</span> vs <span style="color: #109618;">●
+                            Green</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="choosing-k">
+            <h2>4. Choosing the right "k"</h2>
+            <ul>
+                <li><strong>Small k (e.g., 1):</strong> Overfitting. Noise will capture the prediction.</li>
+                <li><strong>Large k:</strong> Underfitting. The model becomes too generic and biased towards the
+                    dominant
+                    class.</li>
+            </ul>
+        </section>
+
+        <section id="scenarios">
+            <h2>5. Scenarios & Use Cases</h2>
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <h4>👍 Good For</h4>
+                    <ul>
+                        <li>Small to medium datasets.</li>
+                        <li>Recommendation systems (similar users/items).</li>
+                        <li>Anomaly detection.</li>
+                    </ul>
+                </div>
+                <div class="comparison-card">
+                    <h4>❌ Bad For</h4>
+                    <ul>
+                        <li>Large data: Calculating distance to millions of points is slow.</li>
+                        <li>High dimensions: "Curse of Dimensionality" makes distances less meaningful.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="case-study">
+            <h2>6. Real-World Case Study: Retail Recommender Systems</h2>
+            <div class="case-study-card"
+                style="background: #e1f5fe; padding: 20px; border-left: 5px solid #03a9f4; border-radius: 4px;">
+                <p><strong>The Problem:</strong> An e-commerce site wants to suggest products based on "Users who bought
+                    this also liked..."</p>
+                <p><strong>The Solution:</strong> <strong>k-NN</strong> finds the 'k' most similar users in the
+                    database.</p>
+                <ul>
+                    <li>Features: Purchase history, pages viewed, time spent on site.</li>
+                    <li>Prediction: Recommend items purchased by the 'k' nearest neighbors that the current user hasn't
+                        seen yet.</li>
+                </ul>
+                <p><strong>Why k-NN?</strong> It is <strong>Instance-Based</strong>. It doesn't need to "learn" a global
+                    model of all shoppers; it simply looks for local patterns in the immediate neighborhood of a
+                    specific user, making recommendations feel highly personalized.</p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>7. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> sklearn.neighbors <span class="keyword">import</span> KNeighborsClassifier
+
+<span class="comment"># 1. Initialize with k=5</span>
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+
+<span class="comment"># 2. Predict</span>
+y_pred = knn.predict(X_new)</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('knnChart').getContext('2d');
+        let trainPoints = [];
+        let testPoint = null;
+        let k = 3;
+
+        // Generate synthetic training data
+        function initData() {
+            trainPoints = [];
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * 10;
+                const y = Math.random() * 10;
+                // Simple circular decision boundary
+                const label = (Math.sqrt(Math.pow(x - 5, 2) + Math.pow(y - 5, 2)) < 4) ? 0 : 1;
+                trainPoints.push({ x, y, label });
+            }
+        }
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: 'Class Red',
+                        data: [],
+                        backgroundColor: ML_COLORS.secondary + 'aa',
+                        pointRadius: 6
+                    },
+                    {
+                        label: 'Class Green',
+                        data: [],
+                        backgroundColor: ML_COLORS.quaternary + 'aa',
+                        pointRadius: 6
+                    },
+                    {
+                        label: 'Test Point (X)',
+                        data: [],
+                        backgroundColor: '#000',
+                        pointRadius: 10,
+                        pointStyle: 'crossRot',
+                        borderWidth: 3
+                    },
+                    {
+                        label: 'Neighbors',
+                        data: [],
+                        backgroundColor: 'transparent',
+                        borderColor: '#3366cc',
+                        borderWidth: 2,
+                        pointRadius: 12,
+                        showLine: false
+                    }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                onClick: (e) => {
+                    const canvasPosition = Chart.helpers.getRelativePosition(e, chart);
+                    const x = chart.scales.x.getValueForPixel(canvasPosition.x);
+                    const y = chart.scales.y.getValueForPixel(canvasPosition.y);
+                    testPoint = { x, y };
+                    updatePrediction();
+                },
+                scales: {
+                    x: { min: 0, max: 10 },
+                    y: { min: 0, max: 10 }
+                }
+            }
+        });
+
+        function updatePrediction() {
+            if (!testPoint) return;
+
+            // Calculate distances
+            const dists = trainPoints.map(p => ({
+                ...p,
+                dist: Math.sqrt(Math.pow(p.x - testPoint.x, 2) + Math.pow(p.y - testPoint.y, 2))
+            }));
+
+            // Sort and take k
+            dists.sort((a, b) => a.dist - b.dist);
+            const neighbors = dists.slice(0, k);
+
+            // Vote
+            const votes = neighbors.reduce((acc, p) => {
+                acc[p.label] = (acc[p.label] || 0) + 1;
+                return acc;
+            }, {});
+
+            const winner = Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b);
+
+            // Update UI
+            document.getElementById('predictionOverlay').style.display = 'block';
+            document.getElementById('predClass').innerText = (winner == 0 ? 'Red' : 'Green');
+            document.getElementById('predClass').style.color = (winner == 0 ? ML_COLORS.secondary : ML_COLORS.quaternary);
+
+            // Update Chart
+            chart.data.datasets[0].data = trainPoints.filter(p => p.label === 0);
+            chart.data.datasets[1].data = trainPoints.filter(p => p.label === 1);
+            chart.data.datasets[2].data = [testPoint];
+            chart.data.datasets[3].data = neighbors;
+
+            chart.update();
+        }
+
+        document.getElementById('kSlider').addEventListener('input', (e) => {
+            k = parseInt(e.target.value);
+            document.getElementById('kVal').innerText = k;
+            updatePrediction();
+        });
+
+        document.getElementById('resetKnn').addEventListener('click', () => {
+            testPoint = null;
+            document.getElementById('predictionOverlay').style.display = 'none';
+            initData();
+            updatePrediction();
+        });
+
+        initData();
+        updatePrediction();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced PEFT Techniques: DoRA, GaLore, and IA3</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .tech-box {
+            border: 1px solid var(--wp-border);
+            background: #fff;
+            padding: 20px;
+            margin: 20px 0;
+            border-top: 4px solid var(--wp-accent);
+        }
+
+        .jupyter-cell {
+            background: #ffffff;
+            border: 1px solid #cfcfcf;
+            border-radius: 4px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .jupyter-input {
+            background: #f7f7f7;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Advanced PEFT Types</h1>
+        <div class="subtitle">Exploring DoRA, GaLore, IA3, and the future of parameter efficiency</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="dora">
+            <div class="tech-box">
+                <h2>1. DoRA: Weight-Decomposed LoRA</h2>
+                <p><strong>Problem:</strong> Standard LoRA couples magnitude and direction updates together. If you
+                    change the direction of a weight, you inadvertently change its magnitude.</p>
+                <p><strong>Solution:</strong> DoRA decomposes the weight matrix into a <strong>magnitude</strong> vector
+                    and a <strong>direction</strong> matrix. It then applies LoRA updates <em>only to the direction
+                        matrix</em>. This makes fine-tuning closer to full fine-tuning in terms of learning capability.
+                </p>
+                <div class="side-note">
+                    📈 <strong>Result:</strong> DoRA consistently outperforms LoRA on reasoning tasks (GSM8K) while
+                    maintaining the same parameter count.
+                </div>
+            </div>
+        </section>
+
+        <section id="galore">
+            <div class="tech-box">
+                <h2>2. GaLore: Gradient Low-Rank Projection</h2>
+                <p><strong>Difference:</strong> GaLore is not an "adapter." It allows <strong>Full Fine-Tuning</strong>
+                    of the model but reduces memory by projecting the <strong>gradients</strong> into a low-rank
+                    subspace.</p>
+                <ul>
+                    <li><strong>Pros:</strong> Updates 100% of weights, no extra inference latency.</li>
+                    <li><strong>Cons:</strong> More complex setup than LoRA.</li>
+                </ul>
+                <div class="jupyter-cell">
+                    <div class="jupyter-input">
+                        <pre><span class="comment"># GaLore initialization in training config</span>
+optim_params = {<span class="string">"rank"</span>: 128, <span class="string">"update_proj_gap"</span>: 200}</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="ia3">
+            <div class="tech-box">
+                <h2>3. IA3: Infused Adapter by Inhibiting and Amplifying Inner Activations</h2>
+                <p><strong>Mechanism:</strong> Instead of adding matrices, IA3 uses <strong>element-wise
+                        scaling</strong> of the internal activations (hidden states). It multiplies the key, value, and
+                    feed-forward activations by small learned vectors.</p>
+                <p><strong>Why use it?</strong> It is even more efficient than LoRA, often requiring only 0.01% of
+                    parameters to be trainable.</p>
+            </div>
+        </section>
+
+        <section id="comparison">
+            <h2>Summary Matrix</h2>
+            <table class="wikitable">
+                <tr>
+                    <th>Method</th>
+                    <th>Mechanism</th>
+                    <th>Ideal For</th>
+                </tr>
+                <tr>
+                    <td><strong>LoRA</strong></td>
+                    <td>Additive MatMul</td>
+                    <td>General purpose FT</td>
+                </tr>
+                <tr>
+                    <td><strong>DoRA</strong></td>
+                    <td>Mag/Dir Decomp</td>
+                    <td>Reasoning & Math tasks</td>
+                </tr>
+                <tr>
+                    <td><strong>GaLore</strong></td>
+                    <td>Gradient Projection</td>
+                    <td>Memory-efficient Full FT</td>
+                </tr>
+                <tr>
+                    <td><strong>IA3</strong></td>
+                    <td>Activation Scaling</td>
+                    <td>Extreme low-budget tasks</td>
+                </tr>
+            </table>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decision Trees Cheatsheet - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .premium-btn {
+            background: #3366cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .premium-btn:hover {
+            background: #254a9c;
+            transform: translateY(-1px);
+        }
+
+        .class-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .class-btn {
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .class-btn.active[data-class="0"] {
+            border-color: #dc3912;
+            background: #dc391211;
+        }
+
+        .class-btn.active[data-class="1"] {
+            border-color: #109618;
+            background: #10961811;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Decision Trees</h1>
+        <div class="subtitle">Hierarchical splitting for intuitive logic</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">Decision Tree</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Supervised (Class/Reg)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Metrics</div>
+                    <div class="infobox-value">Gini, Entropy, MSE</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Structure</div>
+                    <div class="infobox-value">Non-Parametric</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>Decision Trees</strong> mimic human decision-making by asking a series of binary questions. Each
+                question (node) splits the data into two branches based on the feature that provides the most
+                information gain, until a final prediction (leaf) is reached.</p>
+        </section>
+
+        <section id="flow">
+            <h2>2. Visual Flow</h2>
+            <div class="mermaid">
+                graph TD
+                A[Root: Is Humidity > 70?]
+                A -->|Yes| B[Is Windy?]
+                A -->|No| C[Play Tennis]
+                B -->|Yes| D[No Play]
+                B -->|No| E[Play Tennis]
+            </div>
+        </section>
+
+        <section id="playground">
+            <h2>3. Interactive Playground</h2>
+            <p>Click the chart to add points. The algorithm will recursively find the <strong>Best Splitting
+                    Point</strong>
+                (X or Y) that minimizes <strong>Gini Impurity</strong>. Watch how the feature space is partitioned into
+                rectangular decision regions!</p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+
+                <div class="class-selector">
+                    <span>Add point for:</span>
+                    <button class="class-btn active" data-class="0" style="color: #dc3912;">Class A (Red)</button>
+                    <button class="class-btn" data-class="1" style="color: #109618;">Class B (Green)</button>
+                </div>
+
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="treeChart"></canvas>
+                </div>
+
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <button id="clearTree" class="premium-btn" style="background: #666;">Clear All Points</button>
+                    <div style="flex-grow: 1; text-align: right; font-size: 0.9em; color: #666;">
+                        <em>Max Depth: 3 | Metric: Gini Impurity</em>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="math">
+            <h2>4. The "Splitting" Math</h2>
+            <p><strong>Gini Impurity:</strong> Measures how often a randomly chosen element would be incorrectly
+                labeled.
+                <br><code>Gini = 1 - Σ (p_i)²</code>
+            </p>
+        </section>
+
+        <section id="scenarios">
+            <h2>5. Scenarios & Use Cases</h2>
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <h4>🌟 Why use them?</h4>
+                    <ul>
+                        <li><strong>Highly Interpretably:</strong> "White box" model - you can see exactly why a
+                            prediction was made.</li>
+                        <li>Handles both numerical and categorical data naturally.</li>
+                        <li>Requires very little data preprocessing (scaling is not needed).</li>
+                    </ul>
+                </div>
+                <div class="comparison-card">
+                    <h4>🚩 The "Overfitting" Trap</h4>
+                    <ul>
+                        <li>Trees love to grow complex and memorize noise.</li>
+                        <li><strong>Solution:</strong> Pruning (restricting depth) or using Ensembles (Random Forest).
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="case-study">
+            <h2>5. Real-World Case Study: Automated Medical Triage</h2>
+            <div class="case-study-card"
+                style="background: #e8f5e9; padding: 20px; border-left: 5px solid #4caf50; border-radius: 4px;">
+                <p><strong>The Problem:</strong> A rural clinic with no resident doctor needs to prioritize patients
+                    based on symptom urgency.</p>
+                <p><strong>The Solution:</strong> A <strong>Decision Tree</strong> mimics a medical flowchart:</p>
+                <ul>
+                    <li>Step 1: Fever &gt; 102°F? (Yes/No)</li>
+                    <li>Step 2: Difficulty breathing? (Yes/No)</li>
+                    <li>Result: Immediate Referral vs. Schedule Appointment.</li>
+                </ul>
+                <p><strong>Why Decision Trees?</strong> <strong>Explainability</strong>. Doctors and patients trust a
+                    "Tree" because it follows the same logical "Rules" a human expert would use, unlike a black-box
+                    neural network.</p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>6. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> sklearn.tree <span class="keyword">import</span> DecisionTreeClassifier
+<span class="comment"># Train with Depth Limit to prevent overfitting</span>
+clf = DecisionTreeClassifier(max_depth=3)
+clf.fit(X, y)</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('treeChart').getContext('2d');
+        let points = [];
+        let currentClass = 0;
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'Class A', data: [], backgroundColor: ML_COLORS.secondary, pointRadius: 6, zIndex: 10 },
+                    { label: 'Class B', data: [], backgroundColor: ML_COLORS.quaternary, pointRadius: 6, zIndex: 10 }
+                    // Dynamic regions will be added as line datasets later
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                onClick: (e) => {
+                    const pos = Chart.helpers.getRelativePosition(e, chart);
+                    const x = chart.scales.x.getValueForPixel(pos.x);
+                    const y = chart.scales.y.getValueForPixel(pos.y);
+                    points.push({ x, y, label: currentClass });
+                    buildTreeAndVisualize();
+                },
+                scales: {
+                    x: { min: 0, max: 10 },
+                    y: { min: 0, max: 10 }
+                }
+            }
+        });
+
+        function calculateGini(pts) {
+            if (pts.length === 0) return 0;
+            const count0 = pts.filter(p => p.label === 0).length;
+            const p0 = count0 / pts.length;
+            const p1 = 1 - p0;
+            return 1 - (p0 * p0 + p1 * p1);
+        }
+
+        function findBestSplit(pts, bounds) {
+            let bestGini = Infinity;
+            let bestSplit = null;
+
+            // Test X splits
+            for (let x = bounds.x1; x <= bounds.x2; x += 0.5) {
+                const left = pts.filter(p => p.x < x);
+                const right = pts.filter(p => p.x >= x);
+                if (left.length === 0 || right.length === 0) continue;
+                const gini = (left.length / pts.length) * calculateGini(left) + (right.length / pts.length) * calculateGini(right);
+                if (gini < bestGini) {
+                    bestGini = gini;
+                    bestSplit = { axis: 'x', val: x };
+                }
+            }
+
+            // Test Y splits
+            for (let y = bounds.y1; y <= bounds.y2; y += 0.5) {
+                const bottom = pts.filter(p => p.y < y);
+                const top = pts.filter(p => p.y >= y);
+                if (bottom.length === 0 || top.length === 0) continue;
+                const gini = (bottom.length / pts.length) * calculateGini(bottom) + (top.length / pts.length) * calculateGini(top);
+                if (gini < bestGini) {
+                    bestGini = gini;
+                    bestSplit = { axis: 'y', val: y };
+                }
+            }
+            return bestSplit;
+        }
+
+        function buildTreeAndVisualize() {
+            // Reset dynamic datasets (keep 0 and 1)
+            chart.data.datasets = chart.data.datasets.slice(0, 2);
+            chart.data.datasets[0].data = points.filter(p => p.label === 0);
+            chart.data.datasets[1].data = points.filter(p => p.label === 1);
+
+            const splits = [];
+            const queue = [{ pts: points, bounds: { x1: 0, x2: 10, y1: 0, y2: 10 }, depth: 0 }];
+
+            while (queue.length > 0 && splits.length < 10) {
+                const node = queue.shift();
+                if (node.depth >= 3 || calculateGini(node.pts) === 0) continue;
+
+                const split = findBestSplit(node.pts, node.bounds);
+                if (split) {
+                    splits.push({ ...split, bounds: node.bounds });
+                    if (split.axis === 'x') {
+                        queue.push({ pts: node.pts.filter(p => p.x < split.val), bounds: { ...node.bounds, x2: split.val }, depth: node.depth + 1 });
+                        queue.push({ pts: node.pts.filter(p => p.x >= split.val), bounds: { ...node.bounds, x1: split.val }, depth: node.depth + 1 });
+                    } else {
+                        queue.push({ pts: node.pts.filter(p => p.y < split.val), bounds: { ...node.bounds, y2: split.val }, depth: node.depth + 1 });
+                        queue.push({ pts: node.pts.filter(p => p.y >= split.val), bounds: { ...node.bounds, y1: split.val }, depth: node.depth + 1 });
+                    }
+                }
+            }
+
+            // Draw splits as lines
+            splits.forEach(s => {
+                const lineData = s.axis === 'x'
+                    ? [{ x: s.val, y: s.bounds.y1 }, { x: s.val, y: s.bounds.y2 }]
+                    : [{ x: s.bounds.x1, y: s.val }, { x: s.bounds.x2, y: s.val }];
+
+                chart.data.datasets.push({
+                    type: 'line',
+                    data: lineData,
+                    borderColor: '#333',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false,
+                    label: 'Split'
+                });
+            });
+
+            chart.update('none');
+        }
+
+        document.querySelectorAll('.class-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentClass = parseInt(btn.dataset.class);
+            });
+        });
+
+        document.getElementById('clearTree').addEventListener('click', () => {
+            points = [];
+            chart.data.datasets = chart.data.datasets.slice(0, 2);
+            chart.data.datasets[0].data = [];
+            chart.data.datasets[1].data = [];
+            chart.update();
+        });
+    </script>
+</body>
+
+</html>

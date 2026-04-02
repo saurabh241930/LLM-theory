@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naive Bayes Cheatsheet - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .premium-btn {
+            background: #3366cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .premium-btn:hover {
+            background: #254a9c;
+            transform: translateY(-1px);
+        }
+
+        .class-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .class-btn {
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .class-btn.active[data-class="0"] {
+            border-color: #dc3912;
+            background: #dc391211;
+        }
+
+        .class-btn.active[data-class="1"] {
+            border-color: #109618;
+            background: #10961811;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Naive Bayes</h1>
+        <div class="subtitle">Probability-based classification for fast analysis</div>
+    </header>
+
+    <div class="content-wrapper">
+        <aside class="infobox">
+            <div class="infobox-title">Naive Bayes</div>
+            <div class="infobox-data">
+                <div class="infobox-row">
+                    <div class="infobox-label">Type</div>
+                    <div class="infobox-value">Supervised (Classification)</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Base Math</div>
+                    <div class="infobox-value">Bayes Theorem</div>
+                </div>
+            </div>
+        </aside>
+
+        <section id="summary">
+            <h2>1. Summary</h2>
+            <p><strong>Naive Bayes</strong> is based on <strong>Bayes' Theorem</strong>. It is called "Naive" because
+                it assumes that all features are independent of each other. It calculates the probability of each class
+                and picks the one with the highest likelihood.</p>
+        </section>
+
+        <section id="playground">
+            <h2>2. Interactive Playground (Gaussian NB)</h2>
+            <p>Add points for two different classes. The algorithm will estimate the <strong>Mean</strong> and
+                <strong>Variance</strong> for each class. Hover over the chart to see the <strong>Likelihood
+                    P(X|C)</strong> change based on the Gaussian Bell Curve!
+            </p>
+            <div class="playground-container"
+                style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+
+                <div class="class-selector">
+                    <span>Add point for:</span>
+                    <button class="class-btn active" data-class="0" style="color: #dc3912;">Class A (Red)</button>
+                    <button class="class-btn" data-class="1" style="color: #109618;">Class B (Green)</button>
+                </div>
+
+                <div style="height: 350px; margin-bottom: 20px;">
+                    <canvas id="nbChart"></canvas>
+                </div>
+
+                <div class="controls"
+                    style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <button id="clearNb" class="premium-btn" style="background: #666;">Clear All</button>
+                    <div style="flex-grow: 1; text-align: right; font-size: 1.1em;">
+                        <strong>Posterior P(A|x): <span id="posteriorA" style="color: #dc3912;">0%</span></strong> |
+                        <strong>P(B|x): <span id="posteriorB" style="color: #109618;">0%</span></strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="math">
+            <h2>3. Mathematics</h2>
+            <div class="math-block" style="text-align: center; font-size: 1.25em;">
+                P(C|x) ∝ P(x|C) * P(C)
+            </div>
+            <p>In <strong>Gaussian Naive Bayes</strong>, we assume features follow a Normal Distribution:</p>
+            <div class="math-block">
+                P(x|C) = (1 / √(2πσ²)) * exp(-(x-μ)² / 2σ²)
+            </div>
+        </section>
+
+        <section id="case-study">
+            <h2>5. Real-World Case Study: Email Spam Filtering</h2>
+            <div class="case-study-card"
+                style="background: #efebe9; padding: 20px; border-left: 5px solid #795548; border-radius: 4px;">
+                <p><strong>The Problem:</strong> Gmail needs to decide if an incoming mail is "Spam" or "Inbox" in
+                    milliseconds.</p>
+                <p><strong>The Solution:</strong> <strong>Multinomial Naive Bayes</strong> calculates word
+                    probabilities.</p>
+                <ul>
+                    <li>Features: Frequency of words like "Gift", "Lottery", "Meeting", "Invoice".</li>
+                    <li>Calculation: P(Spam | "Lottery") is high; P(Inbox | "Meeting") is high.</li>
+                </ul>
+                <p><strong>Why Naive Bayes?</strong> <strong>Speed and Scalability</strong>. Even with a vocabulary of
+                    50,000 words, Naive Bayes only needs to perform simple additions and multiplications, making it fast
+                    enough to process billions of emails daily across the globe.</p>
+            </div>
+        </section>
+
+        <section id="implementation">
+            <h2>6. Implementation</h2>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> sklearn.naive_bayes <span class="keyword">import</span> GaussianNB
+clf = GaussianNB()
+clf.fit(X_train, y_train)</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="ml_visualizer.js"></script>
+    <script>
+        const ctx = document.getElementById('nbChart').getContext('2d');
+        let points = [];
+        let currentClass = 0;
+        let mouseX = 5;
+
+        const chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'Class A', data: [], backgroundColor: ML_COLORS.secondary, pointRadius: 6 },
+                    { label: 'Class B', data: [], backgroundColor: ML_COLORS.quaternary, pointRadius: 6 },
+                    { label: 'PDF Class A', data: [], type: 'line', borderColor: ML_COLORS.secondary, borderWidth: 2, fill: false, pointRadius: 0, tension: 0.4 },
+                    { label: 'PDF Class B', data: [], type: 'line', borderColor: ML_COLORS.quaternary, borderWidth: 2, fill: false, pointRadius: 0, tension: 0.4 },
+                    { label: 'Current X', data: [{ x: 5, y: 0 }, { x: 5, y: 1 }], type: 'line', borderColor: '#333', borderDash: [5, 5], borderWidth: 1, pointRadius: 0, fill: false }
+                ]
+            },
+            options: {
+                ...CHART_CONFIG_BASE,
+                onClick: (e) => {
+                    const pos = Chart.helpers.getRelativePosition(e, chart);
+                    const x = chart.scales.x.getValueForPixel(pos.x);
+                    const y = chart.scales.y.getValueForPixel(pos.y);
+                    points.push({ x, y, label: currentClass });
+                    updateNB();
+                },
+                onHover: (e, elements) => {
+                    const pos = Chart.helpers.getRelativePosition(e, chart);
+                    mouseX = chart.scales.x.getValueForPixel(pos.x);
+                    updateNB();
+                },
+                scales: {
+                    x: { min: 0, max: 10 },
+                    y: { min: 0, max: 1 }
+                }
+            }
+        });
+
+        function gaussian(x, mu, sigma) {
+            if (sigma < 0.1) sigma = 0.1;
+            const exponent = Math.exp(-Math.pow(x - mu, 2) / (2 * Math.pow(sigma, 2)));
+            return (1 / (sigma * Math.sqrt(2 * Math.PI))) * exponent;
+        }
+
+        function updateNB() {
+            const ptsA = points.filter(p => p.label === 0);
+            const ptsB = points.filter(p => p.label === 1);
+
+            chart.data.datasets[0].data = ptsA;
+            chart.data.datasets[1].data = ptsB;
+            chart.data.datasets[4].data = [{ x: mouseX, y: 0 }, { x: mouseX, y: 1 }];
+
+            if (ptsA.length > 1) {
+                const muA = ptsA.reduce((sum, p) => sum + p.x, 0) / ptsA.length;
+                const varA = ptsA.reduce((sum, p) => sum + Math.pow(p.x - muA, 2), 0) / ptsA.length;
+                const sigA = Math.sqrt(varA);
+                const pdfA = [];
+                for (let x = 0; x <= 10; x += 0.2) pdfA.push({ x, y: gaussian(x, muA, sigA) });
+                chart.data.datasets[2].data = pdfA;
+
+                const likelihoodA = gaussian(mouseX, muA, sigA);
+                const priorA = ptsA.length / points.length;
+                window.probA = likelihoodA * priorA;
+            }
+
+            if (ptsB.length > 1) {
+                const muB = ptsB.reduce((sum, p) => sum + p.x, 0) / ptsB.length;
+                const varB = ptsB.reduce((sum, p) => sum + Math.pow(p.x - muB, 2), 0) / ptsB.length;
+                const sigB = Math.sqrt(varB);
+                const pdfB = [];
+                for (let x = 0; x <= 10; x += 0.2) pdfB.push({ x, y: gaussian(x, muB, sigB) });
+                chart.data.datasets[3].data = pdfB;
+
+                const likelihoodB = gaussian(mouseX, muB, sigB);
+                const priorB = ptsB.length / points.length;
+                window.probB = likelihoodB * priorB;
+            }
+
+            if (window.probA !== undefined && window.probB !== undefined) {
+                const total = window.probA + window.probB;
+                if (total > 0) {
+                    document.getElementById('posteriorA').innerText = (window.probA / total * 100).toFixed(1) + '%';
+                    document.getElementById('posteriorB').innerText = (window.probB / total * 100).toFixed(1) + '%';
+                }
+            }
+
+            chart.update('none');
+        }
+
+        document.querySelectorAll('.class-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentClass = parseInt(btn.dataset.class);
+            });
+        });
+
+        document.getElementById('clearNb').addEventListener('click', () => {
+            points = [];
+            chart.data.datasets.forEach(d => d.data = []);
+            updateNB();
+        });
+    </script>
+</body>
+
+</html>

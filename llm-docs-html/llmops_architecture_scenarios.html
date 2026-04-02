@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLMOps Architecture Scenarios - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .scenario-card {
+            background: #ffffff;
+            border: 1px solid #a2a9b1;
+            border-radius: 8px;
+            padding: 24px;
+            margin: 24px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .scenario-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #3366cc;
+            padding-bottom: 8px;
+        }
+
+        .scenario-icon {
+            font-size: 1.5em;
+        }
+
+        .tech-pill {
+            display: inline-block;
+            background: #eef2ff;
+            color: #3366cc;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>LLMOps Architecture Scenarios</h1>
+        <div class="subtitle">Deploying and Scaling Generative AI in Production</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="intro">
+            <h2>Introduction</h2>
+            <p>Moving from a Jupyter Notebook to a production environment requires more than just an API key. It
+                involves managing latency, cost, reliability, and security across diverse infrastructure. This page
+                explores 5 common enterprise architecture patterns for LLM deployment.</p>
+        </section>
+
+        <!-- Scenario 1: Edge Inference -->
+        <div class="scenario-card">
+            <div class="scenario-header">
+                <span class="scenario-icon">📱</span>
+                <h3>Scenario 1: Low-Latency Edge Inference</h3>
+            </div>
+            <p><strong>Use Case:</strong> Real-time translation or voice assistance in a mobile app where network
+                latency is unacceptable or offline mode is required.</p>
+            <div class="tech-stack">
+                <span class="tech-pill">Gemma-2b / Phi-3</span>
+                <span class="tech-pill">4-bit Quantization (GGUF)</span>
+                <span class="tech-pill">ONNX Runtime</span>
+                <span class="tech-pill">CoreML / TFLite</span>
+            </div>
+            <div class="mermaid">
+                graph LR
+                A[Mobile App] --> B[Local Model Storage]
+                B --> C[ONNX Runtime / MediaPipe]
+                C --> D[Hardware Acceleration: NPU/GPU]
+                D --> E[Inference Result]
+            </div>
+            <h4>Key Concepts:</h4>
+            <ul>
+                <li><strong>Quantization:</strong> Reducing weights from FP16 to INT4 to fit in mobile RAM.</li>
+                <li><strong>Knowledge Distillation:</strong> Training a smaller "student" model from a massive
+                    "teacher".</li>
+            </ul>
+        </div>
+
+        <!-- Scenario 2: High-Throughput Batch Processing -->
+        <div class="scenario-card">
+            <div class="scenario-header">
+                <span class="scenario-icon">🏭</span>
+                <h3>Scenario 2: High-Throughput Batch Processing</h3>
+            </div>
+            <p><strong>Use Case:</strong> Analyzing sentiment or extracting entities from 1 million support tickets
+                overnight for a weekly report.</p>
+            <div class="tech-stack">
+                <span class="tech-pill">vLLM</span>
+                <span class="tech-pill">Ray Cluster</span>
+                <span class="tech-pill">Kubernetes</span>
+                <span class="tech-pill">Redis Queue</span>
+            </div>
+            <div class="mermaid">
+                graph TD
+                A[S3 Bucket: 1M Docs] --> B[Redis/RabbitMQ Task Queue]
+                B --> C[vLLM Worker Cluster]
+                C --> D[Ray Autoscaler]
+                D --> E[Processed Results -> Postgres]
+            </div>
+            <h4>Key Concepts:</h4>
+            <ul>
+                <li><strong>Continuous Batching:</strong> Running multiple requests in parallel by reusing the KV cache
+                    for different tokens.</li>
+                <li><strong>Throughput vs. Latency:</strong> In batching, we prioritize total items per second over the
+                    response time of a single item.</li>
+            </ul>
+        </div>
+
+        <!-- Scenario 3: Real-Time Streaming Agent -->
+        <div class="scenario-card">
+            <div class="scenario-header">
+                <span class="scenario-icon">⚡</span>
+                <h3>Scenario 3: Real-Time Streaming Agent</h3>
+            </div>
+            <p><strong>Use Case:</strong> A customer support chat bot that needs to feel responsive by showing tokens as
+                they are generated.</p>
+            <div class="tech-stack">
+                <span class="tech-pill">WebSockets</span>
+                <span class="tech-pill">FastAPI</span>
+                <span class="tech-pill">LangChain Expression Language (LCEL)</span>
+            </div>
+            <div class="mermaid">
+                graph LR
+                User[User Browser] -- WebSocket / SSE --> Proxy[Load Balancer]
+                Proxy --> Agent[Agent Executor]
+                Agent -- Stream Token --> User
+            </div>
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">async def</span> <span class="keyword">stream_response</span>(query):
+    <span class="keyword">async for</span> token <span class="keyword">in</span> model.astream(query):
+        <span class="keyword">yield</span> <span class="string">f"data: {token}\n\n"</span></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario 4: Hybrid Cloud/On-Prem Deployment -->
+        <div class="scenario-card">
+            <div class="scenario-header">
+                <span class="scenario-icon">🏢</span>
+                <h3>Scenario 4: Hybrid Cloud/On-Prem Deployment</h3>
+            </div>
+            <p><strong>Use Case:</strong> A bank using GPT-4 for general research but needing a local Llama-3 model for
+                processing sensitive customer PII that cannot leave the data center.</p>
+            <div class="tech-stack">
+                <span class="tech-pill">VPC Peering</span>
+                <span class="tech-pill">Ollama / LocalAI</span>
+                <span class="tech-pill">PII Masking Proxy</span>
+            </div>
+            <div class="mermaid">
+                graph TD
+                A[User Query] --> B{PII Detected?}
+                B -->|Yes| C[Local Llama-3 Node]
+                B -->|No| D[External OpenAI/Azure]
+                C & D --> E[Unified Result]
+            </div>
+        </div>
+
+        <!-- Scenario 5: Multi-Model Routing & Failover -->
+        <div class="scenario-card">
+            <div class="scenario-header">
+                <span class="scenario-icon">🔀</span>
+                <h3>Scenario 5: Multi-Model Routing & Failover</h3>
+            </div>
+            <p><strong>Use Case:</strong> Optimizing costs by sending simple queries to $0.15/1M token models and
+                complex ones to $10.00/1M token models.</p>
+            <div class="tech-stack">
+                <span class="tech-pill">Semantic Router</span>
+                <span class="tech-pill">LiteLLM</span>
+                <span class="tech-pill">Circuit Breakers</span>
+            </div>
+            <div class="mermaid">
+                graph LR
+                Q[User Query] --> R[Intent Router]
+                R -->|Complex/Reasoning| M1[Claude 3.5 Sonnet]
+                R -->|Simple/Factual| M2[Llama-3-70B]
+                M1 -- 429/500 Error --> M2[Fallback: GPT-4o-mini]
+            </div>
+            <h4>Failover Strategy:</h4>
+            <p>Implementing <strong>Exponential Backoff</strong> and <strong>Circuit Breakers</strong> ensures that if a
+                provider (e.g., OpenAI) goes down, the system automatically redirects traffic to a backup (e.g.,
+                Anthropic or local hosting).</p>
+        </div>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -26,9 +26,11 @@ body {
     color: var(--wp-text);
     font-family: var(--font-sans);
     line-height: 1.6;
-    padding: 20px 40px;
-    max-width: 1000px;
-    margin: 0 auto;
+    padding: 20px 40px 20px 300px;
+    /* Base desktop padding: 260px (sidebar) + 40px gap */
+    max-width: 1400px;
+    margin: 0;
+    transition: padding-left 0.3s ease;
 }
 
 header {
@@ -319,17 +321,8 @@ em {
     left: 20px;
 }
 
-/* Content adjustment when sidebar is open */
-body {
-    transition: padding-left 0.3s ease;
-    padding-left: 280px;
-    /* Push content for open sidebar */
-    max-width: 1300px;
-    margin: 0 auto;
-}
-
 body.sidebar-closed {
-    padding-left: 80px;
+    padding-left: 60px;
     /* Room for toggle only */
 }
 
@@ -379,24 +372,23 @@ body.sidebar-closed {
 /* Responsive - MUST BE AT END */
 @media (max-width: 1024px) {
     body {
-        margin-left: 0 !important;
-        padding: 15px 15px 15px 60px !important;
-        /* Allow toggle button space without overlapping */
+        padding: 60px 20px 20px 20px !important;
+        /* Top space for relative toggle on small screens */
     }
 
     .sidebar {
         z-index: 2000;
-        width: 280px;
+        width: 260px;
         box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
     }
 
     .sidebar-toggle {
-        left: 290px;
+        left: 20px !important;
+        position: absolute;
     }
 
-    .sidebar-closed .sidebar-toggle,
-    .sidebar.closed~.sidebar-toggle {
-        left: 10px;
+    body.sidebar-closed .sidebar-toggle {
+        left: 20px !important;
     }
 }
 

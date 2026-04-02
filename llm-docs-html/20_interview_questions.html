@@ -91,6 +91,45 @@
   </aside>
 
   <div class="content-wrapper">
+    <section id="deloitte-interview-2026">
+      <h2 style="color: #0081c9; border-bottom: 2px solid #0081c9;">Deloitte GenAI & ML Interview (March 2026)</h2>
+      <div class="qa-container">
+        <h3>Q: Why is it called "Regression" in Logistic Regression?</h3>
+        <div class="answer">
+          <p>It's a classification algorithm, but named "regression" because it models the <strong>log-odds</strong> (a
+            continuous value) using a linear regression equation (weighted sum of inputs). We apply a <strong>Sigmoid
+              function</strong> to map this continuous output to a probability between 0 and 1.</p>
+        </div>
+      </div>
+      <div class="qa-container">
+        <h3>Q: What is the role of an Activation Function?</h3>
+        <div class="answer">
+          <p>Activation functions introduce <strong>non-linearity</strong>. Without them, a neural network is just a
+            linear stack that can only solve simple, linear problems. They allow the network to learn complex patterns
+            (like XOR) and "bend" the decision boundaries.</p>
+        </div>
+      </div>
+      <div class="qa-container">
+        <h3>Q: What is the difference between a Parameter and a Hyperparameter?</h3>
+        <div class="answer">
+          <ul>
+            <li><strong>Parameters:</strong> Learned by the model during training (e.g., weights and biases).</li>
+            <li><strong>Hyperparameters:</strong> Set by the developer <em>before</em> training begins (e.g., learning
+              rate, number of layers, batch size). They control the learning process itself.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="qa-container">
+        <h3>Q: What is Top-P (Nucleus) Sampling?</h3>
+        <div class="answer">
+          <p>Top-P is a decoding strategy that selects tokens from a <strong>cumulative probability mass</strong> P
+            (e.g., 0.9). Unlike Top-K which uses a fixed number, Top-P is dynamic: it picks more tokens when the model
+            is
+            uncertain and fewer when it is confident, leading to more natural and coherent text.</p>
+        </div>
+      </div>
+    </section>
+
     <h2 id="phase-0-fundamentals">Phase 0: LLM Fundamentals</h2>
     <div class="qa-container">
       <h3>Q1: What is the Transformer architecture and why did it replace RNNs?</h3>

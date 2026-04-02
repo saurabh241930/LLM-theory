@@ -229,6 +229,102 @@
             </div>
         </div>
 
+        <!-- Agentic RAG Architectures -->
+        <h2 id="agentic-rag">Agentic RAG Architectures</h2>
+
+        <div class="qa-container">
+            <h3>What is Agentic RAG, and how does it differ from Standard (Naive) RAG?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Standard RAG is a <strong>linear, one-pass pipeline</strong>: Query -> Embed
+                    -> Retrieve -> Generate. It fails if the retrieval is poor or the query is complex.</p>
+                <p><strong>Agentic RAG</strong> transforms the pipeline into an <strong>iterative, reasoning-based
+                        loop</strong>. An LLM "agent" orchestrates the process, deciding whether it has enough
+                    information, if it needs to re-query, or if it should use different tools. It introduces
+                    <strong>autonomy</strong> and <strong>self-correction</strong> into the retrieval process.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Describe the 4 main Agentic RAG patterns and when to apply each.</h3>
+            <div class="answer">
+                <table>
+                    <tr>
+                        <th>Pattern</th>
+                        <th>Mechanism</th>
+                        <th>Best Use Case</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Router RAG</strong></td>
+                        <td>An LLM router selects the best data source (e.g., Vector DB for docs, SQL for numbers,
+                            Search API for news).</td>
+                        <td><strong>Multi-Silo Data:</strong> When information is spread across different types of
+                            databases or APIs.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Corrective RAG (CRAG)</strong></td>
+                        <td>A self-grader evaluates retrieval relevance. If "Irrelevant", it triggers a fallback (e.g.,
+                            Web Search) to find better context.</td>
+                        <td><strong>Accuracy-Critical:</strong> When the Vector DB might not contain the answer, and you
+                            need a "safety net" to prevent hallucinations.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Self-RAG / Reflection</strong></td>
+                        <td>The model generates segments and "critiques" them using reflection tokens (Is it relevant?
+                            Is it supported by facts? Is it useful?).</td>
+                        <td><strong>Complex Synthesized Answers:</strong> When the answer requires high factual density
+                            and strict adherence to retrieved context.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Multi-Hop / Iterative</strong></td>
+                        <td>Breaks a complex query into sub-steps. It retrieves info for Step 1, uses that to formulate
+                            Step 2, and so on.</td>
+                        <td><strong>Comparative Reasoning:</strong> "How does the profit margin of Product A compare to
+                            the industry average in 2023?" (Requires two separate lookups).</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you implement a "Self-Correction" loop in an Agentic RAG system?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> We implement a <strong>Multi-agent or State-Machine flow</strong> (often
+                    using LangGraph):</p>
+                <ol>
+                    <li><strong>Retrieve:</strong> Fetch top-K documents.</li>
+                    <li><strong>Grade:</strong> A separate "Grader LLM" (or prompt) scores each document: [Relevant,
+                        Partially Relevant, Irrelevant].</li>
+                    <li><strong>Decision Branch:</strong>
+                        <ul>
+                            <li>If all are <em>Relevant</em> -> Proceed to Generation.</li>
+                            <li>If some are <em>Irrelevant</em> -> Trigger <strong>Query Transformation</strong>
+                                (rewrite the user query to be more specific) and re-retrieve.</li>
+                            <li>If all are <em>Irrelevant</em> -> Fallback to a secondary tool (e.g., Google Search
+                                API).</li>
+                        </ul>
+                    </li>
+                    <li><strong>Generate & Verify:</strong> After generation, a final check ensures the answer is
+                        grounded in the context.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>When would you choose a "Plan-and-Execute" Agent for RAG over a simple ReAct Agent?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong></p>
+                <ul>
+                    <li><strong>ReAct Agent:</strong> Thinks and acts one step at a time. It's great for
+                        <strong>short-tail reasoning</strong> or when the next step depends entirely on the previous
+                        tool's output. However, it can lose track of the original goal in long sequences.</li>
+                    <li><strong>Plan-and-Execute:</strong> First creates a multi-step "To-Do" list and then executes
+                        each step. It's superior for <strong>long-form, complex research tasks</strong> because it
+                        maintains a high-level roadmap, reducing the risk of the agent getting "distracted" or caught in
+                        infinite loops.</li>
+                </ul>
+            </div>
+        </div>
+
         <!-- LLM in Production -->
         <h2 id="llm-prod">LLM in Production</h2>
 
@@ -798,6 +894,158 @@
                     across clusters would be the immediate resolution roadmaps.</p>
             </div>
         </div>
+        <!-- Latency & Performance Optimization -->
+        <h2 id="latency-opt">Latency & Performance Optimization</h2>
+
+        <div class="qa-container">
+            <h3>How do you reduce the Time-To-First-Token (TTFT) and increase tokens per second (TPS) in production?
+            </h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Optimization requires addressing different parts of the inference stack:</p>
+                <ul>
+                    <li><strong>Reducing TTFT (Wait time):</strong>
+                        <ul>
+                            <li><strong>Prompt Caching:</strong> Cache the KV (Key-Value) states of static system
+                                prompts or common prefixes (like document contexts) to avoid re-computing them.</li>
+                            <li><strong>Flash Attention:</strong> Use kernels like FlashAttention-2 or Flash-Decoding to
+                                accelerate attention computation on high-memory bandwidth GPUs.</li>
+                            <li><strong>Speculative Decoding:</strong> Use a tiny "draft model" to predict several
+                                tokens ahead, which the main "target model" verifies in a single parallel step.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Increasing TPS (Throughput):</strong>
+                        <ul>
+                            <li><strong>Continuous Batching:</strong> Unlike static batching, it schedules new requests
+                                as soon as any request in the batch finishing, maximizing GPU utilization (used in
+                                vLLM/TGI).</li>
+                            <li><strong>Quantization:</strong> Convert weights from FP16 to INT8, FP8, or 4-bit
+                                (AWQ/GPTQ) to reduce memory bandwidth bottlenecks and allow larger batch sizes.</li>
+                            <li><strong>KV Cache Management:</strong> Use <strong>PagedAttention</strong> to manage
+                                memory fragmentation, allowing more concurrent requests to share the same VRAM
+                                efficiently.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>What is Speculative Decoding, and in what real-world scenarios is it most effective?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> <strong>Speculative Decoding</strong> is an optimization technique where a
+                    smaller, faster "draft" model (e.g., Llama-3 8B) predicts the next 3-5 tokens. The larger "target"
+                    model (e.g., Llama-3 70B) then validates these tokens in a single forward pass.</p>
+                <p><strong>Effectiveness:</strong> It is most effective when:
+                <ol>
+                    <li><strong>High Latency/Large Model:</strong> The target model is significantly slower than the
+                        draft model.</li>
+                    <li><strong>High Predictability:</strong> The task involves repetitive or highly structured text
+                        (e.g., code generation, standard legal formatting) where the small model can guess correctly
+                        ~70-80% of the time.</li>
+                    <li><strong>Low Concurrency:</strong> In scenarios with high QPS, the overhead of the draft model
+                        might actually reduce total system throughput; it's best for improving <em>per-user</em>
+                        latency.</li>
+                </ol>
+                </p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How does KV Caching improve latency, and what are its memory implications?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> During autoregressive generation, Transformers re-calculate the attention
+                    for <em>all</em> previous tokens to predict the next one. <strong>KV Caching</strong> stores the Key
+                    and Value tensors of previous tokens in VRAM so they don't have to be re-computed.</p>
+                <ul>
+                    <li><strong>Latency Benefit:</strong> Converts an $O(N^2)$ computation (where $N$ is sequence
+                        length) into an $O(N)$ operation for each new token generated, drastically speeding up response
+                        times.</li>
+                    <li><strong>Memory Implications (The "VRAM Tax"):</strong> As the conversation grows, the KV cache
+                        grows linearly. For a 70B model with a 32K context window, the KV cache can consume tens of
+                        gigabytes of VRAM. This is why <strong>PageAttention</strong> (vLLM) is used to prevent
+                        fragmentation and <strong>Multi-Query Attention (MQA)</strong> or <strong>Grouped-Query
+                            Attention (GQA)</strong> were designed to reduce the size of the KV cache by sharing
+                        keys/values across multiple heads.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Advanced Fine-Tuning & Hyperparameters -->
+        <h2 id="finetuning-adv">Advanced Fine-Tuning & Hyperparameters</h2>
+
+        <div class="qa-container">
+            <h3>How do you choose between different cost (loss) functions based on the problem type during fine-tuning?
+            </h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> The loss function defines what the model "learns" from the data:</p>
+                <ul>
+                    <li><strong>Supervised Fine-Tuning (SFT):</strong> Uses <strong>Cross-Entropy Loss</strong>. This is
+                        standard for teaching a model to follow instructions or imitate a specific writing style by
+                        predicting the next token in a "Golden" dataset.</li>
+                    <li><strong>Direct Preference Optimization (DPO):</strong> Uses a specialized <strong>Binary
+                            Cross-Entropy</strong> variant on pair-wise preferences (Chosen vs Rejected). It implicitly
+                        learns a reward model without needing a separate RLHF step. Best for alignment (e.g., "be more
+                        helpful, less harmful").</li>
+                    <li><strong>Reinforcement Learning from Human Feedback (RLHF):</strong> Uses <strong>PPO (Proximal
+                            Policy Optimization)</strong> with a <strong>KL-Divergence penalty</strong>. The KL penalty
+                        ensures the model doesn't drift too far from the original base model ("reward hacking") while
+                        trying to maximize the reward score.</li>
+                    <li><strong>Embedding Fine-Tuning:</strong> Uses <strong>Contrastive Loss
+                            (Triplet/InfoNCE)</strong>. It pulls similar concepts together in vector space and pushes
+                        dissimilar ones apart. Essential for domain-specific RAG retrieval optimization.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you decide on hyperparameters like LoRA Rank ($r$), Alpha ($\alpha$), and Learning Rate?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> While there is no "one-size-fits-all", industry rules of thumb include:</p>
+                <ul>
+                    <li><strong>Rank ($r$):</strong> Represents the "expressive power" of the adapter.
+                        <ul>
+                            <li>$r=8 \text{ or } 16$ is usually sufficient for simple style changes.</li>
+                            <li>$r=64 \text{ or } 128$ for complex domain knowledge or task-specific logic (like
+                                coding).</li>
+                        </ul>
+                    </li>
+                    <li><strong>Alpha ($\alpha$):</strong> A scaling factor for the LoRA weights. A common heuristic is
+                        <strong>$\alpha = 2 \times r$</strong>. This keeps the signal-to-noise ratio stable across
+                        different ranks.
+                    </li>
+                    <li><strong>Learning Rate (LR):</strong> For LoRA, we use higher rates than full fine-tuning.
+                        Typically <strong>$1 \times 10^{-4}$ to $2 \times 10^{-4}$</strong>. We use a <strong>Cosine
+                            Scheduler with Warmup</strong> (e.g., 5-10% of total steps) to prevent the gradients from
+                        exploding at the start.</li>
+                    <li><strong>Batch Size:</strong> Usually 4-16 depends on VRAM. We use <strong>Gradient
+                            Accumulation</strong> to simulate larger batches (e.g., $BS=4$, $Acc=4 \rightarrow
+                        \text{Effective Batch Size}=16$) for better stability.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How do you identify and prevent "Catastrophic Forgetting" during the fine-tuning process?</h3>
+            <div class="answer">
+                <p><strong>Answer:</strong> Catastrophic forgetting occurs when a model loses its general reasoning or
+                    broad knowledge (e.g., forgets how to do math while being trained on medical docs).</p>
+                <ol>
+                    <li><strong>Identification:</strong> We use "Benchmarks as a Guardrail". During FT, we evaluate the
+                        model not just on the new task, but also on a held-out set on general benchmarks (MMLU, GSM8K).
+                        A sharp drop in GSM8K while medical accuracy rises is a red flag.</li>
+                    <li><strong>Prevention - Parameter Efficient FT (PEFT):</strong> Techniques like
+                        <strong>LoRA</strong> or <strong>Q-LoRA</strong> drastically reduce forgetting because they
+                        freeze the original weights and only train a tiny fraction of new parameters.
+                    </li>
+                    <li><strong>Prevention - Weight Decay & LR:</strong> Lower the learning rate and increase weight
+                        decay to keep weight updates subtle.</li>
+                    <li><strong>Prevention - Data Packing/Replay:</strong> Include a small percentage (e.g., 5-10%) of
+                        the original pre-training data or a general instructional dataset (like Open-Orca) in your
+                        fine-tuning mix to "remind" the model of its foundational skills.</li>
+                </ol>
+            </div>
+        </div>
+
         <!-- Memory in Gen AI -->
         <h2 id="genai-memory">Memory in Gen AI</h2>
 
@@ -812,7 +1060,8 @@
                         Memory</strong>. A parallel background LLM call takes the oldest messages dropping out of the
                     window and condenses them into a dense paragraph. The system prompt is then dynamically updated:
                     <code>[System Prompt] + [Rolling Summary of Turns 1-50] + [Raw Text of Turns 51-55]</code>,
-                    preserving the historical narrative without blowing the token budget.</p>
+                    preserving the historical narrative without blowing the token budget.
+                </p>
             </div>
         </div>
 
@@ -832,7 +1081,8 @@
                         NoSQL user profile:
                         <code>{"allergies": ["peanuts"], "siblings": [{"name": "John", "relation": "brother"}]}</code>.
                         This structured JSON is injected into the System Prompt on <em>every</em> single turn, ensuring
-                        foundational facts are never "forgotten" or buried by search algorithms.</li>
+                        foundational facts are never "forgotten" or buried by search algorithms.
+                    </li>
                 </ol>
             </div>
         </div>

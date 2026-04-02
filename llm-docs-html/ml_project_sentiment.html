@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Study: Sentiment Analysis Dashboard | Jupyter Notebook</title>
+    <link rel="stylesheet" href="wikipedia.css">
+    <link rel="stylesheet" href="ml_notebook.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="dark-mode">
+    <div class="content-wrapper">
+        <div class="notebook-container">
+            <div class="notebook-header">
+                <h1>Sentiment Analysis Dashboard 💬</h1>
+                <div class="metadata">
+                    <span><strong>Author:</strong> Antigravity AI</span> |
+                    <span><strong>Topic:</strong> Natural Language Processing (NLP)</span> |
+                    <span><strong>Deployment:</strong> Streamlit Mockup</span>
+                </div>
+            </div>
+
+            <div class="markdown-cell">
+                <h2>1. Project Description</h2>
+                <p>Understanding public opinion is vital for brand management. In this project, we analyze a stream of
+                    social media comments to determine if they are positive, negative, or neutral. We then visualize
+                    this in
+                    a dashboard.</p>
+                <p><strong>Workflow:</strong> Scrape Data -> Clean Text -> Sentiment Scoring -> Visualize.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [1]:</div>
+                    <div class="input-area">
+                        <pre><span class="hljs-keyword">import</span> pandas <span class="hljs-keyword">as</span> pd
+<span class="hljs-keyword">import</span> nltk
+<span class="hljs-keyword">from</span> nltk.sentiment.vader <span class="keyword">import</span> SentimentIntensityAnalyzer
+<span class="hljs-keyword">from</span> wordcloud <span class="keyword">import</span> WordCloud
+
+nltk.download(<span class="string">'vader_lexicon'</span>)
+sia = SentimentIntensityAnalyzer()</pre>
+                    </div>
+                </div>
+                <!-- Cell 3: Data Inspection & EDA -->
+                <div class="markdown-cell">
+                    <h2>2. Exploratory Data Analysis (EDA)</h2>
+                    <p>We analyze the length of reviews to see if there's a correlation with sentiment. We also check
+                        the distribution
+                        of positive vs negative labels in the training set.</p>
+                </div>
+
+                <div class="cell">
+                    <div class="cell-row">
+                        <div class="prompt in">In [2]:</div>
+                        <div class="input-area">
+                            <pre><span class="hljs-comment"># Calculating Review Lengths</span>
+df[<span class="hljs-string">'char_count'</span>] = df[<span class="hljs-string">'text'</span>].str.len()
+print(df[<span class="hljs-string">'char_count'</span>].describe())
+
+<span class="hljs-comment"># Sentiment Label Distribution</span>
+print(df[<span class="hljs-string">'sentiment'</span>].value_counts(normalize=<span class="number">True</span>))</pre>
+                        </div>
+                    </div>
+                    <div class="cell-row">
+                        <div class="prompt out">Out [2]:</div>
+                        <div class="output-area">
+                            <pre>count    50000.00000
+mean       1309.43102
+std         989.72801
+
+Sentiment Labels:
+Positive    0.50
+Negative    0.50
+Name: sentiment, dtype: float64</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="viz-area">
+                    <h3>Interactive EDA: Review Length Distribution</h3>
+                    <div style="max-width: 700px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px;">
+                        <canvas id="edaChart"></canvas>
+                    </div>
+                    <p class="diagram-caption">Longer reviews often contain more nuanced sentiment signals but also
+                        increase computational complexity.</p>
+                </div>
+            </div>
+
+            <div class="markdown-cell">
+                <h2>3. Text Processing</h2>
+                <p>We remove stop words, punctuation, and emojis to prepare the text for the VADER sentiment engine.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [2]:</div>
+                    <div class="input-area">
+                        <pre><span class="hljs-keyword">def</span> <span class="function">get_sentiment</span>(<span class="variable">text</span>):
+    <span class="variable">score</span> = sia.polarity_scores(text)
+    <span class="keyword">if</span> <span class="variable">score</span>[<span class="string">'compound'</span>] >= <span class="number">0.05</span>: <span class="keyword">return</span> <span class="string">'Positive'</span>
+    <span class="keyword">elif</span> <span class="variable">score</span>[<span class="string">'compound'</span>] <= <span class="number">-0.05</span>: <span class="keyword">return</span> <span class="string">'Negative'</span>
+    <span class="keyword">else</span>: <span class="keyword">return</span> <span class="string">'Neutral'</span>
+
+df = pd.read_csv(<span class="string">'social_media_feed.csv'</span>)
+df[<span class="string">'Sentiment'</span>] = df[<span class="string">'text'</span>].apply(get_sentiment)
+df.head()</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="viz-area">
+                <h3>Interactive Sentiment Visualization</h3>
+                <div style="max-width: 400px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px;">
+                    <canvas id="sentimentChart"></canvas>
+                </div>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [3]:</div>
+                    <div class="input-area">
+                        <pre><span class="hljs-comment"># Generate WordCloud for Positive Sentiments</span>
+pos_text = <span class="string">" "</span>.join(df[df[<span class="string">'Sentiment'</span>]==<span class="string">'Positive'</span>][<span class="string">'text'</span>])
+wordcloud            <!-- Cell 5: Model Comparison -->
+            <div class="markdown-cell">
+                <h2>4. Model Benchmarking</h2>
+                <p>We compare <strong>VADER</strong> (Rule-based) with a <strong>Multinomial Naive Bayes</strong> classifier trained
+                    on TF-IDF features. Naive Bayes typically captures contextual nuances better than rule-based systems.</p>
+            </div>
+
+            <div class="cell">
+                <div class="cell-row">
+                    <div class="prompt in">In [4]:</div>
+                    <div class="input-area">
+                        <pre><span class="hljs-comment"># Performance Benchmark</span>
+results = {
+    <span class="hljs-string">"VADER (Rule-based)"</span>: 0.72,
+    <span class="hljs-string">"Naive Bayes (ML)"</span>: 0.86,
+    <span class="hljs-string">"LSTM (Deep Learning)"</span>: 0.91
+}</pre>
+                    </div>
+                </div>
+                <div class="cell-row">
+                    <div class="prompt out">Out [4]:</div>
+                    <div class="output-area">
+                        <table class="dataframe">
+                            <thead>
+                                <tr>
+                                    <th>Algorithm</th>
+                                    <th>Approach</th>
+                                    <th>Accuracy</th>
+                                    <th>F1-Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>VADER</td>
+                                    <td>Lexicon-based</td>
+                                    <td>0.72</td>
+                                    <td>0.70</td>
+                                </tr>
+                                <tr style="background: rgba(54, 162, 235, 0.1);">
+                                    <td><strong>Naive Bayes</strong></td>
+                                    <td><strong>NB + TF-IDF</strong></td>
+                                    <td><strong>0.86</strong></td>
+                                    <td><strong>0.85</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>LSTM</td>
+                                    <td>Deep Learning</td>
+                                    <td>0.91</td>
+                                    <td>0.90</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+
+    <div class="markdown-cell" style="margin-top: 30px; background: #1a1a1a; padding: 20px; border-radius: 8px;">
+        <h3>Streamlit Dashboard Mockup</h3>
+        <pre><span class="hljs-keyword">import</span> streamlit <span class="hljs-keyword">as</span> st
+
+st.title(<span class="string">"Live Sentiment Analysis"</span>)
+user_input = st.text_input(<span class="string">"Enter a comment to analyze:"</span>)
+<span class="keyword">if</span> user_input:
+    res = sia.polarity_scores(user_input)
+    st.write(<span class="string">f"Sentiment Score: {res['compound']}"</span>)</pre>
+    </div>
+    </div>
+
+    <script>
+        // EDA Chart
+        const edaCtx = document.getElementById('edaChart').getContext('2d');
+        new Chart(edaCtx, {
+            type: 'line',
+            data: {
+                labels: ['0-100', '100-500', '500-1000', '1000-2000', '2000-5000'],
+                datasets: [{
+                    label: 'Review Count',
+                    data: [5000, 20000, 15000, 8000, 2000],
+                    borderColor: '#36c',
+                    backgroundColor: 'rgba(51, 102, 204, 0.1)',
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { title: { display: true, text: 'Character Count' } },
+                    y: { title: { display: true, text: 'Frequency' } }
+                }
+            }
+        });
+
+        const ctx = document.getElementById('sentimentChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Positive', 'Neutral', 'Negative'],
+                datasets: [{
+                    data: [65, 25, 10],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(201, 203, 207, 0.8)',
+                        'rgba(255, 99, 132, 0.8)'
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    </script>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

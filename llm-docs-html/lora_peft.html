@@ -4,247 +4,304 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LoRA and PEFT Techniques - LLM Theory</title>
+    <title>LoRA: Low-Rank Adaptation - Deep Dive</title>
     <link rel="stylesheet" href="wikipedia.css?v=2">
     <style>
-        /* Chapter-specific animations and styles */
+        .math-block {
+            background: #f8f9fa;
+            border-left: 5px solid var(--wp-accent);
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Cambria', 'Times New Roman', serif;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        .jupyter-cell {
+            background: #ffffff;
+            border: 1px solid #cfcfcf;
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .jupyter-input {
+            background: #f7f7f7;
+            padding: 10px;
+            border-bottom: 1px solid #cfcfcf;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+
+        .jupyter-output {
+            padding: 10px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85em;
+            color: #333;
+        }
+
         .matrix-viz {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px;
-            margin: 25px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border: 1px solid var(--wp-border);
+            gap: 20px;
+            margin: 30px 0;
         }
 
-        .matrix {
+        .matrix-box {
+            border: 2px solid #333;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
             font-weight: bold;
-            font-family: serif;
+            background: #fff;
+            position: relative;
         }
 
         .matrix-w {
-            width: 60px;
-            height: 60px;
-            background: #6a737d;
+            width: 80px;
+            height: 80px;
+            background: #e0e0e0;
         }
 
         .matrix-a {
-            width: 15px;
-            height: 60px;
-            background: #36c;
+            width: 20px;
+            height: 80px;
+            background: #bbdefb;
+            border-color: #2196f3;
         }
 
         .matrix-b {
-            width: 60px;
-            height: 15px;
-            background: #37b24d;
+            width: 80px;
+            height: 20px;
+            background: #c8e6c9;
+            border-color: #4caf50;
         }
 
-        .operator {
-            font-size: 24px;
-            color: #333;
-        }
-
-        .wiki-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 0.9em;
-        }
-
-        .wiki-table th,
-        .wiki-table td {
-            border: 1px solid #a2a9b1;
-            padding: 8px;
-            text-align: left;
-        }
-
-        .wiki-table th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-
-        .side-note {
-            background: #fff9db;
-            border-left: 4px solid #fab005;
-            padding: 10px;
-            margin: 15px 0;
-            font-size: 0.9em;
-        }
-
-        .tech-tag {
+        .label-r {
+            position: absolute;
+            top: -20px;
             font-size: 0.8em;
-            background: #eef2ff;
-            color: var(--wp-accent);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: bold;
+            color: #666;
         }
     </style>
 </head>
 
 <body>
-
     <header>
-        <h1>LoRA and PEFT</h1>
-        <div class="subtitle">From Wikipedia, the free encyclopedia of Large Language Models</div>
+        <h1>LoRA: Low-Rank Adaptation</h1>
+        <div class="subtitle">The math, motivation, and mechanics of the most popular PEFT technique</div>
     </header>
 
     <div class="content-wrapper">
-        <!-- Infobox -->
         <aside class="infobox">
-            <div class="infobox-title">LoRA</div>
-            <div class="infobox-image">
-                <svg width="100" height="40" viewBox="0 0 100 40">
-                    <rect x="10" y="5" width="20" height="30" fill="#36c" />
-                    <rect x="40" y="5" width="50" height="5" fill="#37b24d" />
-                    <text x="50" y="25" text-anchor="middle" font-size="8" fill="#36c">Low Rank</text>
-                </svg>
-            </div>
+            <div class="infobox-title">LoRA Factsheet</div>
             <div class="infobox-data">
                 <div class="infobox-row">
-                    <div class="infobox-label">Stands For</div>
-                    <div class="infobox-value">Low-Rank Adaptation</div>
+                    <div class="infobox-label">Invented By</div>
+                    <div class="infobox-value">Microsoft (Hu et al., 2021)</div>
                 </div>
                 <div class="infobox-row">
-                    <div class="infobox-label">Compression</div>
-                    <div class="infobox-value">>10,000x</div>
+                    <div class="infobox-label">Hyperparameters</div>
+                    <div class="infobox-value">Rank ($r$), Alpha ($\alpha$)</div>
                 </div>
                 <div class="infobox-row">
-                    <div class="infobox-label">Efficiency</div>
-                    <div class="infobox-value">High (PEFT)</div>
+                    <div class="infobox-label">Trainable Params</div>
+                    <div class="infobox-value">0.1% to 1% of total</div>
+                </div>
+                <div class="infobox-row">
+                    <div class="infobox-label">Latency</div>
+                    <div class="infobox-value">Zero (when merged)</div>
                 </div>
             </div>
         </aside>
 
-        <div class="main-content">
-            <p><strong>Parameter-Efficient Fine-Tuning (PEFT)</strong> is a category of methods used to adapt Large
-                Language Models to specific downstream tasks without retraining all of the model's parameters. The most
-                prominent technique, <strong>Low-Rank Adaptation (LoRA)</strong>, achieves this by adding small,
-                trainable "adapter" matrices to the pre-existing frozen weights of the transformer architecture.</p>
+        <section id="motivation">
+            <h2>1. Motivation: The Intrinsic Dimension</h2>
+            <p>Why does LoRA work? The core motivation comes from the <strong>Intrinsic Dimension</strong> hypothesis.
+                It suggests that even though an LLM has billions of parameters, the actual "manifold" of any specific
+                task (like medical classification or Python coding) is much simpler and occupies a low-dimensional
+                subspace.</p>
+            <p>Instead of updating all weights in a large matrix $W$, we can approximate the update $\Delta W$ using two
+                smaller matrices that represent this low-dimensional subspace.</p>
+        </section>
 
-            <h2>The Problem: Scale and Memory</h2>
-            <p>Full fine-tuning of a model like Llama 3 (70B parameters) requires updating every single parameter, which
-                necessitates massive GPU VRAM for the gradients and optimizer states. For most developers, this is
-                computationally impossible.</p>
+        <section id="mathematics">
+            <h2>2. The Mathematics of LoRA</h2>
+            <p>For a pre-trained weight matrix $W_0 \in \mathbb{R}^{d \times k}$, LoRA expresses the update as a product
+                of two low-rank matrices $B \in \mathbb{R}^{d \times r}$ and $A \in \mathbb{R}^{r \times k}$, where $r
+                \ll \min(d, k)$.</p>
 
-            <h2>LoRA Architecture</h2>
-            <p>LoRA hypothesizes that the updates to a weight matrix during fine-tuning have a "low intrinsic
-                dimension." Instead of updating a <em>d x d</em> matrix $W$, LoRA represents the update as the product
-                of two smaller matrices, $A$ and $B$, of rank $r$.</p>
-
-            <div class="matrix-viz animate-on-scroll">
-                <div class="matrix matrix-w">W</div>
-                <div class="operator">+</div>
-                <div class="matrix matrix-a">A</div>
-                <div class="operator">×</div>
-                <div class="matrix matrix-b">B</div>
+            <div class="math-block">
+                $h = W_0x + \Delta Wx = W_0x + BAx$
             </div>
 
-            <p>If $W$ is 4096 x 4096 ($~16M$ parameters) and the rank $r$ is 8, then A and B combined only have $4096
-                \times 8 \times 2 = 65,536$ parameters. This represents a <strong>250x reduction</strong> in trainable
-                parameters.</p>
+            <div class="matrix-viz">
+                <div class="matrix-box matrix-w">W₀<br><small>(Frozen)</small></div>
+                <div style="font-size: 2em;">+</div>
+                <div class="matrix-box matrix-a">
+                    <div class="label-r">r</div>A<br><small>(Learned)</small>
+                </div>
+                <div style="font-size: 1.5em;">×</div>
+                <div class="matrix-box matrix-b">
+                    <div class="label-r" style="left: -15px; top: 0;">r</div>B<br><small>(Learned)</small>
+                </div>
+            </div>
 
-            <h2>Quantization: QLoRA</h2>
-            <p><strong>QLoRA</strong> further enhances efficiency by quantizing the base model weights to 4-bit
-                precision (NF4) while performing LoRA updates. This allows fine-tuning of a 7B-parameter model on
-                consumer-grade hardware with as little as 12-16GB of VRAM.</p>
+            <p><strong>Initialization:</strong> Matrix $A$ is typically initialized with <em>Gaussian distribution</em>,
+                and matrix $B$ is initialized to <em>zero</em>. This ensures that at the start of training, the update
+                $BA$ is exactly zero, and the model starts with the exact behavior of the pre-trained weights.</p>
+            <p><strong>Scaling:</strong> We scale the update by $\frac{\alpha}{r}$. This allows us to change the rank
+                $r$ without having to re-tune the learning rate massively.</p>
+        </section>
 
-            <h2>Comparison Table: Tuning Methods</h2>
-            <table class="wiki-table">
-                <thead>
-                    <tr>
-                        <th>Method</th>
-                        <th>Trainable Parameters</th>
-                        <th>Memory Requirement</th>
-                        <th>Performance</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>Full Fine-Tuning</strong></td>
-                        <td>100%</td>
-                        <td>Very High</td>
-                        <td>SOTA Baseline</td>
-                    </tr>
-                    <tr>
-                        <td><strong>LoRA</strong></td>
-                        <td>&lt;1%</td>
-                        <td>Low</td>
-                        <td>Comparable to Full</td>
-                    </tr>
-                    <tr>
-                        <td><strong>QLoRA (4-bit)</strong></td>
-                        <td>&lt;1%</td>
-                        <td>Ultra-Low</td>
-                        <td>Near-LoRA High</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Prompt Tuning</strong></td>
-                        <td>~0.01%</td>
-                        <td>Minimal</td>
-                        <td>Task Specific</td>
-                    </tr>
-                </tbody>
-            </table>
+        <section id="merging">
+            <h2>3. Why it's Effective: Merging Weights</h2>
+            <p>One of LoRA's greatest strengths is that it introduces <strong>zero inference latency</strong>. Because
+                the update is additive ($W = W_0 + BA$), we can physically add the learned $BA$ matrices back into the
+                frozen $W_0$ after training is finished.</p>
+            <div class="side-note">
+                💡 <strong>The "Merge" trick:</strong> In production, you don't run two paths. You compute $W_{new} =
+                W_0 + BA$ once, save it, and use it as a standard linear layer.
+            </div>
+        </section>
 
-            <h2>Why LoRA is the Industry Standard</h2>
+        <section id="implementation">
+            <h2>4. Hands-on Implementation</h2>
+            <p>The following "Jupyter Cell" demonstrates how to configure LoRA using the <code>peft</code> library.</p>
+
+            <div class="jupyter-cell">
+                <div class="jupyter-input">
+                    <pre><span class="keyword">from</span> peft <span class="keyword">import</span> LoraConfig, get_peft_model
+
+<span class="comment"># 1. Define LoRA Config</span>
+config = LoraConfig(
+    r=8,              <span class="comment"># Rank</span>
+    lora_alpha=16,    <span class="comment"># Scaling factor</span>
+    target_modules=[<span class="string">"q_proj"</span>, <span class="string">"v_proj"</span>], <span class="comment"># Which layers to adapt?</span>
+    lora_dropout=0.05,
+    bias=<span class="string">"none"</span>,
+    task_type=<span class="string">"CAUSAL_LM"</span>
+)
+
+<span class="comment"># 2. Wrap the base model</span>
+model = get_peft_model(base_model, config)
+model.print_trainable_parameters()</pre>
+                </div>
+                <div class="jupyter-output">
+                    trainable params: 4,194,304 || all params: 7,504,756,736 || trainable%: 0.0558
+                </div>
+            </div>
+        </section>
+
+        <section id="limitations">
+            <h2>5. Downsides and Limitations</h2>
             <ul>
-                <li><strong>Modular Adaptation:</strong> Developers can share small (10-100MB) LoRA "adapters" instead
-                    of sharing full (140GB) model weights.</li>
-                <li><strong>Reduced Catastrophic Forgetting:</strong> Since the base weights are frozen, the model
-                    retains its original general knowledge while learning specialized behavior from the adapters.</li>
-                <li><strong>Fast Deployment:</strong> Switching between tasks is as simple as swapping the small adapter
-                    matrix in memory.</li>
+                <li><strong>Rank Selection:</strong> If $r$ is too small, the model lacks "capacity" to learn the task.
+                    If $r$ is too large, it overfits and increases memory usage.</li>
+                <li><strong>Module Coverage:</strong> Only targeting <code>q_proj</code> and <code>v_proj</code> (common
+                    in early papers) might be insufficient for complex tasks; you might need to target all linear
+                    layers.</li>
+                <li><strong>Catastrophic Forgetting:</strong> While better than full fine-tuning, enough LoRA training
+                    can still diminish the base model's zero-shot general knowledge.</li>
             </ul>
-
-            <h2>Choosing the Rank ($r$)</h2>
-            <div class="side-note">
-                💡 <strong>Guideline:</strong> A rank of $r=8$ or $r=16$ is sufficient for most language tasks.
-                Increasing rank beyond 64 often leads to diminishing returns and risks overfitting the training data.
-            </div>
-
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>To keep operational costs low, the <strong>RSA Sales QA Dashboard</strong> uses <strong>LoRA
-                    adapters</strong>. Instead of running a massive, expensive model for every audit, the team uses a
-                frozen 8B-parameter base model and swaps in a 100MB LoRA adapter specifically trained to detect
-                "Aggressive Sales Tactics" in insurance transcripts. When the dashboard switches to auditing
-                <em>Customer Support</em> calls instead of <em>Sales</em> calls, it simply swaps the "Sales Auditor"
-                adapter for a "Support empathetic" adapter, allowing a single small server to handle multiple
-                specialized specialized tasks.
-            </p>
-
-            <div class="code-block">
-                <span class="comment"># RSA Case Study: Loading specialized LoRA Adapters</span>
-                <span class="keyword">from</span> peft <span class="keyword">import</span> PeftModel, PeftConfig
-
-                base_model = AutoModelForCausalLM.from_pretrained(<span class="string">"llama-3-8b"</span>)
-                <span class="comment"># Dynamically swap 'Sales Auditor' adapter</span>
-                model = PeftModel.from_pretrained(base_model, <span class="string">"rsa-sales-auditor-adapter"</span>)
-
-                <span class="comment"># To audit support calls, simply reload with:</span>
-                <span class="comment"># model.load_adapter("rsa-support-empathy-adapter")</span>
-            </div>
-
-            <h2>Key Takeaways</h2>
-            <div class="side-note">
-                ✅ PEFT methods adapt models using minimal trainable parameters.<br>
-                ✅ LoRA uses matrix factorization to approximate weight updates.<br>
-                ✅ QLoRA enables fine-tuning on consumer-level GPUs.<br>
-                ✅ Adapters are portable, modular, and easy to distribute.
-            </div>
-        </div>
+        </section>
     </div>
 
-    <script src="animations.js"></script>
+    <section id="rank-playground">
+        <h2>6. Interactive Playground: The Power of Rank ($r$)</h2>
+        <p>Adjust the **Rank ($r$)** slider to see how it affects the size of the trainable matrices $A$ and $B$.
+            Notice how even a very small $r$ (e.g., 4 or 8) can represent high-dimensional changes while requiring
+            vastly fewer parameters than the full frozen matrix $W_0$.</p>
 
-<script src="sidebar.js?v=2"></script>
+        <div class="playground-container"
+            style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); text-align: center;">
+
+            <div class="matrix-viz" id="lora-viz" style="justify-content: space-around; min-height: 150px;">
+                <div class="matrix-group">
+                    <div class="matrix-box matrix-w" style="width: 100px; height: 100px;">W₀<br><small>(Frozen)</small>
+                    </div>
+                    <div style="font-size: 0.8em; margin-top: 5px;">Input: 512, Output: 512<br><b>262,144 Params</b>
+                    </div>
+                </div>
+
+                <div style="font-size: 2em; align-self: center;">+</div>
+
+                <div class="matrix-group" style="display: flex; gap: 10px;">
+                    <div id="matrix-A-box" class="matrix-box matrix-a"
+                        style="width: 10px; height: 100px; transition: width 0.3s;">
+                        <div class="label-r" id="rank-label-A">r=8</div>
+                        A
+                    </div>
+                    <div style="font-size: 1.2em; align-self: center;">×</div>
+                    <div id="matrix-B-box" class="matrix-box matrix-b"
+                        style="width: 100px; height: 10px; transition: height 0.3s;">
+                        <div class="label-r" id="rank-label-B" style="left: -25px; top: 0;">r=8</div>
+                        B
+                    </div>
+                </div>
+
+                <div style="font-size: 2em; align-self: center;">=</div>
+
+                <div class="matrix-group">
+                    <div class="matrix-box"
+                        style="width: 100px; height: 100px; background: #fffde7; border-color: #fbc02d;">W_new</div>
+                    <div style="font-size: 0.8em; margin-top: 5px;">Trainable Params:<br><b id="param-count"
+                            style="color: #2196f3;">8,192</b></div>
+                </div>
+            </div>
+
+            <div class="controls" style="margin-top: 30px; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                <label style="display: block; font-weight: bold; margin-bottom: 10px;">LoRA Rank ($r$): <span id="rVal"
+                        style="color: #2196f3;">8</span></label>
+                <input type="range" id="rSlider" min="1" max="64" step="1" value="8"
+                    style="width: 80%; max-width: 400px;">
+                <p style="font-size: 0.85em; color: #666; margin-top: 10px;">
+                    Param Savings Ratio: <b id="savings-ratio">32x</b> fewer weights!
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <script src="genai_visualizer.js"></script>
+    <script>
+        const rSlider = document.getElementById('rSlider');
+        const rVal = document.getElementById('rVal');
+        const matrixA = document.getElementById('matrix-A-box');
+        const matrixB = document.getElementById('matrix-B-box');
+        const labelA = document.getElementById('rank-label-A');
+        const labelB = document.getElementById('rank-label-B');
+        const paramCount = document.getElementById('param-count');
+        const savingsRatio = document.getElementById('savings-ratio');
+
+        const D = 512; // Hidden dimension dummy
+
+        function updateLoRA() {
+            const r = parseInt(rSlider.value);
+            rVal.innerText = r;
+
+            // Visual scaling (map 1-64 to 5-80 px)
+            const visualWidth = Math.max(5, (r / 64) * 60);
+            matrixA.style.width = visualWidth + 'px';
+            matrixB.style.height = visualWidth + 'px';
+
+            labelA.innerText = `r=${r}`;
+            labelB.innerText = `r=${r}`;
+
+            // Math: Params = (d * r) + (r * k) = 2 * d * r
+            const trainable = 2 * D * r;
+            const frozen = D * D;
+            const ratio = (frozen / trainable).toFixed(1);
+
+            paramCount.innerText = trainable.toLocaleString();
+            savingsRatio.innerText = ratio + 'x';
+        }
+
+        rSlider.oninput = updateLoRA;
+        updateLoRA();
+    </script>
+    <script src="sidebar.js?v=2"></script>
 </body>
 
 </html>

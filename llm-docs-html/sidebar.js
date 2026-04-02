@@ -18,6 +18,33 @@ document.addEventListener('DOMContentLoaded', () => {
             ]
         },
         {
+            category: 'ML CASE SCENARIOS',
+            links: [
+                { id: 'ml_project_fraud.html', title: '1. Fraud Detection 💳' },
+                { id: 'ml_project_rec_sys.html', title: '2. Movie Recommendations 🎬' },
+                { id: 'ml_project_churn.html', title: '3. Customer Churn 📉' },
+                { id: 'ml_project_sentiment.html', title: '4. Sentiment Dashboard 💬' }
+            ]
+        },
+        {
+            category: 'ALGORITHM CHEATSHEETS',
+            links: [
+                { id: 'ml_linear_regression.html', title: '1. Linear Regression' },
+                { id: 'ml_logistic_regression.html', title: '2. Logistic Regression' },
+                { id: 'ml_decision_trees.html', title: '3. Decision Trees' },
+                { id: 'ml_random_forest.html', title: '4. Random Forest' },
+                { id: 'ml_svm.html', title: '5. SVM' },
+                { id: 'ml_knn.html', title: '6. k-NN' },
+                { id: 'ml_kmeans.html', title: '7. k-Means' },
+                { id: 'ml_naive_bayes.html', title: '8. Naive Bayes' },
+                { id: 'ml_pca.html', title: '9. PCA' },
+                { id: 'ml_xgboost.html', title: '10. XGBoost' },
+                { id: 'ml_adaboost.html', title: '11. AdaBoost' },
+                { id: 'ml_neural_networks.html', title: '12. Neural Networks' },
+                { id: 'ml_reinforcement_learning.html', title: '13. Reinforcement Learning' }
+            ]
+        },
+        {
             category: 'PROBABILITY & MATH FOUNDATIONS',
             links: [
                 { id: 'information_theory_basics.html', title: '1. Information Theory' },
@@ -99,20 +126,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'graph_rag.html', title: '18. Graph RAG' },
                 { id: 'agentic_rag.html', title: '19. Agentic RAG' },
                 { id: 'fine_tuning_intro.html', title: '20. Fine-Tuning Intro' },
-                { id: 'lora_peft.html', title: '21. LoRA & PEFT' },
-                { id: 'alignment_rlhf_dpo.html', title: '22. Model Alignment' },
-                { id: 'inference_optimization.html', title: '23. Inference Optimization' },
-                { id: 'react_pattern.html', title: '24. ReAct Pattern' },
-                { id: 'multi_agent_systems.html', title: '25. Multi-Agent Systems' },
-                { id: 'agent_failure_recovery.html', title: '26. Failure Recovery' },
-                { id: 'scaling_rag_millions.html', title: '27. Scaling RAG' },
-                { id: 'high_efficiency_indexing.html', title: '28. CRAG / Self-RAG' },
-                { id: 'evaluation_ragas_langsmith.html', title: '29. Evaluation Hub' },
-                { id: '20_interview_questions.html', title: '30. Interview Recap' },
-                { id: '21_real_world_questions.html', title: '31. Real World Production' },
-                { id: 'llm_serving.html', title: '32. LLM Serving' },
-                { id: 'mcp_protocol.html', title: '33. MCP Protocol' },
-                { id: 'interview_scenario_based.html', title: '34. Scenario Interviews' }
+                { id: 'lora_peft.html', title: '21. LoRA Deep-Dive' },
+                { id: 'qlora_peft.html', title: '22. QLoRA (4-bit Efficiency)' },
+                { id: 'unsloth_optimization.html', title: '23. Unsloth (2x Faster FT)' },
+                { id: 'advanced_peft_types.html', title: '24. Advanced PEFT (DoRA, GaLore)' },
+                { id: 'alignment_rlhf_dpo.html', title: '25. Model Alignment' },
+                { id: 'inference_optimization.html', title: '26. Inference Optimization' },
+                { id: 'llm_langsmith.html', title: '27. LangSmith Observability' },
+                { id: 'react_pattern.html', title: '28. ReAct Pattern' },
+                { id: 'multi_agent_systems.html', title: '29. Multi-Agent Systems' },
+                { id: 'agent_failure_recovery.html', title: '30. Failure Recovery' },
+                { id: 'scaling_rag_millions.html', title: '31. Scaling RAG' },
+                { id: 'high_efficiency_indexing.html', title: '32. CRAG / Self-RAG' },
+                { id: 'evaluation_ragas_langsmith.html', title: '33. Evaluation Hub' },
+                { id: '20_interview_questions.html', title: '34. Interview Recap' },
+                { id: '21_real_world_questions.html', title: '35. Real World Production' },
+                { id: 'llm_serving.html', title: '36. LLM Serving' },
+                { id: 'mcp_protocol.html', title: '37. MCP Protocol' },
+                { id: 'interview_scenario_based.html', title: '38. Scenario Interviews' }
             ]
         },
         {
@@ -129,10 +160,12 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             category: 'LLMOps & PRODUCTION',
             links: [
-                { id: 'llm_tracing_observability.html', title: '1. Tracing & Observability' },
-                { id: 'llm_cost_caching.html', title: '2. Cost & Caching' },
-                { id: 'hallucination_detection.html', title: '3. Hallucination Detection' },
-                { id: 'llm_deployment_safety.html', title: '4. Deployment Safety' }
+                { id: 'llm_serving.html', title: '1. LLM Serving Patterns' },
+                { id: 'llmops_architecture_scenarios.html', title: '2. Architecture Scenarios' },
+                { id: 'llm_tracing_observability.html', title: '3. Tracing & Observability' },
+                { id: 'llm_cost_caching.html', title: '4. Cost & Caching' },
+                { id: 'hallucination_detection.html', title: '5. Hallucination Detection' },
+                { id: 'llm_deployment_safety.html', title: '6. Deployment Safety' }
             ]
         },
         {
@@ -187,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             category: 'System Design',
             links: [
                 { id: 'system_design_company_assistant.html', title: 'Company AI Assistant' },
+                { id: 'sysdesign_agentic_rag_rsa.html', title: 'Designing a RSA NLP Dashboard' },
                 { id: 'system_design_patterns.html', title: 'System Design Patterns' },
                 { id: 'system_design_scaling.html', title: 'System Design Scaling' },
                 { id: 'system_design_chatgpt.html', title: 'ChatGPT Case Study' },

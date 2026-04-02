@@ -384,7 +384,96 @@
 
     <script src="animations.js"></script>
 
-<script src="sidebar.js?v=2"></script>
+    <section id="tokenizer-playground">
+        <h2>5. Interactive Playground: Live Tokenizer & Context Meter</h2>
+        <p>Type below to see how your text is broken into <strong>Tokens</strong> and how it fills the model's
+            <strong>Context Window</strong>. Note how punctuation and spaces are often their own tokens!
+        </p>
+        <div class="playground-container"
+            style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+
+            <div class="input-area" style="margin-bottom: 20px;">
+                <textarea id="tokenInput" placeholder="Start typing to see tokens..."
+                    style="width: 100%; height: 100px; padding: 15px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; font-size: 1.1em; resize: vertical;"></textarea>
+            </div>
+
+            <div class="output-stats" style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px;">
+                <div style="flex: 1;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Context Window Usage: <span
+                            id="tokenCount">0</span> / 100 Tokens</label>
+                    <div style="height: 12px; background: #eee; border-radius: 6px; overflow: hidden;">
+                        <div id="contextBar"
+                            style="height: 100%; width: 0%; background: #3366cc; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tokenGrid"
+                style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 50px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc;">
+                <span style="color: #999; font-style: italic;">Token chips will appear here...</span>
+            </div>
+        </div>
+    </section>
+
+    <script src="genai_visualizer.js"></script>
+    <script>
+        const inputEl = document.getElementById('tokenInput');
+        const countEl = document.getElementById('tokenCount');
+        const gridEl = document.getElementById('tokenGrid');
+        const barEl = document.getElementById('contextBar');
+
+        function mockTokenize(text) {
+            if (!text) return [];
+            // Simple regex to split by word boundaries, spaces, and punctuation
+            // This mimics common subword splitting behavior
+            const rawTokens = text.match(/[\w]+|[^\w\s]|\s+/g) || [];
+            return rawTokens.map(t => {
+                // Generate a consistent dummy ID based on hash
+                let hash = 0;
+                for (let i = 0; i < t.length; i++) hash = ((hash << 5) - hash) + t.charCodeAt(i);
+                return {
+                    text: t,
+                    id: Math.abs(hash % 50000)
+                };
+            });
+        }
+
+        function updateTokens() {
+            const tokens = mockTokenize(inputEl.value);
+            const count = tokens.length;
+
+            countEl.innerText = count;
+            const percent = Math.min(100, (count / 100) * 100);
+            barEl.style.width = percent + '%';
+            barEl.style.background = percent > 80 ? '#dc3912' : '#3366cc';
+
+            if (tokens.length === 0) {
+                gridEl.innerHTML = '<span style="color: #999; font-style: italic;">Token chips will appear here...</span>';
+                return;
+            }
+
+            gridEl.innerHTML = tokens.map((t, i) => `
+                <div class="token-chip" style="
+                    background: ${GENAI_COLORS.token}${(i % 2 === 0 ? '22' : '11')};
+                    border: 1px solid ${GENAI_COLORS.token}55;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-family: monospace;
+                    font-size: 0.9em;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                ">
+                    <span style="font-weight: bold; color: #333;">${t.text === ' ' ? '␣' : t.text.replace(/\n/g, '↵')}</span>
+                    <span style="font-size: 0.7em; color: #666;">${t.id}</span>
+                </div>
+            `).join('');
+        }
+
+        inputEl.oninput = updateTokens;
+        updateTokens();
+    </script>
+    <script src="sidebar.js?v=2"></script>
 </body>
 
 </html>

@@ -90,6 +90,17 @@
             </div>
             <p><strong>Use Case:</strong> Predicting if a sale will be "Successful" or "Unsuccessful" based on
                 historical customer interaction data.</p>
+
+            <div
+                style="background: #eef2ff; padding: 15px; border-left: 4px solid #3366cc; margin: 15px 0; border-radius: 4px;">
+                <strong>💡 Why is it called "Regression"?</strong>
+                <p>This is a common interview trick question. It is called regression because it uses a <strong>linear
+                        regression</strong> skeleton (a weighted sum of inputs) as its base. The "regression" part
+                    refers
+                    to the prediction of a continuous value (the log-odds), which is then mapped to a probability (0-1)
+                    via the Sigmoid function. It performs <strong>Classification</strong>, but its mathematical engine
+                    is a regression model.</p>
+            </div>
         </section>
 
         <section id="bias-variance">
@@ -157,7 +168,8 @@
                 <div class="one-liner">Adds the <strong>absolute value</strong> of weights to the loss.</div>
                 <div class="math-block">Loss = Error + λ Σ|w|</div>
                 <p><strong>Property:</strong> Can shrink some coefficients to <strong>exactly zero</strong>. Useful for
-                    <strong>feature selection</strong> when data has many redundant features.</p>
+                    <strong>feature selection</strong> when data has many redundant features.
+                </p>
             </div>
 
             <div class="comparison-card">
@@ -262,6 +274,64 @@
             </div>
             <p><strong>Benefit:</strong> Provides a more robust estimate of model performance and ensures we use our
                 entire dataset for verification.</p>
+        </section>
+
+        <section id="activation-functions">
+            <h2>8. Activation Functions: The Spark of Non-Linearity</h2>
+            <p>Without activation functions, a neural network (no matter how deep) would just be a series of linear
+                transformations, which is mathematically equivalent to a single linear model. Activation functions allow
+                models to learn <strong>non-linear</strong> patterns.</p>
+
+            <div class="comparison-card">
+                <h3>Common Activation Functions</h3>
+                <ul>
+                    <li><strong>Sigmoid:</strong> Maps input to (0, 1). Used in output layers for binary classification.
+                        <em>Problem:</em> Vanishing gradients.
+                    </li>
+                    <li><strong>ReLU (Rectified Linear Unit):</strong> <code>f(x) = max(0, x)</code>. The standard for
+                        hidden layers. Efficient and helps with vanishing gradients.</li>
+                    <li><strong>Softmax:</strong> Maps a vector to probabilities that sum to 1. Used in multi-class
+                        classification (and LLM token selection).</li>
+                    <li><strong>Tanh:</strong> Maps input to (-1, 1). Zero-centered, often better than Sigmoid for
+                        hidden
+                        layers.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="hyperparameters">
+            <h2>9. Hyperparameters vs. Parameters</h2>
+            <p>Understanding the difference is key to managing the training process.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Parameters</th>
+                        <th>Hyperparameters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Definition</strong></td>
+                        <td>Internal variables learned by the model.</td>
+                        <td>External configurations set by the engineer.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Examples</strong></td>
+                        <td>Weights (w), Biases (b), Attention scores.</td>
+                        <td>Learning Rate, Batch Size, Epochs, Dropout Rate.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Learned?</strong></td>
+                        <td>Yes, via Backpropagation.</td>
+                        <td>No, tuned via Grid Search / Intuition.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>Analogy:</strong> In a car, the <strong>Parameters</strong> are the engine's internal timings
+                (learned during driving), while the <strong>Hyperparameters</strong> are the settings like Tire
+                Pressure or Gear Ratios that you set before the race.</p>
         </section>
     </div>
 
