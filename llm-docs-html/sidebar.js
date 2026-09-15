@@ -365,16 +365,41 @@ document.addEventListener('DOMContentLoaded', () => {
         mermaidScript.type = 'module';
         mermaidScript.innerHTML = `
             import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-            mermaid.initialize({ 
-                startOnLoad: false, 
+            mermaid.initialize({
+                startOnLoad: false,
                 theme: 'base',
+                fontFamily: 'Inter, Helvetica Neue, Arial, sans-serif',
+                flowchart: { curve: 'basis', htmlLabels: true, nodeSpacing: 48, rankSpacing: 52, padding: 14 },
+                sequence: { actorMargin: 60, boxMargin: 12, mirrorActors: false },
                 themeVariables: {
-                    primaryColor: '#eef2ff',
-                    primaryTextColor: '#202122',
-                    primaryBorderColor: '#a2a9b1',
-                    lineColor: '#3366cc',
-                    secondaryColor: '#f8f9fa',
-                    tertiaryColor: '#fff'
+                    fontSize: '13px',
+                    // nodes: soft fill, strong border - ByteByteGo style
+                    primaryColor: '#eef4ff',
+                    primaryTextColor: '#1a2433',
+                    primaryBorderColor: '#3366cc',
+                    secondaryColor: '#fff8e6',
+                    secondaryBorderColor: '#e0a800',
+                    tertiaryColor: '#f0f9f2',
+                    tertiaryBorderColor: '#2e7d4f',
+                    // edges
+                    lineColor: '#5b6b7f',
+                    edgeLabelBackground: '#ffffff',
+                    // containers: pastel stage bands
+                    clusterBkg: '#fbfcfe',
+                    clusterBorder: '#c3cfdd',
+                    titleColor: '#1a2433',
+                    nodeBorder: '#3366cc',
+                    mainBkg: '#eef4ff',
+                    // state + sequence diagrams
+                    labelBoxBkgColor: '#eef4ff',
+                    labelBoxBorderColor: '#3366cc',
+                    actorBkg: '#eef4ff',
+                    actorBorder: '#3366cc',
+                    actorTextColor: '#1a2433',
+                    signalColor: '#5b6b7f',
+                    signalTextColor: '#1a2433',
+                    noteBkgColor: '#fff8e6',
+                    noteBorderColor: '#e0a800'
                 }
             });
             setTimeout(async () => {
@@ -384,6 +409,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 100);
         `;
         document.body.appendChild(mermaidScript);
+    }
+
+    // Inject the interactive widget library if the page uses any widget
+    if (document.querySelector('[data-viz]') && !document.querySelector('script[src*="agent_visualizer"]')) {
+        const vizScript = document.createElement('script');
+        vizScript.src = 'agent_visualizer.js?v=1';
+        document.body.appendChild(vizScript);
     }
 
     // --- Inject "Next Page" Button Dynamically ---

@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Design: Agentic Simulation Runs (SAF) - LLM Theory</title>
-    <link rel="stylesheet" href="wikipedia.css?v=2">
-    <link rel="stylesheet" href="agent_docs.css?v=1">
+    <link rel="stylesheet" href="wikipedia.css?v=4">
+    <link rel="stylesheet" href="agent_docs.css?v=2">
 </head>
 
 <body>
@@ -44,6 +44,52 @@
                 <p>The run outlives the request, so you need durable execution. The solver burns cluster-hours, so you
                     need budgets and gates. Logs are redacted, so you need retrieval. The model can invent a step name,
                     so you need validation.</p>
+
+                <div class="bbg">
+                    <div class="bbg-title">How one agentic simulation run works</div>
+
+                    <div class="bbg-band blue">
+                        <div class="bbg-stage">Stage 1 &middot; Intent to validated plan</div>
+                        <div class="bbg-flow">
+                            <div class="bbg-box"><span class="bbg-num">1</span><b>Engineer</b><span>"bracket fatigue at 200 Hz"</span></div>
+                            <div class="bbg-arrow"><i>&rarr;</i>POST /runs</div>
+                            <div class="bbg-box"><span class="bbg-num">2</span><b>Gateway</b><span>validates the token</span></div>
+                            <div class="bbg-arrow"><i>&rarr;</i>starts workflow</div>
+                            <div class="bbg-box"><span class="bbg-num">3</span><b>Planner</b><span>Opus 5 &middot; returns a typed Plan</span></div>
+                            <div class="bbg-arrow"><i>&rarr;</i>before any solver</div>
+                            <div class="bbg-box"><span class="bbg-num">4</span><b>Validate vs DAG</b><span>unknown step &rarr; replan</span></div>
+                        </div>
+                        <div class="bbg-note">A plan earns the right to spend a solver-hour by passing four checks, none of which touch the network.</div>
+                    </div>
+
+                    <div class="bbg-band amber">
+                        <div class="bbg-stage">Stage 2 &middot; Execute and wait, without holding a thread</div>
+                        <div class="bbg-flow">
+                            <div class="bbg-box"><span class="bbg-num">5</span><b>Executor</b><span>plain Python &middot; typed calls</span></div>
+                            <div class="bbg-arrow"><i>&rarr;</i>idempotency key</div>
+                            <div class="bbg-box"><span class="bbg-num">6</span><b>Solver job</b><span>4 hours &middot; cluster-time</span></div>
+                            <div class="bbg-arrow"><i>&rarr;</i>returns a handle</div>
+                            <div class="bbg-box"><span class="bbg-num">7</span><b>Durable timer</b><span>poll 30 s &rarr; 300 s cap</span></div>
+                            <div class="bbg-arrow"><i>&rarr;</i>terminal state</div>
+                            <div class="bbg-box"><span class="bbg-num">8</span><b>Done check</b><span>Completed <b>and</b> UPTODATE</span></div>
+                        </div>
+                        <div class="bbg-note">Never wait inside a request. A six-hour sleep costs what a 30-second one costs.</div>
+                    </div>
+
+                    <div class="bbg-band green">
+                        <div class="bbg-stage">Stage 3 &middot; On failure, diagnose within a budget</div>
+                        <div class="bbg-flow">
+                            <div class="bbg-box"><span class="bbg-num">9</span><b>Failure</b><span>typed category + signature</span></div>
+                            <div class="bbg-arrow"><i>&rarr;</i>&le; 4 iterations</div>
+                            <div class="bbg-box"><span class="bbg-num">10</span><b>Pick a source</b><span>logs &middot; docs &middot; skills &middot; past runs</span></div>
+                            <div class="bbg-arrow"><i>&rarr;</i>one batched call</div>
+                            <div class="bbg-box"><span class="bbg-num">11</span><b>Grade evidence</b><span>correct / ambiguous / incorrect</span></div>
+                            <div class="bbg-arrow"><i>&rarr;</i>&le; 9 calls total</div>
+                            <div class="bbg-box"><span class="bbg-num">12</span><b>Typed action</b><span>one of six &middot; ~$0.046</span></div>
+                        </div>
+                        <div class="bbg-note">Every exit produces a typed action, including "found nothing", which returns ESCALATE rather than a guess.</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -307,7 +353,7 @@
 
     </div>
     <script src="animations.js"></script>
-    <script src="sidebar.js?v=2"></script>
+    <script src="sidebar.js?v=3"></script>
 </body>
 
 </html>

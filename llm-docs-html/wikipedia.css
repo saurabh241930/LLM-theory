@@ -25,6 +25,7 @@ body {
     background-color: var(--wp-bg);
     color: var(--wp-text);
     font-family: var(--font-sans);
+    font-size: 15px;
     line-height: 1.6;
     padding: 20px 40px 20px 300px;
     /* Base desktop padding: 260px (sidebar) + 40px gap */
