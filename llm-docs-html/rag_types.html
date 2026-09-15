@@ -84,6 +84,48 @@
             color: #444;
             line-height: 1.6;
         }
+
+        .ladder-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.88rem;
+        }
+
+        .ladder-table th,
+        .ladder-table td {
+            border: 1px solid #d1d5da;
+            padding: 9px 11px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .ladder-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .ladder-table tr:nth-child(even) td {
+            background: #fcfcfd;
+        }
+
+        .table-caption {
+            font-size: 0.85rem;
+            color: #54595d;
+            font-style: italic;
+            text-align: center;
+            margin: -12px 0 24px 0;
+        }
+
+        .deeper {
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .deeper a {
+            color: #3366cc;
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -94,9 +136,51 @@
     </header>
 
     <div class="content-wrapper">
-        <p>Retrieval-Augmented Generation (RAG) is not a single architecture, but a spectrum of complexity. As
-            businesses move from "Proof of Concept" to "Production," the pipeline evolves to handle nuance, scale, and
-            multi-step reasoning.</p>
+        <p>RAG is a spectrum, not one architecture. Each rung below adds a capability the rung beneath it lacks, and
+            charges for it in LLM calls per query. Buy a rung only when the one below actually fails on your data.</p>
+
+        <p>This page is the map. Each stage links to its own deep dive.</p>
+
+        <table class="ladder-table">
+            <tr>
+                <th>Stage</th>
+                <th>What it adds</th>
+                <th>LLM calls per query</th>
+                <th>Use when</th>
+            </tr>
+            <tr>
+                <td><strong>1. Naive</strong></td>
+                <td>Retrieval before generation</td>
+                <td>1</td>
+                <td>The answer sits in one passage</td>
+            </tr>
+            <tr>
+                <td><strong>2. Advanced</strong></td>
+                <td>Query rewriting, hybrid search, reranking</td>
+                <td>1-2</td>
+                <td>Retrieval finds the wrong passage</td>
+            </tr>
+            <tr>
+                <td><strong>3. Corrective</strong></td>
+                <td>A grader between retrieve and generate</td>
+                <td>~3 batched</td>
+                <td>You need the system to refuse to answer</td>
+            </tr>
+            <tr>
+                <td><strong>4. Graph</strong></td>
+                <td>Traversal by relationship instead of similarity</td>
+                <td>1 SQL walk, 0 LLM when scoped</td>
+                <td>Questions traverse relationships</td>
+            </tr>
+            <tr>
+                <td><strong>5. Agentic</strong></td>
+                <td>Model picks the source, query, and when to stop</td>
+                <td>Up to 9, capped in code</td>
+                <td>Sources are heterogeneous and not interchangeable</td>
+            </tr>
+        </table>
+        <div class="table-caption">The ladder, priced. Stage 4 is not strictly above stage 3; it answers a different
+            shape of question.</div>
 
         <section id="naive">
             <div class="evolution-step">
@@ -116,18 +200,23 @@
                 <div class="benefit-grid">
                     <div class="benefit-item">✅ <strong>Benefit:</strong> Extremely low latency and simple
                         implementation.</div>
-                    <div class="benefit-item">❌ <strong>Limit:</strong> Highly sensitive to bad chunking and keyword
-                        mismatch.</div>
+                    <div class="benefit-item">❌ <strong>Limit:</strong> Cannot say "nothing here". Nearest-neighbour
+                        search always returns k results, even when nothing relevant exists.</div>
                 </div>
+                <p style="margin-top:15px;">That last limit is the one that bites in production. Ask about a topic that
+                    was never indexed and you get the k least-unrelated chunks, from which an ungoverned model builds a
+                    confident wrong answer. Stage 3 exists to fix exactly this.</p>
+                <div class="deeper"><a href="naive_rag.html">&rarr; Naive RAG Foundations</a> &middot;
+                    <a href="chunking_strategies.html">Chunking In Depth</a></div>
             </div>
         </section>
 
         <section id="advanced">
             <div class="evolution-step">
                 <span class="step-label">Stage 2: Advanced RAG</span>
-                <h2>Pre-Retrieval & Post-Retrieval Optimization</h2>
-                <p>Adds "Intelligence" to the pipeline via Query Expansion (HyDE) and Reranking (Cross-Encoders) to
-                    ensure only gold-standard context reaches the LLM.</p>
+                <h2>Pre-Retrieval &amp; Post-Retrieval Optimization</h2>
+                <p>Adds intelligence to the pipeline via query expansion (HyDE) and reranking (cross-encoders) so only
+                    gold-standard context reaches the LLM.</p>
                 <div class="mermaid-container">
                     <div class="mermaid">
                         graph TD
@@ -137,66 +226,127 @@
                         RANK --> GEN[LLM Generation]
                     </div>
                 </div>
+                <p>The organising principle is cost per candidate. Each stage costs roughly 10-100x more per candidate
+                    than the one before, so it must see 10-100x fewer. A real funnel runs 120,000 candidates down to 5
+                    for about $0.046: metadata filter, then BM25 and vector in parallel, then rank fusion, then a
+                    cross-encoder, then an LLM grade.</p>
                 <div class="benefit-grid">
-                    <div class="benefit-item">✅ <strong>Benefit:</strong> Dramatically higher accuracy and "Grounding".
-                    </div>
-                    <div class="benefit-item">❌ <strong>Limit:</strong> Higher cost per query and increased TTFT.</div>
+                    <div class="benefit-item">✅ <strong>Benefit:</strong> Large accuracy gain for near-zero added cost
+                        in the first three stages.</div>
+                    <div class="benefit-item">❌ <strong>Limit:</strong> Reranking buys nothing when the pre-filtered
+                        pool is already within ~3x your final top-k.</div>
                 </div>
-                <p><a href="advanced_rag.html" style="color: #3366cc; font-weight: bold;">&rarr; Deep Dive into Advanced
-                        RAG Masterclass</a></p>
+                <div class="deeper"><a href="retrieval_funnel.html">&rarr; The Retrieval Funnel, with candidate counts
+                        and per-stage cost</a> &middot; <a href="advanced_rag.html">Advanced RAG</a> &middot;
+                    <a href="reranking.html">Re-ranking</a></div>
             </div>
         </section>
 
-        <section id="modular">
+        <section id="corrective">
             <div class="evolution-step">
-                <span class="step-label">Stage 3: Modular & Graph RAG</span>
-                <h2>Domain-Specific Orchestration</h2>
-                <p>Decouples retrieval into specialized modules. <strong>Graph RAG</strong> adds relationships (Neo4j)
-                    to the mix, allowing for multi-hop reasoning that vector search alone misses.</p>
+                <span class="step-label">Stage 3: Corrective RAG (CRAG)</span>
+                <h2>Grading Evidence Before Generating</h2>
+                <p>A grader sits between retrieval and generation and scores each candidate before anything reaches the
+                    answer step. This is the rung that gives a RAG system the ability to refuse.</p>
+                <div class="mermaid-container">
+                    <div class="mermaid">
+                        graph TD
+                        Q[Query] --> RET[Retrieve top-k]
+                        RET --> G[Grade each candidate]
+                        G -- correct --> GEN[Generate with citations]
+                        G -- ambiguous --> REF[Refine or rewrite query]
+                        G -- incorrect --> DROP[Discard]
+                        REF --> RET
+                        DROP --> NONE[Return: no relevant evidence]
+                    </div>
+                </div>
+                <p>Three verdicts rather than two, because a binary relevant/irrelevant call hinges entirely on the
+                    grader being right at one threshold, and graders are not that well calibrated.
+                    <strong>Ambiguous</strong> is the honest label for most real evidence: a document describing the
+                    same problem for a different product version is neither correct nor irrelevant.</p>
+                <div class="benefit-grid">
+                    <div class="benefit-item">✅ <strong>Benefit:</strong> A bad retrieval never becomes a confident
+                        wrong answer. "Found nothing" becomes a real return value.</div>
+                    <div class="benefit-item">❌ <strong>Limit:</strong> The grader is a model too, so it drifts. Pin
+                        its exact model ID and check it against a frozen labelled set.</div>
+                </div>
+                <div class="deeper"><a href="high_efficiency_indexing.html">&rarr; CRAG / Self-RAG</a> &middot;
+                    <a href="hallucination_detection.html">Hallucinations in Production</a> &middot;
+                    <a href="agent_evals.html">Evaluating Agent Systems</a></div>
+            </div>
+        </section>
+
+        <section id="graph">
+            <div class="evolution-step">
+                <span class="step-label">Stage 4: Graph RAG</span>
+                <h2>Traversal Instead of Similarity</h2>
+                <p>Replaces the flat chunk index with an entity graph, so a query walks relationships rather than
+                    ranking by similarity. It answers questions whose answer spans several documents, where no single
+                    chunk contains the connection.</p>
                 <div class="mermaid-container">
                     <div class="mermaid">
                         graph LR
-                        R[Router] --> VEC[Vector: Facts]
-                        R --> KG[Graph: Relationship]
-                        VEC --> FUSE[Context Fusion]
-                        KG --> FUSE
-                        FUSE --> LLM
+                        Q[Query] --> ENT[Vector search:<br/>find entry node]
+                        ENT --> HOP[Walk edges,<br/>capped at 2 hops]
+                        HOP --> CTX[Related entities<br/>+ relationships]
+                        CTX --> LLM[LLM Generation]
                     </div>
                 </div>
+                <p>Two questions decide whether it is worth it. <strong>Do your queries traverse relationships?</strong>
+                    "What fixed something like this before" is a walk; "what does error 217 mean" is a lookup, and a
+                    graph adds nothing. <strong>How fast does the index go stale?</strong> Full Graph RAG's index is
+                    LLM-built, so a corpus that reissues on a release cadence pays that construction bill again every
+                    release.</p>
+                <p>The cheap version is often the right one: a small graph written as a side effect of work already
+                    happening, queried by a bounded recursive SQL walk in the database you already run. Zero LLM calls,
+                    nothing to rebuild, and no second system where a tenant filter can be forgotten.</p>
                 <div class="benefit-grid">
-                    <div class="benefit-item">✅ <strong>Benefit:</strong> Solves "Who is related to X?" complex queries.
-                    </div>
-                    <div class="benefit-item">❌ <strong>Limit:</strong> Significant maintenance overhead for the Graph.
-                    </div>
+                    <div class="benefit-item">✅ <strong>Benefit:</strong> Answers multi-hop relationship questions
+                        vector search cannot reach.</div>
+                    <div class="benefit-item">❌ <strong>Limit:</strong> A dedicated graph database is real operational
+                        overhead. Earn it before adopting it.</div>
                 </div>
+                <div class="deeper"><a href="graph_rag.html">&rarr; Graph RAG: when a graph beats an index, and when it
+                        does not</a> &middot; <a href="agent_memory_systems.html">Agent Memory Systems</a></div>
             </div>
         </section>
 
         <section id="agentic">
             <div class="evolution-step">
-                <span class="step-label">Stage 4: Agentic RAG</span>
+                <span class="step-label">Stage 5: Agentic RAG</span>
                 <h2>Autonomous Decision Loops</h2>
-                <p>The system is no longer a fixed pipeline. An LLM "Agent" decides which tools to use, when to search
-                    again, and when the answer is "Good Enough".</p>
+                <p>No longer a fixed pipeline. The model chooses which source to consult, what to ask it, and when the
+                    evidence is sufficient. Choosing the source <em>is</em> the judgement.</p>
                 <div class="mermaid-container">
                     <div class="mermaid">
                         graph TD
-                        T[Task] --> AG[Agent Loop]
-                        AG --> TOOL{Search?}
-                        TOOL -- Yes --> DB[(Internal DB)]
-                        TOOL -- Yes --> WEB[Web Search]
-                        DB --> EVAL[Eval Results]
-                        WEB --> EVAL
-                        EVAL -- "Incomplete" --> AG
-                        EVAL -- "Complete" --> ANS[Final Answer]
+                        T[Failure or task] --> AG[Choose tool and query]
+                        AG --> SRC{Which source?}
+                        SRC --> L[Logs: what happened]
+                        SRC --> D[Docs: what it means]
+                        SRC --> S[Skills: what to do]
+                        SRC --> P[Past runs: what worked]
+                        L --> EV[Grade the batch]
+                        D --> EV
+                        S --> EV
+                        P --> EV
+                        EV -- "3+ correct, or no new evidence, or iter 4" --> ANS[Typed action]
+                        EV -- "budget remains" --> AG
                     </div>
                 </div>
+                <p>Use it when sources are genuinely not interchangeable. A licence failure needs the docs and the log;
+                    a solver divergence needs the log and the playbook; a serialization bug is answered by past runs
+                    alone. Any fixed order guesses wrong about half the time, which is what makes the choice worth an
+                    LLM call. With one corpus, a fixed pipeline is cheaper and more predictable.</p>
                 <div class="benefit-grid">
-                    <div class="benefit-item">✅ <strong>Benefit:</strong> Handles open-ended research tasks perfectly.
-                    </div>
-                    <div class="benefit-item">❌ <strong>Limit:</strong> Highest cost; requires strict recursion bounds.
-                    </div>
+                    <div class="benefit-item">✅ <strong>Benefit:</strong> Handles heterogeneous, unreliable sources
+                        that no fixed pipeline orders correctly.</div>
+                    <div class="benefit-item">❌ <strong>Limit:</strong> Highest cost, and an unbounded loop is the most
+                        common production failure. The cap belongs in code, not in a prompt.</div>
                 </div>
+                <div class="deeper"><a href="agentic_rag.html">&rarr; Agentic RAG, with the loop contract and its
+                        cost</a> &middot; <a href="loop_engineering.html">Loop Engineering</a> &middot;
+                    <a href="sysdesign_saf_agent.html">Case study: agentic simulation runs</a></div>
             </div>
         </section>
 
@@ -204,16 +354,38 @@
             <h3>Expert Interview: Senior RAG Design</h3>
             <div class="qa-item">
                 <div class="question">Q: When is Naive RAG "enough" for a production app?</div>
-                <div class="answer">Naive RAG is sufficient when the data is homogeneous (e.g., all 1-page FAQs) and the
-                    queries have high keyword overlap with the content. If you are building a tool for engineers to
-                    search internal documentation, Naive RAG with good chunking often outperforms complex agents that
-                    "overthink" simple retrievals.</div>
+                <div class="answer">When the data is homogeneous (all one-page FAQs) and queries have high keyword
+                    overlap with the content. For engineers searching internal documentation, naive RAG with good
+                    chunking often outperforms complex agents that overthink simple retrievals. Spend your effort on
+                    chunking before you spend it on orchestration.</div>
             </div>
             <div class="qa-item">
-                <div class="question">Q: What is the "Silver Bullet" for RAG accuracy?</div>
-                <div class="answer"><strong>Reranking.</strong> If you could only implement one advanced feature, it
-                    should be a Cross-Encoder reranker. It consistently provides the highest ROI in accuracy versus
-                    implementation effort.</div>
+                <div class="question">Q: What is the "silver bullet" for RAG accuracy?</div>
+                <div class="answer">Reranking, with one caveat. A cross-encoder gives the highest accuracy return for
+                    the implementation effort, but only where the pre-filtered pool exceeds roughly 3x your final
+                    top-k. Below that it buys almost no new ordering and still costs you its latency and rate limit.
+                    Measure the pool size before adopting it as a default.</div>
+            </div>
+            <div class="qa-item">
+                <div class="question">Q: What does Corrective RAG actually add over Advanced RAG?</div>
+                <div class="answer">The ability to return nothing. Advanced RAG improves <em>which</em> chunks you
+                    retrieve; it never questions whether they answer the question. CRAG inserts a grader that can
+                    discard the whole slate, which converts the most dangerous RAG failure, a confident answer built
+                    from irrelevant chunks, into an explicit "no relevant evidence".</div>
+            </div>
+            <div class="qa-item">
+                <div class="question">Q: Is Agentic RAG strictly better than Graph RAG?</div>
+                <div class="answer">No, they solve different problems and compose. Agentic RAG decides <em>which
+                        source</em> to consult. Graph RAG is one of the sources it can consult, and it is the right one
+                    when the question traverses relationships over a small durable set. A well-built agent uses a
+                    scoped graph as one of several retrieval tools.</div>
+            </div>
+            <div class="qa-item">
+                <div class="question">Q: How do you stop an agentic loop from running away?</div>
+                <div class="answer">In code, never in a prompt. A hard iteration cap, a sufficiency threshold (stop at
+                    three items graded correct), and a no-new-evidence exit that terminates when two consecutive
+                    iterations return only already-seen chunks. Check the budget <em>before</em> each call rather than
+                    after, or you overspend by exactly one call every time.</div>
             </div>
         </section>
     </div>
