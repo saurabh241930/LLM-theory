@@ -205,134 +205,32 @@ pre.code-block {
     overflow-x: auto;
 }
 
-/* ---- ByteByteGo-style stage-band diagram ---- */
-.bbg {
-    border: 1px solid #d9dee5;
-    border-radius: 10px;
+/* ---- ByteByteGo-style SVG diagram ---- */
+.bbg-fig {
+    margin: 1.6em 0;
+    padding: 0;
+    border: 1px solid #e2e7ec;
+    border-radius: 12px;
     background: #fff;
-    margin: 1.5em 0;
     overflow: hidden;
 }
 
-.bbg-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 11px 16px;
-    background: #fff;
-    border-bottom: 1px solid #edf0f3;
-    font-weight: 700;
-    font-size: 1.02em;
-    color: #1a2433;
+.bbg-fig .bbg-svg {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
-.bbg-title::before {
-    content: "";
-    width: 5px;
-    height: 20px;
-    border-radius: 3px;
-    background: #2e7d4f;
-    flex-shrink: 0;
-}
-
-.bbg-band {
-    padding: 14px 16px 16px;
-    border-bottom: 1px solid #edf0f3;
-}
-
-.bbg-band:last-child {
-    border-bottom: 0;
-}
-
-.bbg-band.amber { background: #fdf6e3; }
-.bbg-band.blue  { background: #eef4ff; }
-.bbg-band.green { background: #eff8f2; }
-
-.bbg-stage {
-    font-size: .76em;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    color: #6b7785;
-    margin-bottom: 10px;
-}
-
-.bbg-flow {
-    display: flex;
-    align-items: stretch;
-    gap: 0;
-    /* A narrative flow must stay on one line; scroll rather than wrap mid-story. */
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-top: 4px;
-    scrollbar-width: thin;
-}
-
-.bbg-box {
-    background: #fff;
-    border: 1px solid #b9c4d1;
-    border-radius: 7px;
-    padding: 8px 11px 9px 32px;
-    font-size: .83em;
-    line-height: 1.38;
-    min-width: 96px;
-    max-width: 152px;
-    flex: 0 0 auto;
-    position: relative;
-}
-
-.bbg-box > b { display: block; color: #1a2433; }
-.bbg-box > span:not(.bbg-num) { color: #63707e; font-size: .9em; }
-
-.bbg-box .bbg-num {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #3366cc;
-    color: #fff;
-    font-size: .68em;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-}
-
-.bbg-arrow {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 0 6px;
-    min-width: 40px;
-    max-width: 74px;
-    flex: 0 0 auto;
-    color: #6b7785;
-    font-size: .68em;
-    line-height: 1.25;
-    text-align: center;
-}
-
-.bbg-arrow i {
-    font-style: normal;
-    font-size: 1.25em;
-    color: #8c98a6;
-    line-height: 1;
-}
-
-.bbg-note {
-    font-size: .8em;
+.bbg-fig figcaption {
+    font-size: .84em;
     color: #63707e;
-    margin-top: 10px;
-    font-style: italic;
+    padding: 10px 16px 13px;
+    border-top: 1px solid #eef1f4;
+    line-height: 1.5;
 }
 
-@media (max-width: 680px) {
-    .bbg-flow { flex-direction: column; overflow-x: visible; }
-    .bbg-box { max-width: none; width: 100%; }
-    .bbg-arrow { flex-direction: row; padding: 5px 0; min-width: 0; }
-    .bbg-arrow i { transform: rotate(90deg); }
+/* Below ~640px the labels stop being legible when scaled to fit, so scroll instead. */
+@media (max-width: 640px) {
+    .bbg-fig { overflow-x: auto; }
+    .bbg-fig .bbg-svg { width: 760px; }
 }
