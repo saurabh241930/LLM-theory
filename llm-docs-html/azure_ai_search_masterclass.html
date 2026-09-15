@@ -167,7 +167,7 @@ from azure.search.documents.models import VectorQuery, SemanticQuery
 client = SearchClient(endpoint, index_name, credential)
 
 results = client.search(
-    search_text="How to claim RSA benefits?",
+    search_text="AMG solver diverged at iteration 200",
     vector_queries=[VectorQuery(vector=query_emb, k_nearest_neighbors=50, fields="embedding")],
     # The Magic: Semantic Ranking
     query_type="semantic",

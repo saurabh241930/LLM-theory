@@ -191,22 +191,34 @@
                     class="decision-token">[IS_SUPPORTED]</span> to verify that every medicinal claim is
                 cross-referenced with the retrieved research papers before showing it to the doctor.</p>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>The dashboard uses <strong>RAPTOR (Recursive Hierarchical Indexing)</strong> to manage long sales
-                training sessions. Instead of searching through 8 hours of video transcripts, a manager can ask about
-                "General Coaching Trends." The system retrieves a <strong>High-Level Summary Node</strong> (Level 3)
-                that synthesizes common advisor mistakes across the entire month. This allows the RSA team to identify
-                training materials for the entire branch.</p>
+            <h2>Case Study: Corrective Grading Inside the Loop</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent</a> runs corrective grading inside every iteration of
+                its diagnosis loop rather than once at the end, so a bad retrieval never becomes a bad action.</p>
+
+            <p>Each retrieved candidate is graded <code>correct</code>, <code>ambiguous</code>, or
+                <code>incorrect</code>. Three verdicts rather than two, because a binary judgement hinges entirely on
+                the grader being right at one threshold, and <code>ambiguous</code> is the honest label for most real
+                evidence: a page describing the same failure family on a different product release is neither correct
+                nor irrelevant.</p>
+
+            <p>The loop stops on whichever fires first of three conditions: three items graded correct, two iterations
+                returning nothing new, or the iteration cap of four. Every exit produces a typed action, including the
+                one where nothing was found, which is what stops the model inventing an answer from an empty
+                retrieval.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: Abstract Summary Retrieval (RAPTOR)</span>
-                query = <span class="string">"What are the top 3 compliance risks this month?"</span>
-                <span class="comment"># Search higher levels of the summary tree</span>
-                summary_nodes = vector_db.search(query, filter={<span class="string">"level"</span>: 3}, k=1)
-                <span class="keyword">print</span>(f<span class="string">"Global Trend: {summary_nodes[0].text}"</span>)
+                <span class="comment"># Grade a batch per iteration, not one call per candidate</span>
+                graded = <span class="keyword">await</span> grade(failure, cands) <span class="comment"># one batched call</span>
+                kept += [g <span class="keyword">for</span> g <span class="keyword">in</span> graded <span class="keyword">if</span> g.grade != <span class="string">"incorrect"</span>]
+                <span class="keyword">if</span> sum(<span class="number">1</span> <span class="keyword">for</span> g <span class="keyword">in</span> kept <span class="keyword">if</span> g.grade == <span class="string">"correct"</span>) &gt;= MIN_CORRECT:
+                <span class="keyword">break</span> <span class="comment"># stop: sufficiency reached</span>
             </div>
 
-            <h2>Key Takeaways</h2>
+            <p>Batching matters for latency: eight candidates across four iterations is 32 sequential round trips if
+                graded individually, and four if batched, which is the difference between a 40-second diagnosis and a
+                7.5-second one. See <a href="loop_engineering.html">Loop Engineering</a>.</p>
+
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ CRAG protects against irrelevant local data with fallbacks.<br>
                 ✅ RAPTOR enables global context awareness across huge datasets.<br>

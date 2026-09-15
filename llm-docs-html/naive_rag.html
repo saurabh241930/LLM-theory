@@ -257,24 +257,27 @@
                     descriptions).</li>
             </ul>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>The <strong>RSA Sales QA Dashboard</strong> uses Naive RAG to verify if an advisor explained the
-                "Coverage Limits" accurately. When a user queries a specific call, the system retrieves the "Standard
-                RSA Policy" chunks from the Vector DB and provides them as context to the LLM. The model then compares
-                the advisor's spoken words (from transcription) against these "Ground Truth" fragments to see if the
-                advisor claimed the coverage was $500 when the policy actually states $250. This immediate "Grounding"
-                prevents the AI from hallucinating premium details.</p>
+            <h2>Case Study: Diagnosing a Failed Simulation Run</h2>
+            <p>In the <a href="sysdesign_saf_agent.html">SAF agent</a>, plain RAG is the baseline the Diagnoser starts
+                from and quickly outgrows. A step fails, the failure signature is embedded, the nearest solver-log
+                chunks come back, and the model is asked what went wrong. That works when the answer sits in one
+                passage, such as a licence checkout error whose meaning is written plainly in the log tail.</p>
+
+            <p>It breaks on the case that matters. Nearest-neighbour search always returns <em>k</em> results, including
+                when nothing relevant exists. Ask about an HPS queue timeout with nothing about HPS indexed and you get
+                the <em>k</em> least-unrelated chunks, probably about meshing, and an ungoverned model builds a
+                confident wrong answer from them. Plain RAG has no way to say "nothing here", which is why the design
+                adds a grader. See <a href="agentic_rag.html">Agentic RAG</a>.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: Baseline Policy Retrieval</span>
-                <span class="keyword">def</span> <span class="class-name">audit_agent_claim</span>(agent_statement):
-                relevant_policy = vector_db.similarity_search(agent_statement, k=1)
-                prompt = f<span class="string">"Policy: {relevant_policy}\nClaim: {agent_statement}\nIs
-                    compliant?"</span>
-                <span class="keyword">return</span> llm.generate(prompt)
+                <span class="comment"># Baseline: one retrieval, one generation, no way to refuse</span>
+                <span class="keyword">def</span> <span class="class-name">diagnose_plain</span>(failure):
+                chunks = vector_db.similarity_search(build_signature(failure), k=<span class="number">5</span>)
+                <span class="comment"># chunks is never empty, even when nothing matches</span>
+                <span class="keyword">return</span> llm.generate(f<span class="string">"Log: {chunks}\nWhy did this step fail?"</span>)
             </div>
 
-            <h2>Key Takeaways</h2>
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ RAG solves knowledge-cutoff issues in LLMs.<br>
                 ✅ Naive RAG follows a Retrieve → Build → Generate flow.<br>

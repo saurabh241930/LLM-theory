@@ -196,33 +196,33 @@
                 </tbody>
             </table>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>The <strong>RSA Sales QA Dashboard</strong> implements <strong>Smart Schema Retrieval</strong> to handle
-                its massive database of over 200 tables. When a user asks for "Top Performing Advisors," the system
-                doesn't just look at sales numbers. It uses <strong>Vector Search</strong> to link the query to both the
-                <code>Revenue</code> column in the <code>Sales</code> table and the <code>Compliance_Score</code> in the
-                <code>QA_Logs</code> table. If the query is ambiguous, the system asks: <em>"Do you mean top by total
-                    RSA revenue or top by compliance grade?"</em>, ensuring the generated SQL reflects the business's
-                actual intent.
-            </p>
+            <h2>Case Study: Handing the Planner a Schema Snapshot</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent</a> faces the same problem schema retrieval solves, in a
+                different shape. The Planner turns an engineer's sentence into an ordered plan, and it cannot be handed
+                the whole solution schema for every solution in the system.</p>
+
+            <p>Three inputs are retrieved and rendered into the prompt: the step and field schema for
+                <em>this</em> solution, which transactions are long-running, and a topological sort of the dependency
+                graph. All three come from reflection over the solution class at worker start, so the model sees a
+                rendering of what the system already knows rather than reverse-engineering it.</p>
+
+            <p>The payoff is the same as schema retrieval's: the model stops guessing at names. The difference is what
+                happens when it guesses anyway, because a hallucinated step name is caught by validation against that
+                same schema before a solver-hour is spent. See
+                <a href="structured_outputs_guardrails.html">Structured Outputs &amp; Guardrails</a>.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: Vector-Based Schema Retrieval</span>
-                <span class="keyword">from</span> langchain.chains.sql_database.query <span
-                    class="keyword">import</span> create_sql_query_chain
-
-                <span class="comment"># Retrieve ONLY relevant tables for the RSA context</span>
-                relevant_tables = table_vector_db.similarity_search(<span class="string">"RSA sales and compliance
-                    scores"</span>, k=3)
-                context_schema = db.get_table_info(table_names=[t.name <span class="keyword">for</span> t <span
-                    class="keyword">in</span> relevant_tables])
-
-                chain = create_sql_query_chain(llm, db)
-                response = chain.invoke({<span class="string">"question"</span>: <span class="string">"Top advisors by
-                    RSA revenue"</span>, <span class="string">"table_info"</span>: context_schema})
+                <span class="comment"># Schema snapshot rendered into the prompt, not guessed by the model</span>
+                <span class="comment">## Steps, fields and transactions</span>
+                <span class="comment">#   mesh: element_size: float, mesh_handle: EntityHandle</span>
+                <span class="comment">#         transactions: generate (long_running=True)</span>
+                <span class="comment">## Dependency order (topological)</span>
+                <span class="comment">#   geometry.geo_handle -> mesh.mesh_handle -> solve.results</span>
+                schema = SolutionSchema.for_solution(solution_id)
+                order = schema.dag.toplogical_sort()
             </div>
 
-            <h2>Key Takeaways</h2>
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ Dynamic Schema Retrieval is mandatory for large databases.<br>
                 ✅ Use Vector Search to map ambiguous queries to specific columns.<br>

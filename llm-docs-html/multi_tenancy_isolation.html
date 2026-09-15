@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Tenancy &amp; Data Isolation</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link rel="stylesheet" href="agent_docs.css?v=1">
+</head>
+
+<body>
+    <header>
+        <h1>Multi-Tenancy &amp; Data Isolation</h1>
+        <div class="subtitle">Predicates, partial indexes, and the test that proves it</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>Why this is an agent problem and not just a database one</h3>
+            <div class="answer">
+                <div class="one-liner">Retrieval hands the model text from a shared index. One missing predicate and
+                    another customer's data is in your prompt, with no error and no log line.</div>
+
+                <p>A conventional application leaks tenant data through a bug in a query. An agent can leak it through
+                    a bug in a query <em>and</em> through the model summarising what it retrieved, so the leak arrives
+                    as fluent prose rather than as a row in a table. Nothing about the output looks wrong.</p>
+
+                <p>The control has to be a predicate in the SQL. A prompt instruction like "only consider tenant A's
+                    documents" is a request, it fails silently under prompt injection, and it leaves no audit
+                    trail.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Tenant leakage from a missing filter</div>
+                    <p><strong>Symptom:</strong> one tenant's engineer sees a chunk containing another tenant's part
+                        number.</p>
+                    <p><strong>Cause:</strong> a query builder omitted the tenant predicate, or a row landed with a
+                        <code>NULL</code> tenant and matched nothing, which in SQL means it also failed to be excluded
+                        by a naive check.</p>
+                    <p><strong>Mitigation:</strong> make the column <code>NOT NULL</code> with an explicit
+                        <code>'__shared__'</code> sentinel for genuinely shared content, add row-level security so the
+                        predicate cannot be forgotten, and assert zero cross-hits on a two-tenant fixture in CI.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>The shape of a correct query</h3>
+            <div class="answer">
+                <div class="one-liner">Filter inside every branch of a hybrid query, before fusion, so the boundary
+                    cannot be bypassed by joining afterwards.</div>
+
+                <pre class="code-block"><code>WITH filtered AS (
+    SELECT chunk_id, content, uri, content_tsv, embedding
+    FROM   doc_chunks
+    WHERE  tenant_id IN ($5, '__shared__')      -- the isolation boundary
+      AND  solver = $2
+      AND  (solver_version = $3 OR solver_version IS NULL)
+      AND  embedding_model = $4
+      AND  valid_to IS NULL
+), kw AS (
+    SELECT chunk_id, RANK() OVER (...) AS rank
+    FROM   filtered, websearch_to_tsquery('simple', $6) q
+    WHERE  content_tsv @@ q LIMIT 100
+), vec AS (
+    SELECT chunk_id, RANK() OVER (...) AS rank
+    FROM   filtered ORDER BY embedding &lt;=&gt; $1::vector LIMIT 100
+)
+SELECT ... FROM kw FULL OUTER JOIN vec USING (chunk_id)
+JOIN filtered f USING (chunk_id) ORDER BY rrf_score DESC LIMIT 50;</code></pre>
+
+                <p>Both branches read from the same <code>filtered</code> CTE. A version that filtered only the vector
+                    branch would leak through keyword search, and a version that filtered after fusion would have
+                    already scanned rows it should never have touched.</p>
+
+                <p>The <code>'__shared__'</code> sentinel carries its weight. Product documentation is genuinely shared
+                    across tenants, and without an explicit value for that, the tempting implementation is a
+                    <code>NULL</code> meaning "applies to everyone". <code>NULL</code> comparisons in SQL are a
+                    reliable source of exactly this bug, so the sentinel makes the shared case explicit and lets the
+                    column be <code>NOT NULL</code>.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>The index problem nobody warns you about</h3>
+            <div class="answer">
+                <div class="one-liner">Approximate vector indexes apply the filter <em>after</em> the scan, so a
+                    selective predicate silently starves the result set.</div>
+
+                <p>"Filter first" is a logical ordering. The physical plan for an approximate nearest-neighbour index
+                    is usually the opposite: scan the index for the nearest candidates, then apply the predicate to
+                    what came back.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Search breadth</th>
+                        <th>Predicate selectivity</th>
+                        <th>Rows requested</th>
+                        <th>Rows actually returned</th>
+                    </tr>
+                    <tr>
+                        <td>40</td>
+                        <td>10% match</td>
+                        <td>40</td>
+                        <td>~4</td>
+                    </tr>
+                    <tr>
+                        <td>100</td>
+                        <td>10% match</td>
+                        <td>40</td>
+                        <td>~10</td>
+                    </tr>
+                    <tr>
+                        <td>40</td>
+                        <td>1% match (small tenant)</td>
+                        <td>40</td>
+                        <td>~0</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Post-filter starvation. Nothing errors; the answer is just thinner than you
+                    asked for.</div>
+
+                <p>Three fixes, matched to tenant size:</p>
+
+                <ul>
+                    <li><strong>Partial indexes</strong> for a handful of high-value discriminating values, so the
+                        index itself only contains matching rows.</li>
+                    <li><strong>Partitioning by tenant</strong> for large tenants, which makes their queries scan only
+                        their own partition.</li>
+                    <li><strong>Iterative scan</strong> as a bounded fallback for the long tail, capped by a maximum
+                        tuple count so a pathological query cannot become a table scan.</li>
+                </ul>
+
+                <p>The general rule: measure the returned row count against the requested count in production, per
+                    tenant. A small tenant getting four results where a large one gets forty is the signature, and it
+                    is invisible from application logs.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Isolation beyond retrieval</h3>
+            <div class="answer">
+                <div class="one-liner">Every store the agent writes to inherits the same requirement, including the
+                    ones that feel like internal plumbing.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Store</th>
+                        <th>Isolation control</th>
+                        <th>Easy to forget because</th>
+                    </tr>
+                    <tr>
+                        <td>Document chunks</td>
+                        <td>Tenant predicate in the CTE, row-level security</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr>
+                        <td>Memory graph</td>
+                        <td>Tenant filter at <em>every</em> level of the recursion</td>
+                        <td>Filtering entry feels sufficient; hop two crosses the line</td>
+                    </tr>
+                    <tr>
+                        <td>Object storage</td>
+                        <td>Prefix per tenant, scoped credentials</td>
+                        <td>URIs get passed around as opaque strings</td>
+                    </tr>
+                    <tr>
+                        <td>Traces</td>
+                        <td>Tenant as a span attribute; prompts stored by reference</td>
+                        <td>Telemetry has a different access list</td>
+                    </tr>
+                    <tr>
+                        <td>Eval fixtures</td>
+                        <td>Synthetic tenants only</td>
+                        <td>Real failures make convenient test data</td>
+                    </tr>
+                </table>
+                <div class="table-caption">The recursive walk and the trace backend are where this usually
+                    breaks.</div>
+
+                <p>The memory graph is the sharpest case. A recursive traversal that filters on tenant at entry and
+                    not inside the recursion will happily walk an edge into another tenant's subgraph on hop two. See
+                    <a href="agent_memory_systems.html">Agent Memory Systems</a>.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Proving it, rather than believing it</h3>
+            <div class="answer">
+                <div class="one-liner">Zero cross-tenant rows is a testable property, and the test belongs in CI.</div>
+
+                <ul>
+                    <li><strong>Two-tenant fixture.</strong> Seed distinctive content for tenant A and tenant B. Query
+                        as A using B's exact identifiers. Assert zero hits. Run it on every commit.</li>
+                    <li><strong>Fuzz the query surface.</strong> Generate queries from B's corpus and issue them as A.
+                        The distinctive-token approach catches the obvious break; fuzzing catches the partial one.</li>
+                    <li><strong>Assert the row count.</strong> A test that passes because retrieval returned nothing at
+                        all is not evidence of isolation. Check that A gets A's rows <em>and</em> none of B's.</li>
+                    <li><strong>Test deletion.</strong> Delete tenant B and assert nothing of B's survives anywhere,
+                        including the memory graph, object storage and traces.</li>
+                </ul>
+
+                <p>Deletion is worth calling out. Every node, edge and chunk carrying a tenant ID is what makes a
+                    deletion request an ordinary delete rather than a research project. A memory graph built without
+                    that column is a compliance problem discovered under time pressure.</p>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Isolation is a SQL predicate. A prompt instruction is not a control and leaves no audit trail.</li>
+                <li>Filter inside every branch of a hybrid query, before fusion.</li>
+                <li>Make the tenant column <code>NOT NULL</code> with an explicit shared sentinel; <code>NULL</code> is
+                    where this bug lives.</li>
+                <li>Approximate indexes post-filter. Watch returned-vs-requested row counts per tenant.</li>
+                <li>Filter at every level of a recursive traversal, not only at entry.</li>
+                <li>Assert zero cross-hits on a two-tenant fixture in CI, and check that the right rows still come
+                    back.</li>
+            </ul>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

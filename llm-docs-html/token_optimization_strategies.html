@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Optimization Strategies - LLM Theory</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <style>
+        .opt-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .opt-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .opt-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--wp-accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .tag-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .tag {
+            font-size: 0.75em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #f0f0f0;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .tag.cost {
+            background: #e6ffed;
+            color: #22863a;
+        }
+
+        .tag.latency {
+            background: #fff5f5;
+            color: #cb2431;
+        }
+
+        .tag.vram {
+            background: #f1f8ff;
+            color: #0366d6;
+        }
+
+        .diagram-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .kv-viz {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: flex-end;
+            height: 100px;
+        }
+
+        .kv-block {
+            width: 30px;
+            background: var(--wp-accent);
+            border-radius: 4px 4px 0 0;
+            transition: height 0.5s ease-out;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Token Optimization Masterclass</h1>
+        <div class="subtitle">Minimizing Latency, Slashing Costs, and Maxing Context</div>
+    </header>
+
+    <div class="content-wrapper">
+        <section id="intro">
+            <p>In production LLM systems, <strong>tokens are the primary currency</strong>. Every token processed incurs
+                GPU compute cost, consumes VRAM, and increases Time to First Token (TTFT). Optimizing token usage is not
+                just about saving money; it's about enabling capabilities that were previously impossible due to context
+                limits.</p>
+        </section>
+
+        <section id="prompt-compression">
+            <div class="opt-card">
+                <div class="opt-header">
+                    <div class="opt-icon">1</div>
+                    <h3>Prompt Compression (LLMLingua)</h3>
+                </div>
+                <div class="tag-row">
+                    <span class="tag cost">Cost Save: 50%</span>
+                    <span class="tag latency">Latency Redux: 30%</span>
+                </div>
+                <p>Not all words in a prompt carry the same <strong>Information Density</strong>. Natural language is
+                    redundant. Prompt compression uses a smaller, faster model to identify and remove tokens that have
+                    low "perplexity" or mutual information with the target task.</p>
+
+                <div class="code-block" style="background: #282c34; color: #abb2bf; padding: 15px; border-radius: 6px;">
+                    <span style="color: #61afef;">"The system should carefully analyze the provided user document and
+                        extract all the dates found within it."</span><br>
+                    <span style="color: #d19a66;">&darr; Compressed &darr;</span><br>
+                    <span style="color: #98c379;">"Analyze document extract dates."</span>
+                </div>
+                <p>Advanced techniques like <strong>LLMLingua-2</strong> can compress prompts by up to 20x while
+                    retaining 95% of original task performance.</p>
+            </div>
+        </section>
+
+        <section id="kv-caching">
+            <div class="opt-card">
+                <div class="opt-header">
+                    <div class="opt-icon">2</div>
+                    <h3>KV Cache Efficiency (GQA & MQA)</h3>
+                </div>
+                <p>Standard Multi-Head Attention (MHA) creates a unique Key-Value pair for every attention head. This
+                    causes the <strong>KV Cache</strong> to explode in VRAM as context grows.</p>
+
+                <table class="wiki-table">
+                    <tr>
+                        <th>Strategy</th>
+                        <th>Mechanism</th>
+                        <th>VRAM Benefit</th>
+                    </tr>
+                    <tr>
+                        <td><strong>MQA</strong></td>
+                        <td>Multi-Query Attention: All heads share 1 KV pair.</td>
+                        <td>Highest efficiency, slight quality hit.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GQA</strong></td>
+                        <td>Grouped-Query Attention: Sub-groups of heads share KV pairs.</td>
+                        <td>The "Sweet Spot" (used in Llama 3).</td>
+                    </tr>
+                </table>
+                <p><strong>Prefix Caching:</strong> Providers like OpenAI/Anthropic now cache "prefixes" (system
+                    prompts). If multiple requests share the first 2,000 tokens, the KV cache for those tokens is
+                    reused, slashing input costs by 50%.</p>
+            </div>
+        </section>
+
+        <section id="speculative-decoding">
+            <div class="opt-card">
+                <div class="opt-header">
+                    <div class="opt-icon">3</div>
+                    <h3>Speculative Decoding</h3>
+                </div>
+                <p>Large models are "compute-bound" but "memory-bandwidth limited" during generation. Speculative
+                    decoding uses a <strong>Draft Model</strong> (tiny) to guess the next 5-10 tokens, and then a
+                    <strong>Target Model</strong> (large) verifies them in a single forward pass.</p>
+                <div class="diagram-container">
+                    <div class="mermaid">
+                        graph TD
+                        A[Draft Model: GPT-4o-mini] -->|Guess 5 tokens| B{Target Model: GPT-4o}
+                        B -->|Correct| C[Accept All & Continue]
+                        B -->|Wrong| D[Reject & Correct 1 Token]
+                    </div>
+                </div>
+                <p>This can speed up inference by <strong>2x-3x</strong> without losing any output quality.</p>
+            </div>
+        </section>
+
+        <section id="context-pruning">
+            <div class="opt-card">
+                <div class="opt-header">
+                    <div class="opt-icon">4</div>
+                    <h3>Context Pruning & Message Windowing</h3>
+                </div>
+                <p>For long-running agents, context eventually hits the limit. Use these strategies:</p>
+                <ul>
+                    <li><strong>Sliding Window:</strong> Keep only the N most recent messages.</li>
+                    <li><strong>Summarization:</strong> Periodically compress old history into a single summary block.
+                    </li>
+                    <li><strong>Semantic Pruning:</strong> In RAG, only include chunks that cross a certain similarity
+                        threshold, rather than a fixed "Top-K".</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="cheatsheet">
+            <h2>The Token ROI Cheatsheet</h2>
+            <table class="wiki-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Optimization to Apply</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>High Input Cost</td>
+                        <td>Prompt Compression, Prefix Caching</td>
+                    </tr>
+                    <tr>
+                        <td>High Output Cost</td>
+                        <td>Constraint-based decoding (JSON mode)</td>
+                    </tr>
+                    <tr>
+                        <td>Low TPS (Tokens/Sec)</td>
+                        <td>Speculative Decoding, KV Cache Quantization</td>
+                    </tr>
+                    <tr>
+                        <td>VRAM OOM Errors</td>
+                        <td>GQA, PagedAttention (vLLM)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

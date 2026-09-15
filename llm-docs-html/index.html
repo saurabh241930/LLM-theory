@@ -59,12 +59,14 @@
     <div class="contents-container">
         <header class="hub-header">
             <h1>LLM Theory & Production RAG</h1>
-            <div class="subtitle">Complete Curriculm for Roadside Assistance (RSA) Sales QA Dashboards</div>
+            <div class="subtitle">Complete curriculum, from embeddings to production agents</div>
         </header>
 
         <p>This digital textbook covers the end-to-end journey of Large Language Models, from foundational embeddings to
-            hyperscale RAG architectures. Each chapter is grounded in a consistent real-world case study: the
-            <strong>RSA Sales QA Dashboard</strong>.
+            hyperscale RAG architectures and durable agent systems. Chapters share one running case study: an
+            <a href="sysdesign_saf_agent.html"><strong>agent that runs long simulation jobs on Ansys SAF</strong></a>,
+            where a four-hour solve, a day-long approval, and six distinct failure modes force every hard part of agent
+            engineering to show up for a concrete reason.
         </p>
 
 
@@ -640,8 +642,8 @@
             </li>
             <li class="chapter-item">
                 <span class="chapter-number">33</span>
-                <a href="evaluation_ragas_langsmith.html" class="chapter-link">Evaluation Hub</a>
-                <span class="chapter-desc">Testing and monitoring LLM applications.</span>
+                <a href="agent_evals.html" class="chapter-link">Evaluating Agent Systems</a>
+                <span class="chapter-desc">The eval pyramid, five metrics with targets, and grader drift.</span>
             </li>
             <li class="chapter-item">
                 <span class="chapter-number">34</span>
@@ -661,7 +663,82 @@
             <li class="chapter-item">
                 <span class="chapter-number">37</span>
                 <a href="mcp_protocol.html" class="chapter-link">Model Context Protocol (MCP)</a>
-                <span class="chapter-desc">The open standard for connecting AI models to data sources and tools.</span>
+                <span class="chapter-desc">Implementation guide for connecting AI models to data sources and
+                    tools.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">38</span>
+                <a href="token_optimization_strategies.html" class="chapter-link">Token Optimization Strategies</a>
+                <span class="chapter-desc">Advanced techniques: Speculative decoding, KV caching, and prompt
+                    compression.</span>
+            </li>
+        </ul>
+
+        <h2 class="category-title"
+            style="margin-top: 40px; border-bottom: 2px solid var(--wp-accent); padding-bottom: 5px; color: var(--wp-title-text);">
+            AGENT ENGINEERING</h2>
+        <ul class="chapter-list">
+            <li class="chapter-item">
+                <span class="chapter-number">1</span>
+                <a href="sysdesign_saf_agent.html" class="chapter-link">Case Study: Agentic Simulation Runs</a>
+                <span class="chapter-desc">The running example. Durable orchestrator, three bounded LLM roles, and the
+                    numbers behind them.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">2</span>
+                <a href="context_engineering.html" class="chapter-link">Context Engineering</a>
+                <span class="chapter-desc">Ordering by volatility, progressive disclosure, context rot, trust
+                    regions.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">3</span>
+                <a href="agent_skills.html" class="chapter-link">Agent Skills</a>
+                <span class="chapter-desc">SKILL.md, loading by tag, versioning, and skill vs tool vs resource.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">4</span>
+                <a href="tool_design.html" class="chapter-link">Tool Design</a>
+                <span class="chapter-desc">Typed schemas, errors that guide the next call, idempotency in the
+                    wrapper.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">5</span>
+                <a href="loop_engineering.html" class="chapter-link">Loop Engineering</a>
+                <span class="chapter-desc">Iteration caps, three stop conditions, budgets checked before the
+                    call.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">6</span>
+                <a href="agentic_workflows.html" class="chapter-link">Durable Execution</a>
+                <span class="chapter-desc">Replay determinism, idempotency keys, signals and timers, claim-check.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">7</span>
+                <a href="agent_memory_systems.html" class="chapter-link">Memory Systems</a>
+                <span class="chapter-desc">Working vs run vs long-term memory, the memory graph, poisoned
+                    write-back.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">8</span>
+                <a href="structured_outputs_guardrails.html" class="chapter-link">Structured Outputs &amp;
+                    Guardrails</a>
+                <span class="chapter-desc">Constrained decoding, closed enums, allow-lists, action-class gates.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">9</span>
+                <a href="agent_sandboxes.html" class="chapter-link">Sandboxes &amp; Code Execution</a>
+                <span class="chapter-desc">Isolation levels, credential scope, and output as untrusted input.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">10</span>
+                <a href="extended_thinking.html" class="chapter-link">Extended Thinking</a>
+                <span class="chapter-desc">Test-time compute, where reasoning budgets pay, and where they burn
+                    money.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">11</span>
+                <a href="agent_evals.html" class="chapter-link">Evaluating Agent Systems</a>
+                <span class="chapter-desc">The eval pyramid, five metrics with targets, grader drift.</span>
             </li>
         </ul>
 
@@ -671,36 +748,50 @@
         <ul class="chapter-list">
             <li class="chapter-item">
                 <span class="chapter-number">1</span>
+                <a href="retrieval_funnel.html" class="chapter-link">The Retrieval Funnel</a>
+                <span class="chapter-desc">Filter, hybrid, RRF, rerank, grade, with candidate counts and per-stage
+                    cost.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">2</span>
+                <a href="document_parsing_ingestion.html" class="chapter-link">Parsing &amp; Ingestion</a>
+                <span class="chapter-desc">Parsers per document type, tables that survive, incremental re-index.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">3</span>
+                <a href="embedding_migration_versioning.html" class="chapter-link">Embedding Migration</a>
+                <span class="chapter-desc">Dual-write cutover, corpus versioning, and index drift.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">4</span>
                 <a href="rag_query_expansion.html" class="chapter-link">Query Expansion</a>
                 <span class="chapter-desc">PRF, synonyms, and LLM-expansion vs HyDE.</span>
             </li>
             <li class="chapter-item">
-                <span class="chapter-number">2</span>
+                <span class="chapter-number">5</span>
                 <a href="embedding_finetuning.html" class="chapter-link">Embedding Fine-Tuning</a>
                 <span class="chapter-desc">Contrastive learning, triplet loss, and hard negatives.</span>
             </li>
             <li class="chapter-item">
-                <span class="chapter-number">3</span>
+                <span class="chapter-number">6</span>
                 <a href="metadata_filtering.html" class="chapter-link">Metadata Filtering</a>
                 <span class="chapter-desc">Pre-filter vs post-filter, and HNSW payload connections.</span>
             </li>
             <li class="chapter-item">
-                <span class="chapter-number">4</span>
+                <span class="chapter-number">7</span>
                 <a href="colbert_retrieval.html" class="chapter-link">ColBERT & Multi-Vector</a>
                 <span class="chapter-desc">Late interaction, token-level embeddings, and MaxSim scoring.</span>
             </li>
             <li class="chapter-item">
-                <span class="chapter-number">5</span>
+                <span class="chapter-number">8</span>
                 <a href="rag_vs_long_context.html" class="chapter-link">RAG vs Long Context</a>
                 <span class="chapter-desc">Lost in the Middle, NIAH evals, and Gemini 1M.</span>
             </li>
             <li class="chapter-item">
-                <span class="chapter-number">6</span>
+                <span class="chapter-number">9</span>
                 <a href="parent_document_retrieval.html" class="chapter-link">Parent Document Retrieval</a>
                 <span class="chapter-desc">Small-to-big retrieval to solve the chunking paradox.</span>
             </li>
-        </ul>
-
         </ul>
 
         <h2 class="category-title"
@@ -746,11 +837,28 @@
             </li>
             <li class="chapter-item">
                 <span class="chapter-number">5</span>
-                <a href="hallucination_detection.html" class="chapter-link">Hallucination Detection Beyond RAG</a>
-                <span class="chapter-desc">Self-consistency, Factuality scoring, SelfCheckGPT, and logprobs.</span>
+                <a href="model_routing_cost.html" class="chapter-link">Model Routing &amp; Cost Engineering</a>
+                <span class="chapter-desc">Routing by job, prefix-cache mechanics, and budgets that survive a
+                    crash.</span>
             </li>
             <li class="chapter-item">
                 <span class="chapter-number">6</span>
+                <a href="hallucination_detection.html" class="chapter-link">Hallucinations in Production</a>
+                <span class="chapter-desc">Six failure classes and the structural fix for each.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">7</span>
+                <a href="prompt_injection_defense.html" class="chapter-link">Prompt Injection Defence</a>
+                <span class="chapter-desc">Indirect injection through retrieved text, and why filters are not the
+                    fix.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">8</span>
+                <a href="multi_tenancy_isolation.html" class="chapter-link">Multi-Tenancy &amp; Isolation</a>
+                <span class="chapter-desc">SQL predicates, post-filter starvation, and the two-tenant CI test.</span>
+            </li>
+            <li class="chapter-item">
+                <span class="chapter-number">9</span>
                 <a href="llm_deployment_safety.html" class="chapter-link">A/B Testing & Deployment Safety</a>
                 <span class="chapter-desc">Shadow deployments, Canary releases, and Evals on Golden Datasets.</span>
             </li>
@@ -864,9 +972,9 @@
             </li>
             <li class="chapter-item">
                 <span class="chapter-number">S2</span>
-                <a href="sysdesign_agentic_rag_rsa.html" class="chapter-link">Designing a RSA NLP Dashboard</a>
-                <span class="chapter-desc">Enterprise Agentic RAG: Tiered SLM Router, SQL gen, and News/Excel
-                    tools.</span>
+                <a href="sysdesign_saf_agent.html" class="chapter-link">Agentic Simulation Runs (SAF)</a>
+                <span class="chapter-desc">Durable orchestrator, three bounded LLM roles, agentic diagnosis at ~$0.046
+                    per pass.</span>
             </li>
             <li class="chapter-item">
                 <span class="chapter-number">S3</span>

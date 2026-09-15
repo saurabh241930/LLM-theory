@@ -346,33 +346,31 @@
                     valuable window space.</li>
             </ul>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>During the auditing of <strong>Roadside Assistance (RSA)</strong> sales calls, the choice of tokenizer is
-                critical. Insurance policies contain unique alpha-numeric codes like <code>RSA-24-PREM-DISC</code>. A
-                sub-word tokenizer like <strong>tiktoken</strong> ensures these aren't broken into meaningless fragments
-                (e.g., ["R", "SA", "-", "24"]), allowing the model to recognize them as distinct insurance products.
-                Furthermore, because call transcripts are long (30+ minutes), the 128k context window of models like
-                GPT-4o allows the dashboard to "read" the entire conversation at once without losing the beginning of
-                the sale when the mandatory disclosures are usually made.</p>
+            <h2>Case Study: An 84,000-Line Log That Never Enters Context</h2>
+            <p>A Fluent solver log from the <a href="sysdesign_saf_agent.html">SAF agent</a> runs to roughly 84,000
+                lines, and about 95% of it is iteration-by-iteration residual tables that are near-identical to each
+                other. Putting that in a context window is both impossible and pointless.</p>
+
+            <p>Two mechanisms keep it out. The log is chunked structure-aware at ingest, so what gets indexed is the
+                header, a window anchored on each error, a computed summary of the residual history, and the tail. The
+                60,000 numeric rows are never indexed, because no query is ever answered by finding one row of a
+                residual table.</p>
+
+            <p>Second, the log itself is passed as an object-storage URI rather than as text. The model reasons about a
+                reference and calls a tool when it needs content. The same claim-check pattern covers plans and
+                approval payloads, which is what keeps a long run from hitting a payload limit. See
+                <a href="chunking_strategies.html">Chunking In Depth</a>.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: Managing Long Transcripts</span>
-                <span class="keyword">import</span> tiktoken
-
-                tokenizer = tiktoken.encoding_for_model(<span class="string">"gpt-4o"</span>)
-                transcript = <span class="string">"Advisor: Welcome to RSA Sales... [30 minutes of dialogue] ...End of
-                    Call."</span>
-                token_count = <span class="keyword">len</span>(tokenizer.encode(transcript))
-
-                <span class="keyword">if</span> token_count > 120000:
-                <span class="keyword">print</span>(<span class="string">"Transcript exceeds standard context. Applying
-                    summarization window."</span>)
-                <span class="keyword">else</span>:
-                <span class="keyword">print</span>(f<span class="string">"Audit safe: {token_count} tokens
-                    used."</span>)
+                <span class="comment"># The model sees a reference and a summary, never the bytes</span>
+                <span class="keyword">class</span> <span class="class-name">StepResult</span>(BaseModel):
+                status: Literal[<span class="string">"completed"</span>, <span class="string">"failed"</span>, <span class="string">"aborted"</span>, <span class="string">"skipped"</span>]
+                log_ref: str | <span class="keyword">None</span> = <span class="keyword">None</span> <span class="comment"># object-storage URI of the solver log</span>
+                duration_s: float
+                cost_usd: float = <span class="number">0.0</span>
             </div>
 
-            <h2>Key Takeaways</h2>
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ Tokens are sub-word units, not whole words.<br>
                 ✅ Context windows define the model's operational memory depth.<br>

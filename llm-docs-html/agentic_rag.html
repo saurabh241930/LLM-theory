@@ -6,67 +6,252 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agentic RAG</title>
     <link rel="stylesheet" href="wikipedia.css?v=2">
-    <style>
-        .qa-container {
-            margin-bottom: 2em;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-left: 4px solid var(--wp-accent);
-            border-radius: 4px;
-        }
-
-        .qa-container h3 {
-            margin-top: 0;
-            color: var(--wp-title-text);
-        }
-
-        .qa-container .answer {
-            margin-top: 10px;
-        }
-
-        .one-liner {
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-    </style>
+    <link rel="stylesheet" href="agent_docs.css?v=1">
 </head>
 
 <body>
     <header>
         <h1>Agentic RAG</h1>
-        <div class="subtitle">Autonomous Routing and Tool Use</div>
+        <div class="subtitle">When choosing the source is itself the judgement</div>
     </header>
     <div class="content-wrapper">
 
-        <div class="qa-container" id="agentic-rag">
-            <h3>How does Agentic RAG change the retrieval paradigm?</h3>
+        <div class="qa-container">
+            <h3>The RAG family, and what each rung adds</h3>
             <div class="answer">
-                <div class="one-liner">Instead of a static sequence, an LLM Agent dynamically decides what, when, and
-                    how many times to retrieve information.</div>
+                <div class="one-liner">Plain RAG retrieves once. Corrective RAG grades what came back. Agentic RAG
+                    lets the model choose the source, the query, and when to stop.</div>
 
-                <p>Agentic RAG provides the LLM with a <strong>Routing Agent</strong> and access to multiple tools (SQL
-                    DB, Vector DB, Web Search).</p>
-                <h4>Agent Tool Options:</h4>
-                <ul>
-                    <li><strong>Vector Store Tool:</strong> For conceptual or unstructured text queries.</li>
-                    <li><strong>SQL Tool:</strong> For aggregations and relational data.</li>
-                    <li><strong>Web Search Tool:</strong> For real-time context missing from the DB.</li>
-                </ul>
-                <div class="mermaid">
-                    flowchart TD
-                    Q["User Query"] --> Agent["LLM Router / Agent"]
-                    Agent -- "Decides Needs SQL" --> SQL[("SQL DB")]
-                    Agent -- "Decides Needs Concepts" --> Vector[("Vector DB")]
-                    Agent -- "Needs Web Info" --> Web["Tavily / Google Search"]
-
-                    SQL --> Eval["Agent Evaluates Result"]
-                    Vector --> Eval
-                    Web --> Eval
-                    Eval -- "Information Sufficient" --> Output["Final Answer"]
-                    Eval -- "Needs more info" --> Agent
+                <table class="spec">
+                    <tr>
+                        <th>Approach</th>
+                        <th>What it adds</th>
+                        <th>LLM calls per query</th>
+                        <th>Best for</th>
+                    </tr>
+                    <tr>
+                        <td>Plain RAG</td>
+                        <td>Retrieval before generation</td>
+                        <td>1</td>
+                        <td>The answer sits in one passage</td>
+                    </tr>
+                    <tr>
+                        <td>Corrective RAG (CRAG)</td>
+                        <td>A grader between retrieve and generate; refine or rewrite on weak evidence</td>
+                        <td>~3 batched</td>
+                        <td>Refusing to answer from junk</td>
+                    </tr>
+                    <tr>
+                        <td>Agentic RAG</td>
+                        <td>Model picks the tool, the query, and when to stop</td>
+                        <td>iterations x (choice + grade) + 1 proposal; ceiling 9</td>
+                        <td>Heterogeneous, unreliable sources</td>
+                    </tr>
+                    <tr>
+                        <td>Graph RAG</td>
+                        <td>Entity graph traversed by relationship instead of similarity</td>
+                        <td>1 SQL walk, 0 LLM calls when scoped</td>
+                        <td>Relationships over a small durable set</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Each rung costs more. Buy a rung only when the one below actually fails.
                 </div>
 
+                <p>Agentic RAG earns its cost over sources that are not interchangeable. It is the wrong choice when
+                    one corpus holds the answer, because then you are paying a model to choose between one option.</p>
             </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>The test: is choosing the source part of the diagnosis?</h3>
+            <div class="answer">
+                <div class="one-liner">If a fixed pipeline order would be right most of the time, use a fixed
+                    pipeline. If the right source depends on what went wrong, the choice is the judgement.</div>
+
+                <p>The running example makes the test concrete. The Diagnoser has four retrieval tools, and each
+                    answers a different question:</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Tool</th>
+                        <th>Answers</th>
+                        <th>Right when</th>
+                    </tr>
+                    <tr>
+                        <td><code>search_logs</code></td>
+                        <td>What happened?</td>
+                        <td>A serialization bug; the evidence is in this run's own log</td>
+                    </tr>
+                    <tr>
+                        <td><code>search_docs</code></td>
+                        <td>What does this mean?</td>
+                        <td>A licence failure needs the authoritative error-code semantics</td>
+                    </tr>
+                    <tr>
+                        <td><code>load_skill</code></td>
+                        <td>What do we do?</td>
+                        <td>A solver divergence needs the operational playbook</td>
+                    </tr>
+                    <tr>
+                        <td><code>recall_similar_failures</code></td>
+                        <td>What worked last time?</td>
+                        <td>A signature seen before with a known-good remediation</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Four sources, no fixed order that is right more than about half the
+                    time.</div>
+
+                <p>A licence checkout failure needs the docs and the log, and skills add nothing. A solver divergence
+                    needs the log and the skill, and the docs are noise. A serialization bug is answered by past runs
+                    alone. Any fixed order guesses wrong roughly half the time, and that is what makes the choice worth
+                    an LLM call.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>The loop contract</h3>
+            <div class="answer">
+                <div class="one-liner">Four iterations, one tool-choice call and one batched grade call each, one
+                    final proposal. Nine LLM calls, enforced in Python.</div>
+
+                <div class="mermaid">
+                    sequenceDiagram
+                    participant W as Workflow
+                    participant D as diagnose activity
+                    participant T as Retrieval tools
+                    participant G as Grader (Haiku 4.5)
+                    participant P as Proposer (Sonnet 5)
+                    W->>D: Failure record
+                    loop up to 4 iterations
+                    D->>D: choose tool + query
+                    D->>T: call it
+                    T-->>D: Evidence list
+                    D->>G: grade batch (one call)
+                    G-->>D: GradedEvidence list
+                    end
+                    D->>P: propose(kept evidence)
+                    P-->>D: RemediationAction
+                    D-->>W: RemediationAction
+                </div>
+
+                <p>Three conditions stop the loop, whichever fires first: at least three items graded
+                    <code>correct</code>, two consecutive iterations returning nothing outside the already-seen set, or
+                    the iteration cap. Every exit produces a typed action, including the one where nothing was
+                    found.</p>
+
+                <p>The grading step is the corrective part, and it runs inside every iteration rather than once at the
+                    end. Each candidate is graded <code>correct</code>, <code>ambiguous</code>, or
+                    <code>incorrect</code>.</p>
+
+                <div class="teaching">
+                    <div class="tp-title">Why three verdicts instead of relevant/irrelevant</div>
+                    <p>A binary verdict hinges entirely on the grader being right at one threshold, and graders are
+                        not perfectly calibrated. Three grades let the upper threshold clear an answer, the lower one
+                        discard it, and the middle absorb the disagreement.</p>
+                    <p><code>ambiguous</code> is the honest label for most real diagnoses. A 2023R1 page that is
+                        topically near-identical to a 2025R2 failure is not irrelevant and is not correct; a version
+                        mismatch alone downgrades it.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>What it costs</h3>
+            <div class="answer">
+                <div class="one-liner">~$0.046 typical, ~$0.11 worst case, against a solver job measured in
+                    cluster-hours.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Role</th>
+                        <th>Model</th>
+                        <th>Calls</th>
+                        <th>Cost</th>
+                    </tr>
+                    <tr>
+                        <td>Tool choice</td>
+                        <td>Haiku 4.5</td>
+                        <td>&le; 4</td>
+                        <td>~$0.004</td>
+                    </tr>
+                    <tr>
+                        <td>Grade (batched)</td>
+                        <td>Haiku 4.5</td>
+                        <td>&le; 4</td>
+                        <td>~$0.068 worst case</td>
+                    </tr>
+                    <tr>
+                        <td>Proposal</td>
+                        <td>Sonnet 5</td>
+                        <td>&le; 1</td>
+                        <td>~$0.027</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ceiling</strong></td>
+                        <td>&mdash;</td>
+                        <td><strong>9</strong></td>
+                        <td><strong>~$0.11 worst case</strong></td>
+                    </tr>
+                </table>
+                <div class="table-caption">The expensive model proposes once; the cheap model does the high-volume
+                    judgement.</div>
+
+                <p>The latency budget is 60 seconds, which is generous against a failure on a job measured in hours.
+                    The honest framing is never "how do we make diagnosis faster" but "how do we spend 60 seconds on
+                    accuracy".</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Where it goes wrong</h3>
+            <div class="answer">
+                <div class="one-liner">Three failure modes, all of them cheap to prevent and expensive to
+                    discover late.</div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Runaway iterations</div>
+                    <p><strong>Symptom:</strong> the loop rewrites its query repeatedly, never converges, and burns
+                        tokens without producing a result.</p>
+                    <p><strong>Cause:</strong> an unbounded rewrite can wander away from the original failure.</p>
+                    <p><strong>Mitigation:</strong> the cap is enforced in code, not requested in a prompt. Tracking
+                        seen evidence IDs stops a rewrite that keeps returning the same chunks. Escalation on
+                        exhaustion is a <em>result</em>, not a bug: sometimes the corpora genuinely do not cover the
+                        failure.</p>
+                </div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Prompt injection through retrieved text</div>
+                    <p><strong>Symptom:</strong> a diagnosis recommends downloading every project file, or some other
+                        unrelated action.</p>
+                    <p><strong>Cause:</strong> a solver log or shared runbook contains a line that reads as an
+                        instruction, and the model treats it as one.</p>
+                    <p><strong>Mitigation:</strong> state in both the grader and proposal prompts that retrieved text
+                        is data, wrap it in delimited labelled blocks, and rely on the closed remediation enum as the
+                        real backstop. Injected text cannot name an action that does not exist.</p>
+                </div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Grader drift</div>
+                    <p><strong>Symptom:</strong> the escalation rate creeps upward over weeks with no code change.</p>
+                    <p><strong>Cause:</strong> the grader model moved behind a floating alias, or a prompt edit shifted
+                        the boundary between <code>ambiguous</code> and <code>incorrect</code>.</p>
+                    <p><strong>Mitigation:</strong> pin exact model IDs. Keep a frozen labelled set and run it in CI on
+                        every prompt or model change; alert on a shift in the verdict distribution.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Use agentic RAG when choosing the source is part of the answer. With one corpus, a fixed pipeline
+                    is cheaper and more predictable.</li>
+                <li>Bound the loop in code: iteration cap, sufficiency threshold, and a no-new-evidence exit.</li>
+                <li>Grade inside every iteration rather than once at the end, so a bad retrieval never becomes a bad
+                    action.</li>
+                <li>Three verdicts beat two. <code>ambiguous</code> is the honest label for most real evidence.</li>
+                <li>Finding nothing is a typed escalation, not an exception and not a guess.</li>
+            </ul>
         </div>
 
     </div>

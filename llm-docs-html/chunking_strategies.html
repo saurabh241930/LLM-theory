@@ -4,269 +4,293 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masterclass: Advanced Chunking Strategies (Series 2)</title>
-    <link rel="stylesheet" href="wikipedia.css?v=3">
-    <style>
-        .mastery-container {
-            padding: 20px;
-            background: #fdfdfd;
-            border: 1px solid #e1e4e8;
-            border-radius: 8px;
-            margin-bottom: 30px;
-        }
-
-        .theory-highlight {
-            border-left: 5px solid #10b981;
-            background: #f0fdf4;
-            padding: 20px;
-            margin: 20px 0;
-        }
-
-        /* Chunking Visualizer */
-        .chunk-animation-container {
-            background: #1a1a1a;
-            color: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            margin: 30px 0;
-            font-family: 'Courier New', monospace;
-        }
-
-        .text-stream {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            background: #222;
-            padding: 15px;
-            border-radius: 6px;
-            line-height: 1.6;
-            margin-bottom: 20px;
-        }
-
-        .word {
-            padding: 2px 4px;
-            transition: all 0.3s;
-            color: #aaa;
-        }
-
-        .word.chunk-1 {
-            color: #60a5fa;
-            background: rgba(96, 165, 250, 0.15);
-            border-bottom: 2px solid #60a5fa;
-        }
-
-        .word.chunk-2 {
-            color: #f472b6;
-            background: rgba(244, 114, 182, 0.15);
-            border-bottom: 2px solid #f472b6;
-        }
-
-        .word.chunk-3 {
-            color: #fbbf24;
-            background: rgba(251, 191, 36, 0.15);
-            border-bottom: 2px solid #fbbf24;
-        }
-
-        pre {
-            background: #2d2d2d !important;
-            color: #ccc !important;
-            padding: 15px;
-            border-radius: 8px;
-            overflow-x: auto;
-        }
-
-        .code-tabs {
-            display: flex;
-            gap: 1px;
-            margin-bottom: -1px;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            background: #e1e4e8;
-            cursor: pointer;
-            border-radius: 5px 5px 0 0;
-            border: 1px solid #d1d5da;
-            font-weight: bold;
-        }
-
-        .tab.active {
-            background: #2d2d2d;
-            color: white;
-            border-bottom: none;
-        }
-
-        .code-content {
-            display: none;
-        }
-
-        .code-content.active {
-            display: block;
-        }
-
-        .benefit-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px 0;
-        }
-
-        .benefit-title {
-            font-weight: bold;
-            color: #10b981;
-            margin-bottom: 5px;
-        }
-    </style>
+    <title>Chunking In Depth</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link rel="stylesheet" href="agent_docs.css?v=1">
 </head>
 
 <body>
     <header>
-        <h1>Masterclass: Advanced Chunking Strategies</h1>
-        <div class="subtitle">Semantic Splitting, Late Chunking, and Parent-Child Indexing</div>
+        <h1>Chunking In Depth</h1>
+        <div class="subtitle">Different sources need different chunkers in the same system</div>
     </header>
-
     <div class="content-wrapper">
-        <section id="theory">
-            <h2>1. Technical Deep-Dive: The "Context-vs-Precision" Conflict</h2>
-            <p>Chunking is the most underrated lever in RAG tuning. If your chunks are too small, the model loses the
-                "Big Picture". If they are too large, you fill the context window with "Noise" and dilute the relevant
-                answer.</p>
 
-            <div class="theory-highlight">
-                <h3>The Hierarchy of Splitting</h3>
-                <ol>
-                    <li><strong>Fixed-Size:</strong> Constant token count. Fast, but dangerous (splits logical
-                        thoughts).</li>
-                    <li><strong>Recursive Character:</strong> Matches paragraphs &rarr; sentences &rarr; words. Best
-                        general purpose.</li>
-                    <li><strong>Semantic:</strong> Uses embeddings to find natural "topic shifts". Breaks when the
-                        similarity between sentence <code>N</code> and <code>N+1</code> drops below a percentile.</li>
-                    <li><strong>Late Chunking:</strong> Embedding the <em>entire</em> document first, then chunking the
-                        resulting token-level embeddings. This preserves global context within the local chunk vector.
-                    </li>
-                </ol>
+        <div class="qa-container">
+            <h3>The question that matters is not "what size"</h3>
+            <div class="answer">
+                <div class="one-liner">A chunk is the unit you are willing to retrieve and show. Its right shape comes
+                    from the source's structure, not from a token count you picked once.</div>
+
+                <p>Most chunking advice optimises a single global parameter: 512 tokens, 1,000 tokens, 15% overlap.
+                    That framing assumes one corpus of one kind of document. Real retrieval systems ingest several
+                    sources with genuinely different structure, and a chunker tuned for prose destroys a stack
+                    trace.</p>
+
+                <p>Two properties decide the chunker for a source. <strong>Does the source have exploitable
+                    structure?</strong> Headings, log line prefixes, and function boundaries are free segmentation
+                    signals; flat prose has none. <strong>Is a fragment interpretable alone?</strong> A paragraph
+                    saying "set it to 0.5" is useless without knowing what "it" is and which product is being
+                    discussed.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="animation">
-            <h2>2. Visualizing Split Strategies</h2>
-            <p>Compare how <strong>Fixed-Size</strong> (mechanical) vs <strong>Semantic</strong> (intelligent) logic
-                would slice this text.</p>
+        <div class="qa-container">
+            <h3>Four lanes, one shared tail</h3>
+            <div class="answer">
+                <div class="one-liner">Each source gets its own parser and chunker, then they converge on the same
+                    scrub, dedupe, embed and index stages.</div>
 
-            <div class="chunk-animation-container" id="chunkAnim">
-                <div class="text-stream" id="textStream"></div>
-
-                <div class="controls">
-                    <button class="btn-anim" id="btnFixed">Apply Fixed-Size (5 words)</button>
-                    <button class="btn-anim" id="btnSemantic">Apply Semantic Breaks</button>
-                    <button class="btn-anim" id="btnReset">Reset Text</button>
-                </div>
-                <div class="explanation-text" id="statusText" style="margin-top:20px;">Notice how Semantic logic
-                    respects the period boundaries.</div>
-            </div>
-        </section>
-
-        <section id="implementation">
-            <h2>3. Implementation & Benefits</h2>
-
-            <div class="mastery-container">
-                <h3>A. Semantic Splitting (Python & JS)</h3>
-                <p>Using cosine distance to find breakpoint thresholds.</p>
-
-                <div class="code-tabs">
-                    <div class="tab active" onclick="showCode('split', 'py')">Python (LlamaIndex)</div>
-                    <div class="tab" onclick="showCode('split', 'js')">JavaScript (LangChain.js)</div>
+                <div class="mermaid">
+                    flowchart TD
+                    L1["Solver logs<br/>entity-handle log file"] --> C1["Structure-aware chunk<br/>header, error window, tail"]
+                    L2["Product docs<br/>HTML or PDF per release"] --> C2["Prose chunk ~800 tok<br/>then contextualise"]
+                    L3["Skills<br/>SKILL.md in git"] --> C3["One file, one chunk<br/>never split"]
+                    L4["Past runs<br/>confirmed-green outcomes"] --> C4["Normalise failure signature"]
+                    C1 --> T["Scrub, dedupe, embed"]
+                    C2 --> T
+                    C3 --> T
+                    C4 --> T
+                    T --> DB[("Postgres: HNSW + tsvector + metadata")]
                 </div>
 
-                <div id="split-py" class="code-content active">
-                    <pre><code>from llama_index.core.node_parser import SemanticSplitterNodeParser
-from llama_index.embeddings.openai import OpenAIEmbedding
+                <table class="spec">
+                    <tr>
+                        <th>Source</th>
+                        <th>Chunker</th>
+                        <th>Why</th>
+                        <th>Refresh cadence</th>
+                    </tr>
+                    <tr>
+                        <td>Solver logs</td>
+                        <td>Structure-aware: header, error-anchored window, residual summary, tail</td>
+                        <td>An 84,000-line transcript is mostly repetition; the signal is around the error</td>
+                        <td>On failure, synchronously</td>
+                    </tr>
+                    <tr>
+                        <td>Product docs</td>
+                        <td>~800 tokens on heading boundaries, then contextualised</td>
+                        <td>Headings are real semantic boundaries; prose fragments need their context restored</td>
+                        <td>Per product release, diffed by content hash</td>
+                    </tr>
+                    <tr>
+                        <td>Skills</td>
+                        <td>None; the whole file is one chunk</td>
+                        <td>A playbook split in half is worse than useless: half a procedure reads as a whole one</td>
+                        <td>On every git merge</td>
+                    </tr>
+                    <tr>
+                        <td>Past runs</td>
+                        <td>None; normalise the failure signature</td>
+                        <td>Already structured. Chunking a structured record is a projection, not a split</td>
+                        <td>On confirmed-green completion</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Four lanes with different chunkers and different refresh cadences.</div>
 
-# 1. Define embedding model for similarity check
-embed_model = OpenAIEmbedding()
+                <p>Two of the four lanes do not chunk at all, which is the part generic advice never covers. "Chunk
+                    everything" is a habit, not a requirement.</p>
+            </div>
+        </div>
 
-# 2. Configure parser: high percentile = more chunks
-parser = SemanticSplitterNodeParser(
-    buffer_size=1, breakpoint_percentile_threshold=95, embed_model=embed_model
-)
+        <div class="qa-container">
+            <h3>Structure-aware chunking for logs</h3>
+            <div class="answer">
+                <div class="one-liner">Take the header, a window anchored on the error, a summary of the repetitive
+                    middle, and the tail. Discard the rest.</div>
 
-# 3. Process document
-nodes = parser.get_nodes_from_documents([doc])</code></pre>
-                </div>
+                <p>A solver log is the hardest realistic case and the one nobody teaches. It is 84,000 lines, roughly
+                    95% of it iteration-by-iteration residual tables that are near-identical to each other. Fixed-size
+                    chunking over that produces hundreds of interchangeable chunks that all match any query about
+                    residuals equally well, which is the same as matching none of them.</p>
 
-                <div id="split-js" class="code-content">
-                    <pre><code>import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+                <table class="spec">
+                    <tr>
+                        <th>Segment</th>
+                        <th>What it carries</th>
+                        <th>Kept as</th>
+                    </tr>
+                    <tr>
+                        <td>Header</td>
+                        <td>Version, solver, licence, machine, case setup</td>
+                        <td>One chunk, always indexed</td>
+                    </tr>
+                    <tr>
+                        <td>Error-anchored window</td>
+                        <td>Lines around each error or warning, with context either side</td>
+                        <td>One chunk per anchor</td>
+                    </tr>
+                    <tr>
+                        <td>Residual history</td>
+                        <td>60,000 numeric lines</td>
+                        <td>A computed summary chunk, never raw rows</td>
+                    </tr>
+                    <tr>
+                        <td>Tail</td>
+                        <td>Final state, exit code, termination reason</td>
+                        <td>One chunk, always indexed</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Indexing the raw residual table would balloon chunk count for near-zero
+                    retrieval signal.</div>
 
-// Standard Recursive implementation
-const splitter = new RecursiveCharacterTextSplitter({
-  chunkSize: 500,
-  chunkOverlap: 50,
-  separators: ["\n\n", "\n", ".", "!", "?", " ", ""],
-});
+                <p>The residual decision is worth sitting with. Those 60,000 lines contain real information, but not
+                    information retrieval can use: no query will ever be answered by finding one row of a residual
+                    table. A computed summary ("residuals rose over 23 consecutive iterations, diverging from 1e-3")
+                    is one chunk that answers the question the rows were evidence for.</p>
+            </div>
+        </div>
 
-const docs = await splitter.createDocuments([text]);
-console.log(`Document split into ${docs.length} semantic fragments.`);</code></pre>
+        <div class="qa-container">
+            <h3>Contextualisation: fixing the fragment problem</h3>
+            <div class="answer">
+                <div class="one-liner">Prepend 50-100 tokens of situating context to each chunk before embedding, so
+                    a fragment means something on its own.</div>
+
+                <p>The core weakness of prose chunking is that a chunk gets embedded and retrieved alone, while its
+                    meaning depended on the document around it. "Set <code>pseudo-time-step</code> to 0.5" means
+                    nothing without knowing the product, the release, and which failure mode the section addresses.</p>
+
+                <p>Contextualisation runs at ingest: a small model reads the chunk plus its surrounding document and
+                    writes a short preamble naming what the chunk is about. That preamble is embedded with the chunk.</p>
+
+                <pre class="code-block"><code># Before
+"Set pseudo-time-step to 0.5 and re-run. If residuals continue rising,
+ reduce the Courant number by half."
+
+# After contextualisation, embedded together
+"[Fluent 2026 R2 · Troubleshooting · AMG solver divergence]
+ Set pseudo-time-step to 0.5 and re-run. If residuals continue rising,
+ reduce the Courant number by half."</code></pre>
+
+                <p>Doing this once at ingest rather than per query is the single largest cost lever in the ingestion
+                    pipeline. The chunk is written once and read thousands of times, so the per-chunk model call
+                    amortises to nothing. Computing it at query time would be the same work repeated on every
+                    request.</p>
+
+                <div class="trap">
+                    Contextualisation also improves keyword search, not only vector search, because the preamble adds
+                    the product and version tokens that the fragment was missing. Both branches of a hybrid query
+                    benefit from the same preprocessing.
                 </div>
             </div>
+        </div>
 
-            <div class="benefit-card">
-                <div class="benefit-title">The Benefit of "Parent-Child" Indexing</div>
-                <p>By splitting a document into tiny <strong>Child Chunks</strong> (100 tokens) for vector search, but
-                    returning the <strong>Parent Context</strong> (1000 tokens) to the LLM, you get the best of both
-                    worlds: High retrieval accuracy and rich reasoning context.</p>
+        <div class="qa-container">
+            <h3>Scrubbing, deduplication and metadata</h3>
+            <div class="answer">
+                <div class="one-liner">Every chunk is scrubbed before embedding, deduplicated within its own source,
+                    and stamped with the fields every later query filters on.</div>
+
+                <p><strong>Scrubbing</strong> strips paths, hostnames, usernames, and licence-server names. A path
+                    keeps its basename and loses its directory: <code>bracket_v3.cas</code> is useful retrieval signal,
+                    <code>/home/jsmith/projects/acme-confidential/</code> is a liability. Scrubbing happens before
+                    embedding, so the vector never encodes the removed detail either.</p>
+
+                <p><strong>Deduplication runs within a source, never across sources.</strong> A skill quoting a
+                    documentation paragraph is not a duplicate of that paragraph; it carries the team's judgement that
+                    this specific passage matters for this specific failure. Cross-source dedupe would silently delete
+                    exactly the signal that makes skills worth indexing.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Metadata field</th>
+                        <th>Used for</th>
+                    </tr>
+                    <tr>
+                        <td><code>tenant_id</code></td>
+                        <td>The isolation boundary; a SQL predicate on every query</td>
+                    </tr>
+                    <tr>
+                        <td><code>solver</code>, <code>solver_version</code></td>
+                        <td>Pre-filter and grader rule; prevents right-answer-wrong-version</td>
+                    </tr>
+                    <tr>
+                        <td><code>embedding_model</code></td>
+                        <td>Makes an embedding migration a dual-write rather than a rewrite</td>
+                    </tr>
+                    <tr>
+                        <td><code>valid_to</code></td>
+                        <td>Retires superseded chunks without deleting history</td>
+                    </tr>
+                    <tr>
+                        <td><code>run_id</code>, <code>step_name</code></td>
+                        <td>Scopes log chunks tightly enough to skip the reranker</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Metadata is what lets the funnel's first stage be free and correct.</div>
             </div>
-        </section>
+        </div>
+
+        <div class="qa-container">
+            <h3>What not to index</h3>
+            <div class="answer">
+                <div class="one-liner">Unversioned plausible content is worse than no content, because the grader
+                    cannot tell stale from current without a version field.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Source</th>
+                        <th>Value to answers</th>
+                        <th>Decision</th>
+                    </tr>
+                    <tr>
+                        <td>Solver logs</td>
+                        <td>Highest; describes <em>this</em> failure</td>
+                        <td>Index</td>
+                    </tr>
+                    <tr>
+                        <td>Product docs, per version</td>
+                        <td>High; authoritative error semantics</td>
+                        <td>Index</td>
+                    </tr>
+                    <tr>
+                        <td>Skills</td>
+                        <td>Highest per token; operational judgement</td>
+                        <td>Index</td>
+                    </tr>
+                    <tr>
+                        <td>Community forums and KB scrapes</td>
+                        <td>Mixed; unversioned, sometimes contradicts docs</td>
+                        <td>Do not index</td>
+                    </tr>
+                    <tr>
+                        <td>Raw residual tables (60k numeric lines)</td>
+                        <td>Near zero; would balloon chunk count</td>
+                        <td>Do not index; keep the summary</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Two of five sources are deliberately excluded.</div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Chunk-size drift after a docs redesign</div>
+                    <p><strong>Symptom:</strong> retrieval quality drops after a documentation site redesign, with no
+                        change to the retrieval code.</p>
+                    <p><strong>Cause:</strong> heading-boundary chunking depends on the HTML structure. A redesign that
+                        changes heading levels produces chunks of a different shape.</p>
+                    <p><strong>Mitigation:</strong> assert distribution properties at ingest (median chunk size, share
+                        of chunks under a floor) and fail the ingest run when they move sharply, rather than
+                        discovering it through degraded answers weeks later.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Pick the chunker per source. Structure-aware for logs, heading-bounded prose for docs, whole-file
+                    for playbooks, none for already-structured records.</li>
+                <li>Two of four lanes do not chunk at all. "Chunk everything" is a habit, not a requirement.</li>
+                <li>Contextualise at ingest, not at query time. Write once, read thousands of times.</li>
+                <li>Scrub before embedding, and deduplicate within a source rather than across sources.</li>
+                <li>Stamp tenant, version, embedding model and validity on every chunk; that metadata is what makes
+                    the funnel's first stage free and correct.</li>
+                <li>Unversioned plausible content is worse than none.</li>
+            </ul>
+        </div>
+
     </div>
-
-    <script>
-        function showCode(section, lang) {
-            document.querySelectorAll(`#${section}-js, #${section}-py`).forEach(el => el.classList.remove('active'));
-            document.querySelector(`#${section}-${lang}`).classList.add('active');
-            event.target.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-        }
-
-        const rawText = "Artificial intelligence is changing the world. It improves medical diagnostics daily. However, training large models requires massive energy. GPUs are in high demand across the globe.";
-        const words = rawText.split(' ');
-        const stream = document.getElementById('textStream');
-        const statusText = document.getElementById('statusText');
-
-        function initText() {
-            stream.innerHTML = '';
-            words.forEach((w, i) => {
-                const el = document.createElement('span');
-                el.className = 'word';
-                el.innerText = w;
-                stream.appendChild(el);
-            });
-        }
-
-        document.getElementById('btnFixed').addEventListener('click', () => {
-            document.querySelectorAll('.word').forEach((w, i) => {
-                w.className = 'word';
-                if (i < 5) w.classList.add('chunk-1');
-                else if (i < 10) w.classList.add('chunk-2');
-                else w.classList.add('chunk-3');
-            });
-            statusText.innerText = "Fixed logic splits 'diagnostics' away from 'daily' arbitrarily.";
-        });
-
-        document.getElementById('btnSemantic').addEventListener('click', () => {
-            document.querySelectorAll('.word').forEach((w, i) => {
-                w.className = 'word';
-                // Find period indices
-                if (i <= 6) w.classList.add('chunk-1'); // End of first sentence
-                else if (i <= 11) w.classList.add('chunk-2'); // End of second
-                else w.classList.add('chunk-3');
-            });
-            statusText.innerText = "Semantic logic detects sentence boundaries and keeps medical context together.";
-        });
-
-        document.getElementById('btnReset').addEventListener('click', initText);
-
-        initText();
-    </script>
+    <script src="animations.js"></script>
     <script src="sidebar.js?v=2"></script>
 </body>
 

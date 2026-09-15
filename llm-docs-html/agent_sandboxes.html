@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Sandboxes &amp; Code Execution</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link rel="stylesheet" href="agent_docs.css?v=1">
+</head>
+
+<body>
+    <header>
+        <h1>Agent Sandboxes &amp; Code Execution</h1>
+        <div class="subtitle">Isolation boundaries, credential scope, and what an escaped process can reach</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>Why agents end up executing code at all</h3>
+            <div class="answer">
+                <div class="one-liner">Some questions are cheaper to compute than to reason about, and a model that
+                    must answer them from text will guess.</div>
+
+                <p>Three situations push an agent toward running code. The first is arithmetic over data: classifying
+                    60,000 residual values from a solver log is a five-line script and an impossible reading task. The
+                    second is format handling: parsing a proprietary binary result file needs a library, not a
+                    language model. The third is verification: running the test suite is the only honest way to know
+                    whether a proposed fix works.</p>
+
+                <p>Each of those is a genuine reason. What they share is that the code's <em>output</em> becomes model
+                    context, so the execution boundary is also a trust boundary in both directions: untrusted data
+                    goes in, and whatever comes out shapes the next decision.</p>
+
+                <div class="saf-map">
+                    <div class="sm-title">In the running example</div>
+                    <p>The <code>fluent-divergence</code> skill bundles
+                        <code>scripts/classify_residuals.py</code>, which reads the last 2,000 lines of a solver log
+                        and returns one of four classes. The model never reads 84,000 lines of residuals. It reads a
+                        label. See <a href="agent_skills.html">Agent Skills</a>.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Isolation levels, and what each one actually buys</h3>
+            <div class="answer">
+                <div class="one-liner">Pick the weakest boundary that contains the worst thing the code could do, and
+                    be honest about what the weak ones do not stop.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Level</th>
+                        <th>Boundary</th>
+                        <th>Stops</th>
+                        <th>Does not stop</th>
+                        <th>Startup</th>
+                    </tr>
+                    <tr>
+                        <td>Restricted interpreter</td>
+                        <td>Language-level, same process</td>
+                        <td>Casual mistakes</td>
+                        <td>A determined escape; shares your memory space</td>
+                        <td>~0 ms</td>
+                    </tr>
+                    <tr>
+                        <td>Subprocess + rlimits</td>
+                        <td>OS process, dropped privileges</td>
+                        <td>Runaway CPU and memory, crashes</td>
+                        <td>Filesystem and network reach</td>
+                        <td>~10 ms</td>
+                    </tr>
+                    <tr>
+                        <td>Container</td>
+                        <td>Namespaces, cgroups, seccomp</td>
+                        <td>Filesystem, network, resource abuse</td>
+                        <td>Kernel-level escapes</td>
+                        <td>~100 ms-1 s</td>
+                    </tr>
+                    <tr>
+                        <td>MicroVM</td>
+                        <td>Hardware virtualisation</td>
+                        <td>Kernel escapes</td>
+                        <td>Side channels on shared hardware</td>
+                        <td>~125 ms</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Cost rises with isolation; so does what survives a compromise.</div>
+
+                <p>A restricted interpreter running in your own process is the option that most often gets chosen and
+                    most often should not. It shares your memory space, your file descriptors, and your credentials.
+                    It is reasonable for arithmetic on data you produced and unreasonable for anything touching content
+                    a third party could shape.</p>
+
+                <p>For a system where scripts are hand-written, version-controlled, and reviewed, a subprocess with
+                    dropped privileges and hard resource limits is usually the right level. Model-authored code needs a
+                    container at minimum.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>The boundary that matters most is the credential</h3>
+            <div class="answer">
+                <div class="one-liner">Process isolation limits what code can run. Credential scope limits what a
+                    compromise can reach, which is the part that ends up in the incident report.</div>
+
+                <p>An agent typically holds a token that authenticates the user who started the run. If sandboxed code
+                    can read that token, isolation has bought very little: the escape does not need to break out of the
+                    container when it can make authenticated API calls from inside it.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Rule</th>
+                        <th>Why</th>
+                    </tr>
+                    <tr>
+                        <td>No ambient credentials in the sandbox environment</td>
+                        <td>Environment variables and mounted credential files are the first thing hostile code
+                            reads</td>
+                    </tr>
+                    <tr>
+                        <td>Data in by argument or stdin, results out by stdout</td>
+                        <td>A narrow interface is auditable; a shared filesystem is not</td>
+                    </tr>
+                    <tr>
+                        <td>Network denied by default</td>
+                        <td>Most analysis scripts need none, and exfiltration needs one open egress</td>
+                    </tr>
+                    <tr>
+                        <td>Short-lived, narrowly scoped tokens when a call is genuinely needed</td>
+                        <td>A token measured in minutes limits the window; the user's own token lasts the run</td>
+                    </tr>
+                    <tr>
+                        <td>Wall-clock and memory caps enforced by the OS</td>
+                        <td>A timeout in application code does not stop a busy loop reliably</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Least privilege applied to the process, not only to the user.</div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">A token that outlives its purpose</div>
+                    <p><strong>Symptom:</strong> a step running fine for three hours suddenly fails every API call
+                        with 401, or worse, a long-lived token turns up somewhere it should not be.</p>
+                    <p><strong>Cause:</strong> the access token handed to the activity when the step started has an
+                        expiry measured in minutes, while the run is measured in hours. Holding one token for the life
+                        of a four-hour run is both fragile and a large blast radius.</p>
+                    <p><strong>Mitigation:</strong> re-issue a fresh, narrowly scoped credential per activity at the
+                        point it actually calls out, rather than once at workflow start. An expiry mid-poll then costs
+                        one retried activity, not a failed run.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Output is untrusted input</h3>
+            <div class="answer">
+                <div class="one-liner">Whatever the sandbox prints goes into the model's context, so a script reading
+                    a hostile log can become an injection vector.</div>
+
+                <p>This is the direction people forget. The sandbox protects your infrastructure from the code. It does
+                    nothing to protect the model from the code's output. A script that echoes lines from a solver log
+                    is a pipe from untrusted text straight into the prompt.</p>
+
+                <p>Three habits close it. Return structured values rather than free text, so a classifier returns one
+                    of four enum labels instead of a paragraph. Cap output length, because a script that returns
+                    100,000 lines has already cost you the context window. Wrap whatever does come back in the same
+                    delimited, labelled block any other untrusted source gets, under the same policy that instructions
+                    inside it are data to report rather than commands to follow.</p>
+
+                <div class="saf-map">
+                    <div class="sm-title">In the running example</div>
+                    <p><code>classify_residuals.py</code> returns one of <code>amg_divergence</code>,
+                        <code>fp_exception</code>, <code>viscosity_limited</code>, <code>cfl_too_high</code>. A
+                        hostile log can make it return the wrong label. It cannot make it return an instruction,
+                        because those four strings are the entire output vocabulary. See
+                        <a href="prompt_injection_defense.html">Prompt Injection Defence</a>.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Reproducibility: a sandbox is also a versioned artefact</h3>
+            <div class="answer">
+                <div class="one-liner">An agent run you cannot re-execute is an agent run you cannot debug.</div>
+
+                <p>Sandboxes drift the way any environment drifts. A script that worked in March fails in September
+                    because a dependency moved. When the script is part of a diagnosis path, that drift shows up as
+                    degraded agent quality with no code change to blame.</p>
+
+                <ul>
+                    <li>Pin the image by digest, not by a floating tag.</li>
+                    <li>Version bundled scripts with the skill that carries them, and record which product versions
+                        they were verified against.</li>
+                    <li>Record the image digest on the run's trace, so "why did this run behave differently" is a
+                        lookup.</li>
+                    <li>Run the skill's fixed (input, expected output) pairs in CI whenever the image or the script
+                        changes.</li>
+                </ul>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Cold-start latency inside a bounded loop</div>
+                    <p><strong>Symptom:</strong> diagnosis latency jumps by seconds whenever a script runs, and the
+                        loop starts closing in on its deadline.</p>
+                    <p><strong>Cause:</strong> a fresh container per invocation inside a loop that may run four
+                        iterations.</p>
+                    <p><strong>Mitigation:</strong> keep a warm pool for the common scripts, or run trusted
+                        version-controlled scripts as a subprocess and reserve containers for model-authored code. Give
+                        the execution a hard deadline that returns a typed failure rather than hanging the
+                        iteration.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Choose isolation by what the code could reach, not by what it is meant to do. Model-authored code
+                    needs a container at minimum.</li>
+                <li>Credential scope matters more than process isolation. Hostile code inside a container with your
+                    token does not need to escape it.</li>
+                <li>Sandbox output is untrusted input. Return enums and capped lengths, and wrap what comes back as
+                    untrusted.</li>
+                <li>Pin images by digest and version scripts with the skill, or quality drifts with no code change to
+                    blame.</li>
+                <li>A fresh container per iteration inside a bounded loop is a latency bill worth measuring before you
+                    pay it.</li>
+            </ul>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

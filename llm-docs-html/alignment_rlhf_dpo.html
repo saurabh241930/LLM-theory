@@ -214,28 +214,35 @@
                 highly specific corporate standards or brand-voice preferences that generic alignment doesn't cover.
             </div>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>The <strong>RSA Sales QA Dashboard</strong> requires a bot that is perfectly aligned with "Insurance
-                Ethics." during training, the developers used <strong>DPO (Direct Preference Optimization)</strong> to
-                provide the model with pairs of responses. For example, given a transcript where an advisor slightly
-                pressures a customer, the model was trained to prefer a response that <em>flags the ethical
-                    violation</em> over one that <em>praises the successful sale</em>. This alignment ensures the AI
-                acts as a safeguard for the company's legal reputation rather than just a sales-tracking tool.</p>
+            <h2>Case Study: Alignment Without Retraining</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent</a> needs its Diagnoser to never propose something
+                destructive, and it gets that guarantee from types and deterministic code rather than from preference
+                tuning.</p>
+
+            <p>The reason is the strength of the guarantee. RLHF and DPO shift a distribution: they make bad outputs
+                much less likely. A closed enum makes them unrepresentable. When the untrusted input is a solver log an
+                attacker could have shaped, "much less likely" is the wrong shape of promise.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: DPO Preference Pair</span>
-                dpo_dataset = {
-                <span class="string">"prompt"</span>: <span class="string">"Audit: Advisor failed to mention RSA $50
-                    fee."</span>,
-                <span class="string">"chosen"</span>: <span class="string">"FLAG: Compliance violation. Mandatory fee
-                    disclosure missing."</span>,
-                <span class="string">"rejected"</span>: <span class="string">"The advisor was very polite and closed the
-                    sale successfully."</span>
-                }
-                <span class="comment"># Model learns to prioritize legal safety over sales success.</span>
+                <span class="keyword">class</span> <span class="class-name">RemediationKind</span>(StrEnum):
+                RETRY = <span class="string">"retry"</span>
+                ADJUST_FIELD = <span class="string">"adjust_field"</span>
+                RERUN_UPSTREAM = <span class="string">"rerun_upstream"</span>
+                SWITCH_SKILL = <span class="string">"switch_skill"</span>
+                ESCALATE = <span class="string">"escalate"</span>
+                ABORT = <span class="string">"abort"</span>
             </div>
 
-            <h2>Key Takeaways</h2>
+            <p>A fully compromised diagnosis can return one of six values. There is no <code>delete_project</code> to
+                reach for, because the type does not admit one. Two further controls narrow it: field adjustments can
+                only touch fields declared in the step's own schema, and anything classed destructive, expensive or
+                IP-sensitive routes to a human regardless of stated confidence.</p>
+
+            <p>Preference tuning still has its place, on properties you cannot express as a type: tone, format
+                preference, how a proposal explains itself. It is a complement to structural controls, not a substitute
+                for them. See <a href="structured_outputs_guardrails.html">Structured Outputs &amp; Guardrails</a>.</p>
+
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ Alignment ensures models are safe and useful for humans.<br>
                 ✅ SFT is the "Foundation" of alignment; DPO/RLHF is the "Polish."<br>

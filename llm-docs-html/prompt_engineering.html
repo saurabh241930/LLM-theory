@@ -258,30 +258,44 @@
                     prompt chain.</li>
             </ul>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>To audit <strong>Auto Insurance</strong> sales, the dashboard uses a structured <strong>System
-                    Prompt</strong> that defines the LLM's persona as a "Rigorous Compliance Officer." The prompt
-                includes <strong>Few-Shot</strong> examples of "Compliant" vs. "Non-Compliant" mentions of RSA (e.g.,
-                specifically checking if the agent mentioned that RSA is optional). By using
-                <strong>Chain-of-Thought</strong> ("Think step-by-step to identify if the agent pressured the
-                customer"), the model provides a reasoned justification for every flagged call, which helps sales
-                managers explain the violation to their advisors.
-            </p>
+            <h2>Case Study: The Planner Prompt</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent's</a> Planner prompt is deliberately mechanical. It
+                does not coax the model with persona framing or few-shot examples. It renders what the system already
+                knows, states the rules as constraints, and asks for one typed object.</p>
+
+            <p>Every section is assembled from a different source, ordered by how often it changes: stable instructions
+                and schema first so the prefix cache can hold them, the engineer's intent last. Putting the volatile
+                part early would invalidate the cache on every call. See
+                <a href="context_engineering.html">Context Engineering</a>.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: Compliance System Prompt</span>
-                prompt = {
-                <span class="string">"role"</span>: <span class="string">"system"</span>,
-                <span class="string">"content"</span>: <span class="string">"""You are an RSA Compliance Auditor.
-                    Task: Audit transcript for 'Optional Disclosure'.
-                    Rule: Advisor MUST state that RSA is a voluntary add-on.
-                    Few-Shot Example:
-                    Compliant: 'RSA is an optional service for $5.99.'
-                    Non-Compliant: 'I'm adding the RSA service to your account now.'"""</span>
-                }
+                <span class="comment">SYSTEM PROMPT SKELETON (plan_run)</span>
+                You are the Planner for the SAF solution "{solution_id}".
+                You never execute anything. You return one Plan and nothing else.
+
+                <span class="comment">## Steps, fields and transactions</span>
+                {rendered from get_steps_fields()}
+
+                <span class="comment">## Dependency order (topological)</span>
+                {DependencyGraph.toplogical_sort()}
+
+                <span class="comment">## Allow-listed transactions for this role</span>
+                {policy.allowlist snapshot}
+
+                <span class="comment">## Rules</span>
+                - Every step.transaction pair MUST exist in the schema above.
+                - Order steps so every input is produced by an earlier step.
+                - Set approval_required=True for expensive or destructive transactions.
+
+                <span class="comment">## Task</span>
+                Engineer's intent: "{intent}"
             </div>
 
-            <h2>Checklist for Production Prompts</h2>
+            <p>The prompt never mentions the DAG library; it shows a rendering of what the DAG already knows. That is
+                the general habit worth copying: put facts the system owns into the prompt as data, and keep the
+                judgement in the rules.</p>
+
+<h2>Checklist for Production Prompts</h2>
             <div class="side-note">
                 [ ] Is the task clearly defined?<br>
                 [ ] Is the context relevant and pruned?<br>

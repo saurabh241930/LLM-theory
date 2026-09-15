@@ -208,32 +208,54 @@
                     updates.</li>
             </ul>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>The <strong>RSA Sales QA Dashboard</strong> uses a <strong>Supervisor Agent Pattern</strong> to manage
-                the complexity of an audit. The Supervisor receives a call recording and assigns sub-tasks: the
-                <strong>Transcription Agent</strong> converts audio to text, the <strong>Compliance Agent</strong>
-                checks for mandatory RSA disclosures, and the <strong>PII-Redactor Agent</strong> ensures customer phone
-                numbers and addresses are removed before the audit is saved. This specialized division of labor ensures
-                that the compliance check is both accurate and legally secure.
-            </p>
+            <h2>Case Study: Why the Swarm Was Rejected</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent</a> scored a multi-agent swarm against two alternatives
+                and rejected it on evidence. Three independent LLM agents negotiating with each other lost on four of
+                six criteria that a long-running solver job actually cares about.</p>
+
+            <table class="intent-table">
+                <tr>
+                    <th>Criterion</th>
+                    <th>Multi-agent swarm</th>
+                    <th>Durable orchestrator (chosen)</th>
+                </tr>
+                <tr>
+                    <td>Durability across crashes</td>
+                    <td>Partial; depends on each agent's own state</td>
+                    <td>Full; state survives process death</td>
+                </tr>
+                <tr>
+                    <td>Human-in-the-loop</td>
+                    <td>Ambiguous; unclear which agent owns the pause</td>
+                    <td>Native; the workflow waits on a signal indefinitely</td>
+                </tr>
+                <tr>
+                    <td>Auditability</td>
+                    <td>Low; agent-to-agent messages are hard to replay</td>
+                    <td>High; typed, logged steps</td>
+                </tr>
+                <tr>
+                    <td>Cost predictability</td>
+                    <td>Poor; inter-agent chatter multiplies model calls</td>
+                    <td>Good; budget checked before every priced call</td>
+                </tr>
+            </table>
+
+            <p>The deciding argument is that the problem is a DAG with known structure, not an open-ended negotiation. A
+                swarm adds non-determinism at every handoff and buys nothing a topological sort and a typed plan do not
+                already give. The system still has three specialised LLM roles, Planner, Executor and Diagnoser, but
+                they are bounded roles called <em>by</em> a deterministic workflow rather than agents talking to each
+                other.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: LangGraph Supervisor Architecture</span>
-                <span class="keyword">def</span> <span class="class-name">supervisor_node</span>(state):
-                <span class="keyword">if</span> <span class="string">"audio"</span> <span class="keyword">in</span>
-                state: <span class="keyword">return</span> <span class="string">"transcriber"</span>
-                <span class="keyword">if</span> <span class="string">"text"</span> <span class="keyword">in</span>
-                state: <span class="keyword">return</span> <span class="string">"compliance_checker"</span>
-                <span class="keyword">return</span> <span class="string">"END"</span>
-
-                workflow = StateGraph(AuditState)
-                workflow.add_node(<span class="string">"transcriber"</span>, transcriber_agent)
-                workflow.add_node(<span class="string">"compliance_checker"</span>, auditor_agent)
-                workflow.add_edge(<span class="string">"transcriber"</span>, <span
-                    class="string">"compliance_checker"</span>)
+                <span class="comment"># Roles are activities the workflow calls. They never call each other.</span>
+                plan = <span class="keyword">await</span> workflow.execute_activity(plan_run, req)
+                result = <span class="keyword">await</span> workflow.execute_child_workflow(StepWorkflow.run, step)
+                <span class="keyword">if</span> result.status == <span class="string">"failed"</span>:
+                remediation = <span class="keyword">await</span> workflow.execute_child_workflow(DiagnoseWorkflow.run, ...)
             </div>
 
-            <h2>Key Takeaways</h2>
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ LangGraph enables cyclic workflows and state persistence.<br>
                 ✅ Use "Nodes" for logic and "Edges" for decision branching.<br>

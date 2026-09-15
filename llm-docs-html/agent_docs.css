@@ -1,0 +1,206 @@
+/* Shared styles for the agent-engineering pages.
+   Matches the existing .qa-container / .trap / .depth conventions. */
+
+.qa-container {
+    margin-bottom: 2em;
+    padding: 18px 20px;
+    background-color: #f8f9fa;
+    border-left: 4px solid var(--wp-accent);
+    border-radius: 4px;
+}
+
+.qa-container h3 {
+    margin-top: 0;
+    color: var(--wp-title-text);
+}
+
+.qa-container h4 {
+    margin-top: 1.2em;
+    margin-bottom: 0.4em;
+}
+
+.qa-container .answer {
+    margin-top: 10px;
+}
+
+.qa-container .answer p {
+    margin-bottom: 0.9em;
+}
+
+.qa-container ul,
+.qa-container ol {
+    margin: 0.6em 0 0.9em 1.4em;
+}
+
+.qa-container li {
+    margin-bottom: 0.4em;
+}
+
+.one-liner {
+    font-weight: bold;
+    margin-bottom: 12px;
+    font-size: 1.05em;
+    line-height: 1.5;
+}
+
+/* A named failure mode: symptom, cause, mitigation. */
+.chokepoint {
+    background-color: #fff8e6;
+    border-left: 4px solid #e0a800;
+    padding: 14px 16px;
+    margin: 1.2em 0;
+    border-radius: 3px;
+}
+
+.chokepoint .cp-title {
+    font-weight: bold;
+    color: #8a6100;
+    margin-bottom: 8px;
+    font-size: 1.02em;
+}
+
+.chokepoint p {
+    margin: 0 0 6px 0;
+}
+
+.chokepoint p:last-child {
+    margin-bottom: 0;
+}
+
+/* A concept taught from zero, at the point it is first needed. */
+.teaching {
+    background-color: #eef4ff;
+    border-left: 4px solid #3366cc;
+    padding: 14px 16px;
+    margin: 1.2em 0;
+    border-radius: 3px;
+}
+
+.teaching .tp-title {
+    font-weight: bold;
+    color: #1a4a99;
+    margin-bottom: 8px;
+    font-size: 1.02em;
+}
+
+/* Where this concept lands in the running SAF example. */
+.saf-map {
+    background-color: #f0f7f2;
+    border-left: 4px solid #2e7d4f;
+    padding: 14px 16px;
+    margin: 1.2em 0;
+    border-radius: 3px;
+}
+
+.saf-map .sm-title {
+    font-weight: bold;
+    color: #1d5c39;
+    margin-bottom: 8px;
+    font-size: 1.02em;
+}
+
+.trap {
+    background-color: #fff3cd;
+    padding: 12px 14px;
+    border-left: 4px solid #ffc107;
+    margin: 1em 0;
+}
+
+.depth {
+    background-color: #e9ecef;
+    padding: 12px 14px;
+    border-left: 4px solid #6c757d;
+    margin: 1em 0;
+}
+
+table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.2em 0;
+    font-size: 0.92em;
+}
+
+table.spec th,
+table.spec td {
+    border: 1px solid var(--wp-border);
+    padding: 9px 11px;
+    text-align: left;
+    vertical-align: top;
+}
+
+table.spec th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+table.spec tr:nth-child(even) td {
+    background: #fcfcfd;
+}
+
+table.spec code {
+    font-size: 0.95em;
+    white-space: nowrap;
+}
+
+.table-caption {
+    font-size: 0.87em;
+    color: #54595d;
+    font-style: italic;
+    margin: -0.7em 0 1.5em 0;
+    text-align: center;
+}
+
+code {
+    background: #f1f3f5;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 0.92em;
+}
+
+pre.code-block code {
+    background: none;
+    padding: 0;
+    font-size: 1em;
+    color: inherit;
+    white-space: pre;
+}
+
+pre.code-block {
+    background: #282c34;
+    color: #abb2bf;
+    padding: 18px;
+    border-radius: 6px;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 0.86em;
+    line-height: 1.55;
+    margin: 1.3em 0;
+    overflow-x: auto;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.takeaways {
+    background: #f8f9fa;
+    border: 1px solid var(--wp-border);
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin: 2em 0 1em 0;
+}
+
+.takeaways h3 {
+    margin-top: 0;
+}
+
+.takeaways li {
+    margin-bottom: 0.55em;
+}
+
+.mermaid {
+    background: #fff;
+    border: 1px solid var(--wp-border);
+    border-radius: 4px;
+    padding: 16px;
+    margin: 1.3em 0;
+    text-align: center;
+    overflow-x: auto;
+}

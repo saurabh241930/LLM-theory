@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Parsing &amp; Ingestion</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link rel="stylesheet" href="agent_docs.css?v=1">
+</head>
+
+<body>
+    <header>
+        <h1>Document Parsing &amp; Ingestion</h1>
+        <div class="subtitle">The stage before chunking, where most retrieval quality is won or lost</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>Every RAG tutorial starts from clean text</h3>
+            <div class="answer">
+                <div class="one-liner">Real corpora are PDFs with multi-column layouts, tables that carry the answer,
+                    and figures with captions that explain them. The chunker runs downstream of a parser nobody
+                    teaches.</div>
+
+                <p>A naive PDF text extractor reads a two-column page as interleaved lines, flattens a table into a
+                    run of numbers with no headers, and drops figure captions entirely. Everything downstream inherits
+                    that damage. You can tune chunk size and reranking forever and never recover a table whose column
+                    headers were lost at extraction.</p>
+
+                <p>The practical consequence: measure parse quality before tuning retrieval. If tables are the answer
+                    and tables are broken, retrieval tuning is the wrong knob.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Parser choice by document type</h3>
+            <div class="answer">
+                <div class="one-liner">Pick the cheapest parser that preserves the structure your questions
+                    need.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Document type</th>
+                        <th>Parser</th>
+                        <th>Preserve</th>
+                        <th>Cost</th>
+                    </tr>
+                    <tr>
+                        <td>HTML documentation</td>
+                        <td>DOM-aware extraction</td>
+                        <td>Heading hierarchy, table structure, anchors</td>
+                        <td>Near zero</td>
+                    </tr>
+                    <tr>
+                        <td>Born-digital PDF</td>
+                        <td>Layout-aware text extraction</td>
+                        <td>Reading order, columns, table cells</td>
+                        <td>Low</td>
+                    </tr>
+                    <tr>
+                        <td>Scanned PDF</td>
+                        <td>OCR plus layout analysis</td>
+                        <td>Everything; nothing exists as text yet</td>
+                        <td>Moderate, and error-prone</td>
+                    </tr>
+                    <tr>
+                        <td>Pages where figures carry meaning</td>
+                        <td>Vision model over the page image</td>
+                        <td>Diagram semantics, chart values</td>
+                        <td>High; use selectively</td>
+                    </tr>
+                    <tr>
+                        <td>Logs and structured output</td>
+                        <td>Line-oriented, format-specific</td>
+                        <td>Line prefixes, error anchors, timestamps</td>
+                        <td>Near zero</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Vision parsing is powerful and expensive; route pages to it rather than
+                    running it over a whole corpus.</div>
+
+                <p>Routing matters more than picking one parser. A documentation set is mostly prose that a cheap
+                    extractor handles perfectly, with a small fraction of pages where a diagram is the answer.
+                    Detecting those and sending only them to a vision model keeps the bill proportional to the value.
+                </p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Tables are the case that breaks naive pipelines</h3>
+            <div class="answer">
+                <div class="one-liner">A table flattened to text loses the row-column relationship that was the entire
+                    content.</div>
+
+                <p>"Error 217 | licence checkout failed | restart the licence daemon" is three related cells. Flattened
+                    into prose and split across a chunk boundary, the error code can end up in one chunk and its
+                    remediation in another, and neither is retrievable as an answer.</p>
+
+                <ul>
+                    <li><strong>Never split a table across chunks.</strong> A table is an atomic unit, the same way a
+                        skill file is.</li>
+                    <li><strong>Serialise to a structure-preserving format.</strong> Markdown tables or HTML keep the
+                        header-to-cell relationship in the token stream, so the model can read down a column.</li>
+                    <li><strong>Repeat headers in every chunk</strong> when a long table genuinely must be split, so
+                        each fragment stands alone.</li>
+                    <li><strong>Carry a caption.</strong> "Table 3.1: Failure taxonomy" is retrieval signal the rows
+                        themselves do not contain.</li>
+                </ul>
+
+                <p>The same reasoning applies to figures. A diagram is retrievable through its caption and surrounding
+                    text, so keep them attached to whatever representation of the figure you store.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>The ingestion pipeline, end to end</h3>
+            <div class="answer">
+                <div class="one-liner">Collect, parse, chunk, scrub, dedupe, embed, index, stamp. The parser and
+                    chunker differ per source; the tail is shared.</div>
+
+                <div class="mermaid">
+                    flowchart TD
+                    C["Collect<br/>per-source fetch, content hash"] --> P["Parse<br/>per-type parser"]
+                    P --> K["Chunk<br/>per-source chunker"]
+                    K --> X["Contextualise<br/>50-100 token preamble"]
+                    X --> S["Scrub<br/>paths, hosts, usernames"]
+                    S --> D["Dedupe<br/>within source only"]
+                    D --> E["Embed<br/>stamp embedding_model"]
+                    E --> I["Index<br/>HNSW + tsvector + metadata"]
+                </div>
+
+                <p>Two stages deserve attention because they are commonly placed wrong.</p>
+
+                <p><strong>Contextualisation belongs at ingest, before embedding.</strong> A chunk is written once and
+                    read thousands of times, so a per-chunk model call amortises to nothing. Computing the same context
+                    at query time repeats the work on every request. It also improves keyword search, because the
+                    preamble contributes the product and version tokens the fragment was missing.</p>
+
+                <p><strong>Scrubbing belongs before embedding, not before display.</strong> Scrubbing at render time
+                    leaves the removed detail encoded in the vector, where it can still influence retrieval and still
+                    sits in your index.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Incremental ingest</h3>
+            <div class="answer">
+                <div class="one-liner">Diff by content hash so a release re-embeds the pages that changed, not the
+                    corpus.</div>
+
+                <p>A documentation release typically changes a small fraction of pages. Hashing parsed content per
+                    document and comparing against the previous run turns a full re-index into a modest incremental
+                    job, which is what makes per-release refresh affordable at all.</p>
+
+                <p>Hash the <em>parsed</em> content rather than the raw file. A PDF regenerated with a new timestamp
+                    has a different file hash and identical content, and hashing the file would re-embed the whole
+                    corpus on every release.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Change detected</th>
+                        <th>Action</th>
+                    </tr>
+                    <tr>
+                        <td>New document</td>
+                        <td>Parse, chunk, embed, index</td>
+                    </tr>
+                    <tr>
+                        <td>Content hash changed</td>
+                        <td>Re-chunk and re-embed; set <code>valid_to</code> on the old chunks</td>
+                    </tr>
+                    <tr>
+                        <td>Unchanged</td>
+                        <td>Skip; update the version tag only</td>
+                    </tr>
+                    <tr>
+                        <td>Document removed</td>
+                        <td>Set <code>valid_to</code>; retain for audit</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Retirement uses a validity window rather than a delete, so audit
+                    survives.</div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Failure modes in ingestion</h3>
+            <div class="answer">
+                <div class="one-liner">Ingestion fails quietly. Nothing errors; answers just get worse.</div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Silent parser regression</div>
+                    <p><strong>Symptom:</strong> retrieval quality drops after a documentation site redesign, with no
+                        change to any retrieval code.</p>
+                    <p><strong>Cause:</strong> heading-boundary chunking depends on HTML structure. A redesign that
+                        changes heading levels produces chunks of an entirely different shape.</p>
+                    <p><strong>Mitigation:</strong> assert distribution properties at ingest (median chunk size, share
+                        of chunks under a floor, count of extracted tables) and fail the ingest run when they move
+                        sharply, rather than discovering it through degraded answers weeks later.</p>
+                </div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">OCR errors becoming permanent</div>
+                    <p><strong>Symptom:</strong> queries for a specific error code never match, though the code is
+                        clearly in the source document.</p>
+                    <p><strong>Cause:</strong> OCR read <code>217</code> as <code>2l7</code>. Keyword search cannot
+                        match it, and the embedding for a corrupted token is meaningless.</p>
+                    <p><strong>Mitigation:</strong> validate extracted identifiers against known patterns for the
+                        domain, flag low-confidence OCR regions for review, and prefer born-digital sources whenever
+                        both exist.</p>
+                </div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Ingest that is not idempotent</div>
+                    <p><strong>Symptom:</strong> a re-run after a partial failure produces duplicate chunks, and
+                        retrieval returns the same passage three times in a top-8 slate.</p>
+                    <p><strong>Cause:</strong> the ingest job appends rather than upserting, keyed by nothing stable.
+                    </p>
+                    <p><strong>Mitigation:</strong> key chunks by a deterministic ID derived from document URI, version
+                        and ordinal, and upsert. A re-run then repairs rather than duplicates.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Measure parse quality before tuning retrieval. A lost table header cannot be recovered
+                    downstream.</li>
+                <li>Route pages to parsers by type. Send only figure-bearing pages to a vision model.</li>
+                <li>Never split a table across chunks, and keep headers and captions attached.</li>
+                <li>Contextualise and scrub before embedding, not at query or render time.</li>
+                <li>Diff by hash of parsed content so a release re-embeds only what changed.</li>
+                <li>Assert chunk distribution properties at ingest; parser regressions are otherwise silent.</li>
+            </ul>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -120,31 +120,93 @@
         </section>
 
         <section id="implementation">
-            <h2>4. Building an MCP Server</h2>
-            <p>You can build MCP servers using the official TypeScript or Python SDKs.</p>
-            <div class="code-block">
-                <span style="color: #6a9955;">// TypeScript MCP Server Example</span><br>
-                import { Server } from "@modelcontextprotocol/sdk/server/index.js";<br>
-                import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";<br><br>
-                const server = new Server({ name: "my-tool", version: "1.0.0" }, { capabilities: { tools: {} }
-                });<br><br>
-                server.setRequestHandler(ListToolsRequestSchema, async () => ({<br>
-                &nbsp;&nbsp;tools: [{ name: "get_weather", description: "Get weather info", inputSchema: {...} }]<br>
-                }));<br><br>
-                const transport = new StdioServerTransport();<br>
-                await server.connect(transport);
+            <h2>4. Building an MCP Server: Step-by-Step</h2>
+            <p>To build a production-ready MCP server, you typically use the provided SDKs. Below are the patterns for
+                both TypeScript and Python.</p>
+
+            <div class="tabs-container">
+                <div class="code-block">
+                    <h4>Python (mcp-python-sdk)</h4>
+                    <pre><code>from mcp.server.fastmcp import FastMCP
+
+# Create a server instance
+mcp = FastMCP("WeatherService")
+
+@mcp.tool()
+async def get_weather(city: str) -> str:
+    """Get current weather for a city."""
+    return f"The weather in {city} is sunny, 22°C"
+
+if __name__ == "__main__":
+    mcp.run()</code></pre>
+                </div>
+                <div class="code-block">
+                    <h4>TypeScript (mcp-sdk)</h4>
+                    <pre><code>import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+
+const server = new Server({ name: "my-server", version: "1.0.0" }, {
+  capabilities: { tools: {} }
+});
+
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [{ name: "get_weather", description: "Get weather", inputSchema: {...} }]
+}));
+
+const transport = new StdioServerTransport();
+await server.connect(transport);</code></pre>
+                </div>
             </div>
         </section>
 
+        <section id="integration">
+            <h2>5. Integrating with AI Hosts (Claude Desktop)</h2>
+            <p>Once your server is built, you need to tell the AI Host (client) how to spawn it. For Claude Desktop,
+                this involves editing the <code>claude_desktop_config.json</code> file.</p>
+            <div class="qa-container">
+                <h3>Connecting a Local Server</h3>
+                <div class="answer">
+                    <p>Locate your config file
+                        (<code>~/Library/Application Support/Claude/claude_desktop_config.json</code> on macOS or
+                        <code>%APPDATA%\Claude\claude_desktop_config.json</code> on Windows) and add your server:</p>
+                    <div class="code-block" style="background: #1e1e1e; border: 1px solid #444;">
+                        <pre><code style="color: #9cdcfe;">{
+  "mcpServers": {
+    "my-custom-tool": {
+      "command": "python",
+      "args": ["/path/to/your/server.py"]
+    }
+  }
+}</code></pre>
+                    </div>
+                    <p>After restarting Claude, a 🔌 icon will appear, indicating the server is connected and the LLM
+                        can now "see" your tools.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="debugging">
+            <h2>6. Debugging MCP: The Inspector</h2>
+            <p>Because MCP servers often run as background processes, traditional logging can be hard to see. The
+                <strong>MCP Inspector</strong> is a CLI tool that allows you to test your server in isolation.</p>
+            <div class="code-block">
+                npx @modelcontextprotocol/inspector python path/to/server.py
+            </div>
+            <p>This launches an interactive web interface where you can manually trigger tool calls and inspect the
+                JSON-RPC traffic.</p>
+        </section>
+
         <section id="interviews">
-            <h2>5. MCP Senior Interview Questions</h2>
+            <h2>7. MCP Senior Interview Questions</h2>
             <div class="qa-container">
                 <h3>Q: How does MCP improve RAG architectures?</h3>
                 <div class="answer">
                     <p>Instead of manual ETL pipelines where data is pre-chunked into a vector DB, MCP allows
                         <strong>Just-In-Time retrieval</strong>. The model can browse a live file system or query a live
                         database via MCP Tools/Resources, ensuring it uses the most current context without syncing
-                        issues.</p>
+                        issues.
+                    </p>
                 </div>
             </div>
             <div class="qa-container">
@@ -152,7 +214,8 @@
                 <div class="answer">
                     <p>Since MCP servers can execute local commands or access sensitive files,
                         <strong>sandboxing</strong> is critical. Most hosts allow users to approve specific "MCP Tools"
-                        before execution, and servers should ideally follow the principle of least privilege.</p>
+                        before execution, and servers should ideally follow the principle of least privilege.
+                    </p>
                 </div>
             </div>
         </section>

@@ -138,23 +138,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'agent_failure_recovery.html', title: '30. Failure Recovery' },
                 { id: 'scaling_rag_millions.html', title: '31. Scaling RAG' },
                 { id: 'high_efficiency_indexing.html', title: '32. CRAG / Self-RAG' },
-                { id: 'evaluation_ragas_langsmith.html', title: '33. Evaluation Hub' },
+                { id: 'agent_evals.html', title: '33. Evaluating Agent Systems' },
                 { id: '20_interview_questions.html', title: '34. Interview Recap' },
                 { id: '21_real_world_questions.html', title: '35. Real World Production' },
                 { id: 'llm_serving.html', title: '36. LLM Serving' },
                 { id: 'mcp_protocol.html', title: '37. MCP Protocol' },
-                { id: 'interview_scenario_based.html', title: '38. Scenario Interviews' }
+                { id: 'token_optimization_strategies.html', title: '38. Token Optimization' },
+                { id: 'interview_scenario_based.html', title: '39. Scenario Interviews' }
+            ]
+        },
+        {
+            category: 'AGENT ENGINEERING',
+            links: [
+                { id: 'sysdesign_saf_agent.html', title: '1. Case Study: Agentic Simulation Runs' },
+                { id: 'context_engineering.html', title: '2. Context Engineering' },
+                { id: 'agent_skills.html', title: '3. Agent Skills' },
+                { id: 'tool_design.html', title: '4. Tool Design' },
+                { id: 'loop_engineering.html', title: '5. Loop Engineering' },
+                { id: 'agentic_workflows.html', title: '6. Durable Execution' },
+                { id: 'agent_memory_systems.html', title: '7. Memory Systems' },
+                { id: 'structured_outputs_guardrails.html', title: '8. Structured Outputs & Guardrails' },
+                { id: 'agent_sandboxes.html', title: '9. Sandboxes & Code Execution' },
+                { id: 'extended_thinking.html', title: '10. Extended Thinking' },
+                { id: 'agent_evals.html', title: '11. Evaluating Agent Systems' }
             ]
         },
         {
             category: 'ADVANCED RAG DEEP DIVES',
             links: [
-                { id: 'rag_query_expansion.html', title: '1. Query Expansion' },
-                { id: 'embedding_finetuning.html', title: '2. Embedding Fine-Tuning' },
-                { id: 'metadata_filtering.html', title: '3. Metadata Filtering' },
-                { id: 'colbert_retrieval.html', title: '4. ColBERT & Multi-Vector' },
-                { id: 'rag_vs_long_context.html', title: '5. RAG vs Long Context' },
-                { id: 'parent_document_retrieval.html', title: '6. Parent Document Retrieval' }
+                { id: 'retrieval_funnel.html', title: '1. The Retrieval Funnel' },
+                { id: 'document_parsing_ingestion.html', title: '2. Parsing & Ingestion' },
+                { id: 'embedding_migration_versioning.html', title: '3. Embedding Migration' },
+                { id: 'rag_query_expansion.html', title: '4. Query Expansion' },
+                { id: 'embedding_finetuning.html', title: '5. Embedding Fine-Tuning' },
+                { id: 'metadata_filtering.html', title: '6. Metadata Filtering' },
+                { id: 'colbert_retrieval.html', title: '7. ColBERT & Multi-Vector' },
+                { id: 'rag_vs_long_context.html', title: '8. RAG vs Long Context' },
+                { id: 'parent_document_retrieval.html', title: '9. Parent Document Retrieval' }
             ]
         },
         {
@@ -164,8 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'llmops_architecture_scenarios.html', title: '2. Architecture Scenarios' },
                 { id: 'llm_tracing_observability.html', title: '3. Tracing & Observability' },
                 { id: 'llm_cost_caching.html', title: '4. Cost & Caching' },
-                { id: 'hallucination_detection.html', title: '5. Hallucination Detection' },
-                { id: 'llm_deployment_safety.html', title: '6. Deployment Safety' }
+                { id: 'model_routing_cost.html', title: '5. Model Routing & Cost' },
+                { id: 'hallucination_detection.html', title: '6. Hallucinations in Production' },
+                { id: 'prompt_injection_defense.html', title: '7. Prompt Injection Defence' },
+                { id: 'multi_tenancy_isolation.html', title: '8. Multi-Tenancy & Isolation' },
+                { id: 'llm_deployment_safety.html', title: '9. Deployment Safety' }
             ]
         },
         {
@@ -220,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             category: 'System Design',
             links: [
                 { id: 'system_design_company_assistant.html', title: 'Company AI Assistant' },
-                { id: 'sysdesign_agentic_rag_rsa.html', title: 'Designing a RSA NLP Dashboard' },
+                { id: 'sysdesign_saf_agent.html', title: 'Agentic Simulation Runs (SAF)' },
                 { id: 'system_design_patterns.html', title: 'System Design Patterns' },
                 { id: 'system_design_scaling.html', title: 'System Design Scaling' },
                 { id: 'system_design_chatgpt.html', title: 'ChatGPT Case Study' },

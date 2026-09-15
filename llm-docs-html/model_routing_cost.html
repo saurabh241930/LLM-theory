@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Routing &amp; Cost Engineering</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link rel="stylesheet" href="agent_docs.css?v=1">
+</head>
+
+<body>
+    <header>
+        <h1>Model Routing &amp; Cost Engineering</h1>
+        <div class="subtitle">Routing by job, prefix caching that actually hits, and budgets that survive a crash</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>One model for every call is the expensive default</h3>
+            <div class="answer">
+                <div class="one-liner">Route by what the call needs. Planning wants the strongest reasoning over the
+                    largest context; grading is a narrow, high-volume judgement that does not.</div>
+
+                <p>An agent makes several structurally different kinds of call, and they have different requirements.
+                    Planning happens once or twice per run and decides how a solver-hour gets spent, so being wrong is
+                    expensive. Grading happens up to 32 times per diagnosis and answers a three-way classification with
+                    a clear rubric.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Role</th>
+                        <th>Model</th>
+                        <th>Calls per diagnosis</th>
+                        <th>Tokens in / out</th>
+                        <th>Cost</th>
+                    </tr>
+                    <tr>
+                        <td>Planner</td>
+                        <td>Opus 5</td>
+                        <td>1-2 per run</td>
+                        <td>~6,000 / ~1,500</td>
+                        <td>~$0.068 per run</td>
+                    </tr>
+                    <tr>
+                        <td>Tool choice</td>
+                        <td>Haiku 4.5</td>
+                        <td>&le; 4</td>
+                        <td>~800 / ~50</td>
+                        <td>~$0.004</td>
+                    </tr>
+                    <tr>
+                        <td>Grade (batched)</td>
+                        <td>Haiku 4.5</td>
+                        <td>&le; 4</td>
+                        <td>~1,850 / ~60 per candidate</td>
+                        <td>~$0.068 worst case</td>
+                    </tr>
+                    <tr>
+                        <td>Proposal</td>
+                        <td>Sonnet 5</td>
+                        <td>&le; 1</td>
+                        <td>~9,800 / ~700</td>
+                        <td>~$0.027</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ceiling</strong></td>
+                        <td>&mdash;</td>
+                        <td><strong>9</strong></td>
+                        <td>&mdash;</td>
+                        <td><strong>~$0.11 worst, ~$0.046 typical</strong></td>
+                    </tr>
+                </table>
+                <div class="table-caption">The expensive model runs once; the cheap model absorbs the volume.</div>
+
+                <p>The trade is real and worth stating plainly: routing across three models means three cost curves to
+                    watch instead of one, and a quality regression on the cheap model shows up as a rising escalation
+                    rate rather than an error. That is cheap to catch with a frozen labelled set and cheap to fix by
+                    re-routing.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>How to decide which call gets which model</h3>
+            <div class="answer">
+                <div class="one-liner">Ask what a wrong answer costs, then how many times per run the call
+                    happens.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Signal</th>
+                        <th>Points to the strong model</th>
+                        <th>Points to the cheap model</th>
+                    </tr>
+                    <tr>
+                        <td>Cost of being wrong</td>
+                        <td>A wasted solver-hour, a bad approval</td>
+                        <td>One noisy candidate among eight</td>
+                    </tr>
+                    <tr>
+                        <td>Call volume</td>
+                        <td>Once or twice per run</td>
+                        <td>Tens per run</td>
+                    </tr>
+                    <tr>
+                        <td>Task shape</td>
+                        <td>Open-ended reasoning, long context, ordering</td>
+                        <td>Classification against an explicit rubric</td>
+                    </tr>
+                    <tr>
+                        <td>Recoverability</td>
+                        <td>Hard to undo</td>
+                        <td>A later stage catches it</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Grading is high-volume, rubric-bound, and individually recoverable, which is
+                    the cheap-model profile exactly.</div>
+
+                <p>One rule keeps this honest: route by measurement, not by instinct. Move a role to a cheaper model,
+                    run the frozen labelled set, and look at precision per class. If it holds, keep the saving. The
+                    decision is a number, not a preference.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Prefix caching: the mechanics people get wrong</h3>
+            <div class="answer">
+                <div class="one-liner">Prefix caching keys on an exact byte-for-byte prefix, and short prompts on
+                    small models do not qualify at all.</div>
+
+                <p>Prompt caching stores the processed prefix of a request so a later request sharing that exact prefix
+                    skips re-processing it. Two constraints decide whether you ever benefit.</p>
+
+                <p><strong>The prefix must match exactly.</strong> One retrieved chunk placed above your stable
+                    instructions invalidates everything after it. This is why ordering by volatility matters: stable
+                    instructions, tool schemas and resources first, retrieved evidence last. See
+                    <a href="context_engineering.html">Context Engineering</a>.</p>
+
+                <p><strong>There is a minimum cacheable length.</strong> Small models typically require a larger
+                    minimum prefix than their prompts usually reach. The grader's prompt is a few hundred tokens
+                    against a minimum in the low thousands, so prompt caching does nothing for the highest-volume call
+                    in the system.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Call</th>
+                        <th>Prompt size</th>
+                        <th>Prefix caching helps?</th>
+                        <th>What to do instead</th>
+                    </tr>
+                    <tr>
+                        <td>Planner</td>
+                        <td>~6,000 tokens, stable schema block</td>
+                        <td>Yes</td>
+                        <td>Order the schema block ahead of the intent</td>
+                    </tr>
+                    <tr>
+                        <td>Proposal</td>
+                        <td>~9,800 tokens, stable system prefix</td>
+                        <td>Yes, after ~2 reads in the window</td>
+                        <td>Keep evidence last</td>
+                    </tr>
+                    <tr>
+                        <td>Grader</td>
+                        <td>A few hundred tokens</td>
+                        <td>No, below the minimum</td>
+                        <td>Cache verdicts by (query hash, evidence ID, model)</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Caching the wrong layer is a common source of "we added caching and nothing
+                    changed".</div>
+
+                <p>Caching verdicts instead of prompts is the move worth remembering. The grader answers a pure
+                    function of (query, evidence, model), so the result is cacheable even when the prompt is not.</p>
+
+                <p>The largest lever is earlier than any of this: precomputing contextualised chunks at ingest rather
+                    than per query. The chunk is written once and read thousands of times. See
+                    <a href="chunking_strategies.html">Chunking In Depth</a>.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Budgets as durable state</h3>
+            <div class="answer">
+                <div class="one-liner">A typed budget object decremented before every priced call, living in
+                    crash-proof state rather than a side table.</div>
+
+                <pre class="code-block"><code>class Budget(BaseModel):
+    max_usd: float = 25.0
+    max_wall_clock_s: int = 6 * 3600
+    max_llm_calls: int = 60
+    max_solver_hours: float = 4.0
+
+PRICES = {  # USD per million tokens, input/output
+    "claude-opus-5":   (5.00, 25.00),
+    "claude-sonnet-5": (2.00, 10.00),
+    "claude-haiku-4-5": (1.00,  5.00),
+}
+
+def charge_llm(model: str, input_tokens: int, output_tokens: int) -&gt; float:
+    cin, cout = PRICES[model]
+    return (input_tokens * cin + output_tokens * cout) / 1e6</code></pre>
+
+                <p>Four dimensions, because money is not the only thing that runs out. A run can be cheap in dollars
+                    and still burn six hours of wall clock or four solver-hours.</p>
+
+                <p>Two properties make this work. The check runs <em>before</em> the call that would exceed the cap, so
+                    you never overspend by one call, which is the difference between $0.001 and a solver-hour. And the
+                    budget lives on durable workflow state, so a retry cannot double-count it and a crash cannot lose
+                    it. See <a href="agentic_workflows.html">Agentic Workflows</a>.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Cost tracked in a side table</div>
+                    <p><strong>Symptom:</strong> the recorded spend for a run disagrees with the provider invoice, and
+                        nobody can say which is right.</p>
+                    <p><strong>Cause:</strong> an activity writes its cost to a separate table after the call. A retry
+                        writes twice; a crash between the call and the write loses one.</p>
+                    <p><strong>Mitigation:</strong> return the cost as part of the activity's typed result so it
+                        replays deterministically with the run's own history, and expose it through a live query rather
+                        than a separate counter.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>What to cut first when cost becomes binding</h3>
+            <div class="answer">
+                <div class="one-liner">In order: the reranker where the pool is already narrow, then more routing to
+                    the mid model, then the loop cap.</div>
+
+                <ol>
+                    <li><strong>The reranker, selectively.</strong> Where the pre-filtered pool is within ~3x the final
+                        top-k, reranking buys almost no new ordering. Dropping it there is nearly free and does not
+                        touch accuracy.</li>
+                    <li><strong>Route more diagnoses to the mid model.</strong> Reserve the strongest model for
+                        low-confidence escalations rather than every proposal.</li>
+                    <li><strong>Lower the loop iteration cap.</strong> Going from 4 to 3 is a visible trade against
+                        escalation rate, which is the honest kind of cut: it shows up in a metric rather than
+                        silently.</li>
+                </ol>
+
+                <p>The ordering matters because the first two are invisible to quality and the third is not. A cut that
+                    shows up in a number somebody watches is a decision; a cut that shows up nowhere is a slow
+                    regression.</p>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Route by cost-of-being-wrong and call volume. High-volume rubric-bound classification is the cheap
+                    model's job.</li>
+                <li>Prefix caching needs an exact prefix and a minimum length. Order by volatility, and cache verdicts
+                    when prompts are too short to qualify.</li>
+                <li>Precompute at ingest before optimising anything at query time.</li>
+                <li>Check budgets before the call, across dollars, wall clock, calls, and solver-hours.</li>
+                <li>Return cost as part of the typed activity result so it cannot be double-counted or lost.</li>
+            </ul>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

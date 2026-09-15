@@ -4,102 +4,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hallucination Detection</title>
+    <title>Hallucinations in Production</title>
     <link rel="stylesheet" href="wikipedia.css?v=2">
-    <style>
-        .hal-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-
-        .hal-card {
-            background: #fff;
-            padding: 20px;
-            border-top: 5px solid #ccc;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            border-radius: 4px;
-        }
-
-        .diagram-box {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            padding: 20px;
-            border-radius: 4px;
-            font-family: monospace;
-            text-align: center;
-            margin: 20px 0;
-            border-left: 5px solid #e55039;
-        }
-
-        .highlight {
-            font-weight: bold;
-            color: #e55039;
-        }
-    </style>
+    <link rel="stylesheet" href="agent_docs.css?v=1">
 </head>
 
 <body>
     <header>
-        <h1>Hallucination Detection Beyond RAG</h1>
-        <div class="subtitle">Self-Consistency, Factuality Scoring, and Uncertainty Quantification</div>
+        <h1>Hallucinations in Production</h1>
+        <div class="subtitle">Six failure classes, and the structural fix for each</div>
     </header>
-
     <div class="content-wrapper">
-        <section>
-            <h2>The Post-RAG Problem</h2>
-            <p>Even if you perfectly retrieve the correct document via RAG, the LLM can still misinterpret it, ignore
-                it, or confidently invent facts. Detecting hallucination precisely <em>before</em> sending the answer to
-                the user is the Holy Grail of LLMOps.</p>
-            <p><strong>There are four primary strategies to detect a lie:</strong></p>
-        </section>
 
-        <section>
-            <div class="hal-grid">
+        <div class="qa-container">
+            <h3>"Hallucination" names six different bugs</h3>
+            <div class="answer">
+                <div class="one-liner">Treating them as one problem leads to one blunt mitigation, usually a
+                    confidence score, which fixes none of them well.</div>
 
-                <div class="hal-card" style="border-top-color: #3498db;">
-                    <h3>1. Self-Consistency (Ensemble Math)</h3>
-                    <p>Primarily used for logic or math problems. Instead of asking the model once, you ask the model 5
-                        times (with <code>temperature=0.7</code>) to generate 5 different reasoning paths.</p>
-                    <p>If 4 paths result in "42" and 1 path results in "39", you take the <strong>majority vote</strong>
-                        (42), and assume the outlier was a hallucination. Extremely effective, but costs 5x the API
-                        tokens.</p>
-                </div>
+                <p>The word covers a model inventing a citation, misreading a number, naming a function that does not
+                    exist, and confidently answering from an empty retrieval. Those have different causes, appear at
+                    different points in the pipeline, and have different fixes. Most are structural: you make the
+                    failure impossible rather than detecting it afterwards.</p>
 
-                <div class="hal-card" style="border-top-color: #feca57;">
-                    <h3>2. Factuality & NLI Scoring (LLM-as-a-Judge)</h3>
-                    <p>Natural Language Inference (NLI). You deploy a second, smaller model specifically trained to
-                        detect contradiction.</p>
-                    <p>You feed the Judge model the RAG source document and the generated Answer. The Judge grades the
-                        Answer: <br><strong>Entailment (True), Neutral (Unsupported), or Contradiction (Lie).</strong>
-                        This is the foundation of frameworks like RAGAS and TruLens.</p>
-                </div>
-
-                <div class="hal-card" style="border-top-color: #9b59b6;">
-                    <h3>3. Uncertainty Quantification (Logprobs)</h3>
-                    <p>Models like OpenAI allow you to request the <code>logprobs</code> array alongside the generated
-                        text. This exposes the literal probability percentage the model assigned to every word it chose.
-                    </p>
-                    <p>If a model generates "The capital of France is Paris [99% prob]", it is confident. If it
-                        generates "The patient should take <span class="highlight">Aspirin [12% prob]</span>", the model
-                        is violently hallucinating and guessing the next token. You programmatically catch
-                        low-confidence entities and trigger a fallback.</p>
-                </div>
-
-                <div class="hal-card" style="border-top-color: #e55039;">
-                    <h3>4. SelfCheckGPT (Zero-Resource Detection)</h3>
-                    <p>What if you don't have RAG source documents to check against?</p>
-                    <p><strong>Mechanic:</strong> You generate 1 "Main Answer" (Temp=0.0). Then you generate 5 "Draft
-                        Answers" (Temp=1.0) on the exact same question. You then ask a small LLM to cross-examine
-                        passage 1 against the 5 drafts. If the LLM is hallucinating a specific date, it will generate a
-                        <em>different</em> wrong date every single time in the 5 drafts. The cross-examination
-                        effortlessly spots the contradiction and flags the Main Answer as a hallucination.</p>
-                </div>
-
+                <table class="spec">
+                    <tr>
+                        <th>Class</th>
+                        <th>What it looks like</th>
+                        <th>Structural fix</th>
+                        <th>Cost of the fix</th>
+                    </tr>
+                    <tr>
+                        <td>Malformed output</td>
+                        <td>Prose where JSON was expected; unclosed fence</td>
+                        <td>Constrained decoding against a JSON Schema</td>
+                        <td>Free</td>
+                    </tr>
+                    <tr>
+                        <td>Invented identifiers</td>
+                        <td><code>step: "meshing"</code> when the step is <code>mesh</code></td>
+                        <td>Validate against ground truth the system owns</td>
+                        <td>Microseconds</td>
+                    </tr>
+                    <tr>
+                        <td>Invented actions</td>
+                        <td>A tool call outside the intended surface</td>
+                        <td>Closed enum plus allow-list</td>
+                        <td>A set membership test</td>
+                    </tr>
+                    <tr>
+                        <td>Invented citations</td>
+                        <td>Evidence IDs that retrieval never returned</td>
+                        <td>Validate IDs server-side against what was retrieved</td>
+                        <td>A set membership test</td>
+                    </tr>
+                    <tr>
+                        <td>Answering from nothing</td>
+                        <td>Confident answer when retrieval found nothing relevant</td>
+                        <td>Grade evidence; make "found nothing" a typed return</td>
+                        <td>~$0.017 per query</td>
+                    </tr>
+                    <tr>
+                        <td>Stale-but-plausible</td>
+                        <td>Correct answer for last year's version</td>
+                        <td>Version as filter predicate <em>and</em> grader rule</td>
+                        <td>Near zero</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Five of six are prevented by code. Only the last two need a model in the
+                    loop.</div>
             </div>
-        </section>
+        </div>
+
+        <div class="qa-container">
+            <h3>Class 1-2: shape and membership are different guarantees</h3>
+            <div class="answer">
+                <div class="one-liner">Constrained decoding guarantees valid JSON. It says nothing about whether the
+                    strings inside mean anything.</div>
+
+                <p>Structured outputs remove malformed output entirely: decoding is constrained so a token violating
+                    the schema cannot be emitted. That kills the whole regex-parsing failure class.</p>
+
+                <p>It does not touch the next one. A field declared <code>step: str</code> compiles to a JSON Schema
+                    type of <code>"string"</code>, and nothing stops a plausible-sounding invention.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Hallucinated step names</div>
+                    <p><strong>Symptom:</strong> the first activity fails with <code>unknown step 'meshing'</code> on a
+                        solution whose step is named <code>mesh</code>.</p>
+                    <p><strong>Cause:</strong> structured outputs constrain shape, not membership. Long context or a
+                        paraphrased intent makes a near-miss name more likely.</p>
+                    <p><strong>Mitigation:</strong> cross-check every identifier against the real schema before
+                        anything runs, and put the valid names in the error text. That error becomes the feedback for
+                        the next attempt, so the model self-corrects in one replan rather than looping.</p>
+                </div>
+
+                <p>The general rule: whenever the system owns ground truth, check against it rather than hoping. A
+                    microsecond lookup ahead of a solver-hour is never a close call. See
+                    <a href="structured_outputs_guardrails.html">Structured Outputs &amp; Guardrails</a>.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Class 3-4: closed sets beat detection</h3>
+            <div class="answer">
+                <div class="one-liner">If the output must be one of six enum values, no amount of hallucination or
+                    injection produces a seventh.</div>
+
+                <pre class="code-block"><code>class RemediationKind(StrEnum):
+    RETRY = "retry"
+    ADJUST_FIELD = "adjust_field"
+    RERUN_UPSTREAM = "rerun_upstream"
+    SWITCH_SKILL = "switch_skill"
+    ESCALATE = "escalate"
+    ABORT = "abort"</code></pre>
+
+                <p>There is no <code>delete_project</code> for a confused or manipulated model to reach for, because
+                    the type does not admit one. This is the cheapest strong guarantee in the whole system.</p>
+
+                <p>Invented citations get the same treatment. A proposed action carries an evidence list, and those IDs
+                    are validated server-side against the IDs retrieval actually returned. An invented reference is
+                    rejected rather than rendered. Without that check, a fabricated citation is indistinguishable from
+                    a real one in the UI, which is the version of this bug that damages trust hardest.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Class 5: the empty-retrieval failure</h3>
+            <div class="answer">
+                <div class="one-liner">Nearest-neighbour search always returns k results, including when nothing
+                    relevant exists.</div>
+
+                <p>This is the most under-appreciated hallucination source in RAG, because the retrieval looks like it
+                    worked. Ask about an HPS queue timeout with nothing about HPS indexed, and vector search returns
+                    the k least-unrelated chunks, probably about meshing. An ungoverned model builds a confident answer
+                    from them.</p>
+
+                <p>Plain RAG has no way to say "nothing here". Corrective grading gives it one: a grader scores each
+                    candidate <code>correct</code>, <code>ambiguous</code>, or <code>incorrect</code> before anything
+                    reaches the generation step, and an empty kept-set returns a typed escalation.</p>
+
+                <pre class="code-block"><code>if not kept:
+    return RemediationAction(kind=RemediationKind.ESCALATE,
+                             reason="no evidence graded relevant after retrieval",
+                             evidence=[], confidence=0.0, requires_approval=True)</code></pre>
+
+                <div class="teaching">
+                    <div class="tp-title">Why three verdicts, not two</div>
+                    <p>A binary relevant/irrelevant judgement hinges on the grader being right at exactly one
+                        threshold, and graders are not that well calibrated. Three grades let the upper threshold clear
+                        an answer, the lower one discard it, and the middle absorb genuine uncertainty.</p>
+                    <p><code>ambiguous</code> is the honest label for most real evidence. A page describing the same
+                        failure family, for a different product version, is neither correct nor irrelevant.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Class 6: right answer, wrong version</h3>
+            <div class="answer">
+                <div class="one-liner">The hardest class, because every surface-level check passes.</div>
+
+                <p>A 2023R1 documentation page can be topically near-identical to a 2025R2 failure, cite correctly,
+                    grade as relevant, and still be wrong. Nothing about the output looks broken. The remediation runs,
+                    consumes an approval and an eight-hour solve, and fails.</p>
+
+                <p>Version correctness gets enforced three separate times, because one check is not enough:</p>
+
+                <ul>
+                    <li>As a <strong>pre-filter predicate</strong>, so off-version chunks never enter the candidate
+                        pool.</li>
+                    <li>As a <strong>grader rule</strong>: a version mismatch alone downgrades <code>correct</code> to
+                        <code>ambiguous</code>, even when the content matches perfectly.</li>
+                    <li>As a <strong>visible citation field</strong>, so a human reviewing the proposal sees which
+                        version the evidence came from.</li>
+                </ul>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Index drift after a product release</div>
+                    <p><strong>Symptom:</strong> the week after a release, diagnoses cite the previous version and
+                        confidence drops, with nothing erroring.</p>
+                    <p><strong>Cause:</strong> docs are a versioned artefact but the index is not release-aware, so old
+                        chunks keep retrieving.</p>
+                    <p><strong>Mitigation:</strong> retire superseded chunks with <code>valid_to = now()</code> on
+                        ingest, and alert on drift between the version retrieved and the version running.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Where scoring still earns its place</h3>
+            <div class="answer">
+                <div class="one-liner">Confidence scores are for routing, not for catching the classes above.</div>
+
+                <p>A confidence number is a poor detector and a decent router. In the running system it decides whether
+                    an action executes automatically or waits for a human: a proposal auto-applies only when confidence
+                    is at or above 0.75 <em>and</em> the action kind is on the auto-safe list. Everything else routes to
+                    approval regardless of how confident the model claims to be.</p>
+
+                <p>That is the right use. The score never decides whether the content is true; it decides who looks at
+                    it before it runs.</p>
+
+                <p>For measuring the problem rather than preventing it, the eval pyramid gives numbers that move:
+                    grader precision against a frozen labelled set, unassisted-completion rate, and escalation rate over
+                    time. A rising escalation rate where every escalation is a correct "I don't know" is a healthy
+                    system. See <a href="agent_evals.html">Evaluating Agent Systems</a>.</p>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Name the class before reaching for a mitigation. Five of six are prevented by code, not detected by
+                    a model.</li>
+                <li>Constrained decoding kills malformed output. It does nothing about invented identifiers.</li>
+                <li>Closed enums and allow-lists make invented actions unrepresentable, which also blocks injection.
+                </li>
+                <li>Validate citation IDs against what retrieval actually returned.</li>
+                <li>Make "found nothing" a typed return value, or the model will fill the gap.</li>
+                <li>Enforce version three times: filter, grader rule, visible citation.</li>
+            </ul>
+        </div>
+
     </div>
+    <script src="animations.js"></script>
     <script src="sidebar.js?v=2"></script>
 </body>
 

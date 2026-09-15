@@ -205,30 +205,37 @@
                     a long context window.</li>
             </ul>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>The dashboard's <strong>"Auto-Auditor"</strong> agent uses the <strong>ReAct Pattern</strong> to perform
-                deep investigations. When auditing a flagged call, the agent follows a loop: <strong>Thought:</strong>
-                "I need to check if the advisor mentioned that RSA is optional." → <strong>Action:</strong>
-                <code>search_transcript("optional", "RSA")</code> → <strong>Observation:</strong> "No mention found." →
-                <strong>Thought:</strong> "I should now check if the advisor explicitly claimed it was mandatory." →
-                <strong>Action:</strong> <code>search_transcript("required", "must have")</code>. This step-by-step
-                reasoning allows the agent to build a solid case for its compliance flags, which is then presented to
-                the human manager.
-            </p>
+            <h2>Case Study: Why a Thin ReAct Loop Was Not Enough</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent</a> considered a plain ReAct loop first: one LLM holding
+                the conversation, calling tools directly, deciding what to do next after each observation. It was the
+                simplest option and it lost on four criteria.</p>
+
+            <p>A solver run takes four hours, so a single long-lived process holding the conversation is a process
+                holding a thread and a connection for four hours. A crash loses the plan entirely, because the state
+                lives in the transcript. An approval that takes a day has nothing to pause on. And the audit trail is
+                one opaque transcript, which makes "why did the agent set this field to 0.85?" hard to reconstruct.</p>
+
+            <p>The loop structure survives; what changes is who owns it. The Diagnoser is still a tool-use loop, but a
+                bounded one: at most four iterations, a nine-call ceiling, three named stop conditions, and a
+                deterministic workflow deciding what happens between calls.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: ReAct Auditor Loop</span>
-                <span class="keyword">class</span> <span class="class-name">RSAAuditor</span>:
-                <span class="keyword">def</span> <span class="class-name">audit_step</span>(self, transcript):
-                thought = <span class="string">"Check if RSA was described as 'optional'."</span>
-                action = search_tool.run(<span class="string">"optional RSA"</span>)
-                observation = <span class="string">"Found: 'I'll just add this for you'."</span>
-                <span class="keyword">if</span> <span class="string">"optional"</span> <span class="keyword">not</span>
-                <span class="keyword">in</span> observation:
-                <span class="keyword">return</span> <span class="string">"FLAG: Coercive sale detected."</span>
+                <span class="comment"># The loop is bounded in code, not requested in a prompt</span>
+                MAX_ITERS = <span class="number">4</span>
+                MIN_CORRECT = <span class="number">3</span>
+
+                <span class="keyword">for</span> _ <span class="keyword">in</span> range(MAX_ITERS):
+                tool_name, query, k = <span class="keyword">await</span> choose_tool(failure, query, kept)
+                cands = [e <span class="keyword">for</span> e <span class="keyword">in</span> <span class="keyword">await</span> tools[tool_name](query, k) <span class="keyword">if</span> e.ref <span class="keyword">not</span> <span class="keyword">in</span> seen]
+                <span class="keyword">if</span> <span class="keyword">not</span> cands:
+                <span class="keyword">break</span> <span class="comment"># stop: no new evidence</span>
             </div>
 
-            <h2>Key Takeaways</h2>
+            <p>ReAct remains the right shape for short, bounded investigations where nothing expensive or irreversible
+                happens. It stops being enough the moment a run outlives a request. See
+                <a href="loop_engineering.html">Loop Engineering</a>.</p>
+
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ ReAct combines Chain-of-Thought with external tools.<br>
                 ✅ Reasoning before acting reduces irrational tool calls.<br>

@@ -225,34 +225,56 @@
                     it.</li>
             </ul>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>During automated auditing, the <strong>RSA Sales QA Dashboard</strong> often retrieves multiple
-                similar-looking clauses regarding "Cancellation Fees" from the insurance policy manual. A standard
-                embedding search might rank a "General Policy Cancellation" chunk higher than the specific "RSA Add-on
-                Cancellation" chunk due to keyword density. By applying a <strong>Cross-Encoder Reranker</strong>, the
-                dashboard re-evaluates the top 50 chunks against the user's specific query about RSA fees, ensuring the
-                <em>most legally precise</em> clause is shown to the auditor, thereby preventing wrongful penalization
-                of advisors.
-            </p>
+            <h2>Case Study: Reranking 50 Candidates Down to 8</h2>
+            <p>In the <a href="sysdesign_saf_agent.html">SAF agent's</a> retrieval funnel, a cross-encoder narrows 50
+                fused candidates to 8 for about $0.002. The stage after it, LLM grading, costs roughly ten times more
+                per candidate, which is the whole reason the rerank exists.</p>
+
+            <p>The division of labour is precise. A cross-encoder reads query and document jointly and produces scores
+                that are comparable <em>across</em> candidates, which is the "pick the best 8 of 50" problem. The
+                grader that follows sees one excerpt in isolation and answers a binary question, so it cannot rank at
+                all. It still runs, because it catches something no cross-encoder knows: a 2023R1 page can be topically
+                near-identical to a 2025R2 failure and still be wrong, and a version mismatch alone downgrades the
+                verdict.</p>
+
+            <p>The more useful lesson is when to skip it.</p>
+
+            <table class="intent-table">
+                <tr>
+                    <th>Source</th>
+                    <th>Pool after pre-filter</th>
+                    <th>Rerank?</th>
+                </tr>
+                <tr>
+                    <td>Log chunks, scoped to one run and step</td>
+                    <td>20-30 for a top-8</td>
+                    <td>No; already near the answer width</td>
+                </tr>
+                <tr>
+                    <td>Skills, after the solver filter</td>
+                    <td>A few dozen</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>Product docs</td>
+                    <td>Thousands</td>
+                    <td>Always; ordering is the whole problem</td>
+                </tr>
+            </table>
+
+            <p>Rule of thumb: rerank only when the pre-filtered pool exceeds roughly 3x the final top-k. Below that the
+                reranker buys almost no new ordering for its latency and its rate limit. See
+                <a href="retrieval_funnel.html">The Retrieval Funnel</a>.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: Precision Reranking</span>
-                <span class="keyword">from</span> sentence_transformers <span class="keyword">import</span> CrossEncoder
-
-                model = CrossEncoder(<span class="string">'cross-encoder/ms-marco-MiniLM-L-6-v2'</span>)
-                query = <span class="string">"What is the exact penalty for missing RSA disclosures?"</span>
-                chunks = [<span class="string">"General policy cancellation..."</span>, <span class="string">"RSA add-on
-                    disclosure failure results in $100 fine..."</span>]
-
-                scores = model.predict([(query, chunk) <span class="keyword">for</span> chunk <span
-                    class="keyword">in</span> chunks])
-                sorted_chunks = [c <span class="keyword">for</span> _, c <span class="keyword">in</span>
-                sorted(zip(scores, chunks), reverse=True)]
-
-                <span class="keyword">print</span>(f<span class="string">"Top Match: {sorted_chunks[0]}"</span>)
+                RERANK_MIN_POOL = <span class="number">3</span> <span class="comment"># rerank only when the pool exceeds 3x top_k</span>
+                <span class="keyword">if</span> len(cands) &gt; RERANK_MIN_POOL * top_k:
+                cands = <span class="keyword">await</span> reranker.rerank(sig.query_text, cands, top_n=top_k)
+                <span class="keyword">else</span>:
+                cands = cands[:top_k] <span class="comment"># skip the hop, keep RRF order</span>
             </div>
 
-            <h2>Key Takeaways</h2>
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ Rerankers are "Context-Aware" Cross-Encoders.<br>
                 ✅ Two-stage retrieval maximizes both speed and accuracy.<br>

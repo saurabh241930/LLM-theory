@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Workflows &amp; Durable Execution</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link rel="stylesheet" href="agent_docs.css?v=1">
+</head>
+
+<body>
+    <header>
+        <h1>Agentic Workflows &amp; Durable Execution</h1>
+        <div class="subtitle">Replay, idempotency, signals, and runs that outlive the process</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>The problem: the run outlives the request</h3>
+            <div class="answer">
+                <div class="one-liner">A four-hour solve, a day-long approval, and a worker restart all break an
+                    agent that keeps its state in process memory.</div>
+
+                <p>A normal HTTP request answers when the work is done. A long-running job breaks that on purpose: the
+                    POST that starts it returns almost immediately, before the work has even begun, and the caller is
+                    left holding only the knowledge that a job was accepted somewhere. To find out what happened, the
+                    caller has to come back and ask again.</p>
+
+                <p>The trap is treating that loop as something you run inside a single request. A caller blocking on a
+                    wait for an hour-long job holds a thread, a connection, and often a timeout budget for the entire
+                    hour. The fix is not a cleverer wait call. It is moving the loop out of any single request
+                    entirely, into something built to sleep for hours without holding a resource.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">The 600-second wait ceiling</div>
+                    <p><strong>Symptom:</strong> the wait helper returns a timeout while the solver is still
+                        iterating, and a prototype that passed every test against a two-minute mock fails the day it
+                        meets a real six-hour job.</p>
+                    <p><strong>Cause:</strong> the helper is a blocking sleep loop inside one HTTP request, hard-capped
+                        at 600 s, against solver jobs whose own default maximum is a week.</p>
+                    <p><strong>Mitigation:</strong> never wait inside a tool call. Poll from a durable timer loop, 30 s
+                        doubling to a 300 s cap with jitter, holding nothing between polls.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Durable execution in one page</h3>
+            <div class="answer">
+                <div class="one-liner">Your orchestration is an ordinary function whose local variables survive a
+                    crash, because every command it issues and every result it receives is recorded in order.</div>
+
+                <div class="teaching">
+                    <div class="tp-title">How replay works</div>
+                    <p>The engine records every command the workflow function issues and every result it receives, as
+                        an append-only event history. If the worker process dies mid-run, another worker replays that
+                        history through the same function from the top. Each <code>await</code> on a previously
+                        recorded command returns instantly with the recorded answer instead of re-issuing it, so the
+                        function's local variables come back exactly where they left off.</p>
+                    <p>No status column. No reconciler cron job. The loop position, the cursor, and the budget are
+                        ordinary Python attributes that happen to be crash-proof.</p>
+                </div>
+
+                <p>This only works if replay produces the same command sequence every time, which is why workflow code
+                    must be deterministic: no wall-clock reads, no random values, no threads, no network or disk
+                    access. The engine supplies deterministic substitutes for time and randomness. Every LLM call,
+                    every HTTP call, and every clock read that matters lives in an <em>activity</em>, where none of
+                    those restrictions apply.</p>
+
+                <div class="mermaid">
+                    flowchart TD
+                    W["RunSolutionWorkflow<br/><i>deterministic, no I/O</i>"] --> A1["plan_run<br/>activity"]
+                    W --> SW["StepWorkflow<br/>child, per step"]
+                    W --> DW["DiagnoseWorkflow<br/>child, on failure"]
+                    W --> A2["apply_remediation<br/>activity"]
+                    W --> SIG["approval_decision / abort<br/>signals"]
+                    W --> Q["get_status / get_plan<br/>queries"]
+                    SW --> A3["execute_step<br/>activity"]
+                    SW --> A4["poll_method_state<br/>activity, timer loop"]
+                </div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">An LLM call inside workflow code</div>
+                    <p><strong>Symptom:</strong> a run that behaved correctly on Monday produces a different plan, or
+                        crashes with a non-determinism error, after a routine deploy.</p>
+                    <p><strong>Cause:</strong> the model call was made from workflow code instead of an activity. Model
+                        output is not deterministic, so a replay of the same history can call a slightly different
+                        model version or simply return different text, and the whole recovery mechanism depends on
+                        issuing the same commands every replay.</p>
+                    <p><strong>Mitigation:</strong> every LLM call lives inside an activity with a bounded retry
+                        policy. The workflow never reads model text; it branches only on the typed objects those
+                        activities return.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Idempotency: retries are the default, so make them safe</h3>
+            <div class="answer">
+                <div class="one-liner">A retry re-runs the whole function, including side effects the first attempt
+                    already committed.</div>
+
+                <p>Activities are retried automatically, which is the point. But if an activity submits a solver job
+                    and the worker crashes before the result is recorded, the engine has no way to know the solve
+                    happened and will run the activity again. A duplicate solve costs real cluster-hours.</p>
+
+                <p>An idempotency key breaks that link. It is a deterministic string derivable from information the
+                    caller already has, identifying "this specific attempt to do this specific thing" rather than
+                    "this specific HTTP call".</p>
+
+                <pre class="code-block"><code># Derived from workflow-visible identifiers, never a fresh UUID.
+key = f"{run_id}:{step.ordinal}:{step.transaction}"
+
+def run_transaction(client, project, step, transaction, args, *,
+                    idempotency_key: str, long_running: bool):
+    if already_applied(idempotency_key):
+        return load_handle(idempotency_key)      # resume, do not resubmit
+    result = invoke(client, project, step, transaction, args)
+    record(idempotency_key, result)
+    return result</code></pre>
+
+                <p>The key has to be computed the same way on every retry, which is why it is built from stable
+                    identifiers rather than anything generated inside the activity. A UUID minted at call time is a
+                    different key every attempt and protects nothing.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">The same transaction, twice</div>
+                    <p><strong>Symptom:</strong> a step that failed on a transient network blip during its upload
+                        phase re-runs from scratch, and a solve that had actually completed gets charged again.</p>
+                    <p><strong>Cause:</strong> the activity is retried as one unit. Platform-level conflict detection
+                        usually only blocks a second invocation while the first is still running, not one that arrives
+                        after it finished.</p>
+                    <p><strong>Mitigation:</strong> check the idempotency ledger before invoking anything, and return
+                        the recorded result if the key is already present, so a retry after partial success resumes
+                        rather than resubmits.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Signals, queries, timers, and the human gate</h3>
+            <div class="answer">
+                <div class="one-liner">Three ways the outside world touches a running workflow without breaking
+                    replay.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Mechanism</th>
+                        <th>Direction</th>
+                        <th>Can mutate state</th>
+                        <th>Used for</th>
+                    </tr>
+                    <tr>
+                        <td>Signal</td>
+                        <td>In, fire-and-forget</td>
+                        <td>Yes</td>
+                        <td>Approval decisions, abort</td>
+                    </tr>
+                    <tr>
+                        <td>Query</td>
+                        <td>Out, read-only</td>
+                        <td>No</td>
+                        <td>Status, current plan, live budget</td>
+                    </tr>
+                    <tr>
+                        <td>Timer</td>
+                        <td>Internal</td>
+                        <td>Yes, on fire</td>
+                        <td>Poll backoff, approval SLA</td>
+                    </tr>
+                </table>
+                <div class="table-caption">A 30-second sleep and a 30-day sleep cost the same: nothing.</div>
+
+                <p>Human approval is a timer plus a signal, which is why a durable orchestrator handles it natively
+                    while a ReAct loop cannot. The workflow notifies a reviewer, records a pending request ID, and
+                    waits on a decision with a deadline. If nothing arrives, it escalates once to a different
+                    recipient, then fails the run. Auto-approving on timeout is never acceptable for a destructive or
+                    expensive action.</p>
+
+                <pre class="code-block"><code>async def gate(self, request: ApprovalRequest, sla: timedelta) -&gt; ApprovalDecision:
+    self.pending_request_id = request.approval_id
+    await workflow.execute_activity(notify_human, args=[request], ...)
+    for attempt in (0, 1):
+        try:
+            await workflow.wait_condition(
+                lambda: self.decision is not None, timeout=sla)
+            return self.decision
+        except asyncio.TimeoutError:
+            if attempt == 0:
+                await workflow.execute_activity(escalate_approval, ...)
+    return ApprovalDecision(approval_id=request.approval_id, decision="reject",
+                            decided_by="system:sla_timeout",
+                            comment="two SLA windows expired")</code></pre>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Approval fatigue</div>
+                    <p><strong>Symptom:</strong> engineers approve without reading, and the gate protects nothing.</p>
+                    <p><strong>Cause:</strong> too many action classes trigger a gate, so approving becomes routine.
+                    </p>
+                    <p><strong>Mitigation:</strong> gate on action class (destructive, expensive, IP-sensitive), not on
+                        step count, and batch one approval per plan rather than one per step.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>History growth and the claim-check pattern</h3>
+            <div class="answer">
+                <div class="one-liner">Event history has size limits, and prompts, plans and logs blow through them
+                    faster than they look like they will.</div>
+
+                <p>Durable history is an asset until it is a bottleneck. Engines cap a single payload (commonly a few
+                    MB) and a total history size. A solver log, a full prompt, or a large plan passed as an activity
+                    argument crosses those ceilings sooner than expected, and the symptom is a payload-too-large error
+                    on an otherwise healthy run.</p>
+
+                <p>The claim-check pattern fixes it: write the blob to object storage and pass a URI and a hash. The
+                    workflow only ever holds references. Anything that genuinely needs the full object calls a small
+                    load activity.</p>
+
+                <p>For history <em>length</em> rather than payload size, long replan loops call continue-as-new, which
+                    restarts the workflow with fresh history and a compact summary, keeping the same workflow ID so
+                    pending signals still find a listener.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Approvals lost across continue-as-new</div>
+                    <p><strong>Symptom:</strong> a run that compacted its history during an open approval window never
+                        resumes.</p>
+                    <p><strong>Cause:</strong> continue-as-new starts a fresh execution, and anything not explicitly
+                        passed forward is gone, including the pending request ID.</p>
+                    <p><strong>Mitigation:</strong> carry any pending approval into the continue-as-new arguments and
+                        re-register the wait before doing anything else.</p>
+                </div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">A workflow code change breaks in-flight runs</div>
+                    <p><strong>Symptom:</strong> a run started before a deploy fails with a non-determinism error right
+                        after, with no change to its own state.</p>
+                    <p><strong>Cause:</strong> the new worker binary replays the run's history against changed code,
+                        and the emitted commands no longer match what history recorded.</p>
+                    <p><strong>Mitigation:</strong> wrap every behaviour change in a versioning gate so old runs take
+                        the old branch, and replay real production histories in CI before a risky deploy.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Move the wait out of the request. A durable timer loop sleeps for six hours at the cost of a
+                    30-second one.</li>
+                <li>Keep orchestration deterministic. Every LLM call and every HTTP call belongs in a retryable
+                    activity.</li>
+                <li>Derive idempotency keys from stable identifiers the caller already has, and check the ledger before
+                    acting.</li>
+                <li>Human approval is a timer plus a signal. Escalate once, then fail; never auto-approve a destructive
+                    action on timeout.</li>
+                <li>Pass references, not payloads, and compact history before it becomes the bottleneck.</li>
+            </ul>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

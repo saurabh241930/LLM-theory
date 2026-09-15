@@ -223,27 +223,49 @@
                 "polish" or behavioral nuance.
             </div>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>When building the <strong>RSA Sales QA Dashboard</strong>, the team had to choose between RAG and
-                Fine-Tuning. For the <strong>"Policy Knowledge"</strong> (e.g., "What does the $50 RSA plan cover?"),
-                they chose <strong>RAG</strong> because policy details change quarterly and require exact citations.
-                However, for <strong>"Behavioral Tone"</strong> (ensuring the bot provides feedback in a supportive,
-                coaching style rather than a punitive one), they chose to <strong>Fine-Tune</strong> a smaller model.
-                This hybrid approach keeps the facts accurate via RAG while ensuring a consistent, corporate-aligned
-                coaching persona via Fine-Tuning.</p>
+            <h2>Case Study: Why the SAF Agent Does Not Fine-Tune</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent</a> needs the model to know things a general model does
+                not: what AMG divergence means, which parameter to lower first, which remedies work on this release.
+                Fine-tuning is the obvious way to teach that, and the design rejects it.</p>
 
-            <div class="code-block">
-                <span class="comment"># RSA Case Study: Hybrid RAG vs FT Routing</span>
-                <span class="keyword">def</span> <span class="class-name">audit_router</span>(query):
-                <span class="keyword">if</span> is_fact_based(query):
-                <span class="keyword">return</span> rag_pipeline.query(query, collection=<span
-                    class="string">"rsa_policy_v4"</span>)
-                <span class="keyword">else</span>:
-                <span class="keyword">return</span> fine_tuned_model.generate(query, system_prompt=<span
-                    class="string">"Supportive Coach"</span>)
-            </div>
+            <p>The reason is update cadence. Operational knowledge changes on someone else's schedule, and a product
+                release can rename the very parameter a fix depends on. Fine-tuned weights have no version field and no
+                way to fail closed. A versioned playbook does:
+                <code>metadata.verified_against: "2026 R1, 2026 R2"</code>, checked by the loader against the running
+                version, escalating rather than loading stale advice.</p>
 
-            <h2>Key Takeaways</h2>
+            <table class="intent-table">
+                <tr>
+                    <th></th>
+                    <th>Fine-tuning</th>
+                    <th>Skills + retrieval (chosen)</th>
+                </tr>
+                <tr>
+                    <td>Update cost</td>
+                    <td>A training run per knowledge change</td>
+                    <td>A git merge</td>
+                </tr>
+                <tr>
+                    <td>Version awareness</td>
+                    <td>None; knowledge is baked in</td>
+                    <td>Explicit, checked at load time</td>
+                </tr>
+                <tr>
+                    <td>Auditability</td>
+                    <td>Cannot cite why it believed something</td>
+                    <td>Cites the playbook and the evidence</td>
+                </tr>
+                <tr>
+                    <td>Failure mode</td>
+                    <td>Confidently stale</td>
+                    <td>Fails closed to escalation</td>
+                </tr>
+            </table>
+
+            <p>Fine-tuning remains the right tool where the gap is <em>format or style</em> rather than fast-changing
+                facts. See <a href="agent_skills.html">Agent Skills</a>.</p>
+
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ Use Prompting for initial discovery and basic constraints.<br>
                 ✅ Use RAG for all knowledge-heavy, dynamic document tasks.<br>

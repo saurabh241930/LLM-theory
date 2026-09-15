@@ -1,56 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Graph RAG</title>
     <link rel="stylesheet" href="wikipedia.css?v=2">
-    <style>
-        .qa-container {
-            margin-bottom: 2em;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-left: 4px solid var(--wp-accent);
-            border-radius: 4px;
-        }
-        .qa-container h3 { margin-top: 0; color: var(--wp-title-text); }
-        .qa-container .answer { margin-top: 10px; }
-        .one-liner { font-weight: bold; margin-bottom: 10px; }
-    </style>
+    <link rel="stylesheet" href="agent_docs.css?v=1">
 </head>
+
 <body>
     <header>
         <h1>Graph RAG</h1>
-        <div class="subtitle">Knowledge Graphs & Entity Extraction</div>
+        <div class="subtitle">When a graph beats an index, and when it is an expensive mistake</div>
     </header>
     <div class="content-wrapper">
 
-        <div class="qa-container" id="graph-rag-concepts">
-            <h3>What makes Graph RAG powerful compared to Vector RAG?</h3>
+        <div class="qa-container">
+            <h3>What Graph RAG replaces</h3>
             <div class="answer">
-                <div class="one-liner">Graph RAG extracts entities and relationships into a Knowledge Graph, enabling multi-hop reasoning over connected concepts.</div>
-                
-<p>Standard vector RAG struggles with questions that span multiple unconnected documents. Graph RAG resolves this by pre-computing relationships.</p>
-<h4>Implementation Flow</h4>
-<ol>
-    <li>Pass documents to an LLM to extract Entities (Nodes) and Relationships (Edges).</li>
-    <li>Store in a Graph DB (like Neo4j) and a Vector DB.</li>
-    <li>At query time, retrieve relevant entities via Vector lookup, then traverse their graph neighbors to fetch deep context.</li>
-</ol>
-<div class="mermaid">
-graph LR
-  A[User: John Doe] -- WORKS_FOR --> B[Acme Corp]
-  B -- LOCATED_IN --> C[New York]
-  A -- HAS_SKILL --> D[Python]
-  style A fill:#f9f,stroke:#333
-  style B fill:#bbf,stroke:#333
-</div>
+                <div class="one-liner">A flat chunk index answers "what text looks like this question". A graph
+                    answers "what is connected to this thing, and how".</div>
 
+                <p>Standard RAG embeds chunks and retrieves the nearest ones. That works when the answer sits in a
+                    passage that resembles the question. It fails on questions whose answer is a relationship spanning
+                    several documents, because no single chunk contains the connection.</p>
+
+                <p>Graph RAG builds an entity graph instead: nodes for entities, typed edges for relationships, and
+                    often LLM-generated community summaries over clusters. A query traverses relationships rather than
+                    ranking by similarity.</p>
+
+                <div class="teaching">
+                    <div class="tp-title">The two questions that decide it</div>
+                    <p><strong>Do the questions traverse relationships?</strong> "Which failures were fixed by lowering
+                        the Courant number, and did those runs stay green?" is a two-hop walk. "What does error 217
+                        mean?" is a lookup, and a graph adds nothing to it.</p>
+                    <p><strong>How fast does the index go stale?</strong> Graph construction is the expensive part.
+                        If the corpus reissues on a release cadence, you pay that cost again every release.</p>
+                </div>
             </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>The cost nobody budgets for</h3>
+            <div class="answer">
+                <div class="one-liner">Full Graph RAG's index is LLM-built, which makes rebuilds expensive enough to
+                    change the decision.</div>
+
+                <p>Constructing an entity graph over a large corpus means running a model over every document to
+                    extract entities and relationships, then summarising communities. Published figures for indexing
+                    roughly a million tokens land in the region of a few hours of processing and a real bill. Over a
+                    documentation corpus that reissues per product release, that is a recurring cost against a corpus
+                    whose questions are mostly lookups.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th></th>
+                        <th>Full Graph RAG over docs</th>
+                        <th>Scoped graph over run outcomes</th>
+                    </tr>
+                    <tr>
+                        <td>How the graph is built</td>
+                        <td>LLM extraction over every document</td>
+                        <td>Rows written as a side effect of each run finishing</td>
+                    </tr>
+                    <tr>
+                        <td>Rebuild trigger</td>
+                        <td>Every corpus release</td>
+                        <td>Never; it is incremental</td>
+                    </tr>
+                    <tr>
+                        <td>Query cost</td>
+                        <td>Traversal plus summary reads</td>
+                        <td>One recursive SQL query, zero LLM calls</td>
+                    </tr>
+                    <tr>
+                        <td>Question shape it serves</td>
+                        <td>Corpus-wide sensemaking</td>
+                        <td>"What fixed something like this before?"</td>
+                    </tr>
+                    <tr>
+                        <td>Verdict for this system</td>
+                        <td>Rejected</td>
+                        <td>Adopted</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Same technique, two scopes, opposite answers.</div>
+
+                <p>Graph RAG is not wrong here; it is aimed at the wrong corpus. The documentation corpus is large,
+                    fast-changing, and mostly asked lookup questions. The failure-to-remediation-to-outcome data is
+                    small, structured, durable, and asked exactly the relationship question a graph is good at.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>The scoped graph, concretely</h3>
+            <div class="answer">
+                <div class="one-liner">Two Postgres tables and a recursive CTE capped at two hops. No graph database,
+                    no LLM call.</div>
+
+                <div class="mermaid">
+                    erDiagram
+                    MEM_NODES {
+                    string node_id
+                    string node_type
+                    string tenant_id
+                    vector embedding
+                    }
+                    MEM_EDGES {
+                    string edge_id
+                    string src_node_id
+                    string dst_node_id
+                    string relation
+                    float weight
+                    }
+                    MEM_NODES ||--o{ MEM_EDGES : connects
+                </div>
+
+                <p>Nodes are failure signatures, remediation kinds, and skill tags. Edges are typed and weighted:
+                    <code>fixed_by</code>, <code>similar_to</code>, <code>cites</code>. Every row carries a tenant.</p>
+
+                <pre class="code-block"><code>WITH RECURSIVE hop(node_id, relation, depth, path) AS (
+    SELECT n.node_id, NULL::text, 0, ARRAY[n.node_id]
+    FROM   mem_nodes n
+    WHERE  n.node_id = $1                    -- nearest failure-signature node
+  UNION ALL
+    SELECT e.dst_node_id, e.relation, h.depth + 1, h.path || e.dst_node_id
+    FROM   hop h
+    JOIN   mem_edges e ON e.src_node_id = h.node_id
+    WHERE  h.depth &lt; 2                       -- cap at two hops
+      AND  NOT e.dst_node_id = ANY(h.path)   -- no cycles
+)
+SELECT n.node_id, n.node_type, h.relation, h.depth
+FROM   hop h
+JOIN   mem_nodes n ON n.node_id = h.node_id
+WHERE  h.depth &gt; 0
+  AND  n.tenant_id = $2
+ORDER  BY h.depth, h.node_id;</code></pre>
+
+                <p>Entry into the graph is a vector search for the nearest failure signature; traversal from there is
+                    relational. That hybrid is the practical shape: embeddings find the door, edges walk the
+                    building.</p>
+
+                <p>The depth cap and the cycle guard both matter. Without the cap, a well-connected node returns most
+                    of the graph. Without the path check, a cycle runs forever.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>When to reach for a real graph database</h3>
+            <div class="answer">
+                <div class="one-liner">A recursive CTE handles two hops over a small graph. Deeper traversals over
+                    millions of edges are what graph engines are for.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Signal</th>
+                        <th>Stay in Postgres</th>
+                        <th>Move to a graph engine</th>
+                    </tr>
+                    <tr>
+                        <td>Traversal depth</td>
+                        <td>1-2 hops</td>
+                        <td>Variable or unbounded</td>
+                    </tr>
+                    <tr>
+                        <td>Graph size</td>
+                        <td>Thousands of edges</td>
+                        <td>Tens of millions</td>
+                    </tr>
+                    <tr>
+                        <td>Query shape</td>
+                        <td>Fixed, known in advance</td>
+                        <td>Pattern matching, shortest path</td>
+                    </tr>
+                    <tr>
+                        <td>Operational cost</td>
+                        <td>Already running Postgres</td>
+                        <td>A new system to run and secure</td>
+                    </tr>
+                </table>
+                <div class="table-caption">The graph living in the same database as the retrieval store means one
+                    place tenant filters can be forgotten, not two.</div>
+
+                <p>Keeping the graph in the same Postgres instance as the vector store is a real operational
+                    simplification. One backup story, one connection pool, one place to enforce tenant isolation. A
+                    separate graph database buys traversal power and costs a second system where a filter can be
+                    missed.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Failure modes</h3>
+            <div class="answer">
+                <div class="one-liner">Graphs fail quietly, because a wrong edge looks exactly like a right one.</div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Edges recording coincidences</div>
+                    <p><strong>Symptom:</strong> the graph confidently recommends a fix that never actually worked.
+                    </p>
+                    <p><strong>Cause:</strong> a <code>fixed_by</code> edge was written because a retry passed, when
+                        something unrelated is what changed.</p>
+                    <p><strong>Mitigation:</strong> write an edge only when the retry reached terminal success and the
+                        remediation was the sole change. Decay edge weight when a reused fix stops working. See
+                        <a href="agent_memory_systems.html">Agent Memory Systems</a>.</p>
+                </div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Embedding model change breaks graph entry</div>
+                    <p><strong>Symptom:</strong> similar-failure recall stops surfacing precedent after an embedding
+                        upgrade, with no error anywhere.</p>
+                    <p><strong>Cause:</strong> entry into the graph is a vector search, and vectors from two models are
+                        not comparable.</p>
+                    <p><strong>Mitigation:</strong> stamp <code>embedding_model</code> on every node, dual-write
+                        during cutover, drop the old column once every reader has moved.</p>
+                </div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Tenant leakage through a traversal</div>
+                    <p><strong>Symptom:</strong> one tenant's engineer sees a remediation derived from another
+                        tenant's run.</p>
+                    <p><strong>Cause:</strong> the tenant filter was applied to the entry lookup but not to the
+                        traversal, so hop two crossed the boundary.</p>
+                    <p><strong>Mitigation:</strong> filter on tenant at every level of the recursion, not only at
+                        entry, and assert zero cross-hits on a two-tenant fixture in CI.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Two questions decide it: do queries traverse relationships, and how fast does the index go
+                    stale.</li>
+                <li>Full Graph RAG's index is LLM-built, so a corpus that reissues per release pays that bill
+                    repeatedly.</li>
+                <li>A small graph written as a side effect of work already happening is incremental and costs nothing
+                    to maintain.</li>
+                <li>Embeddings find the entry node; edges do the traversal. Cap the depth and guard against
+                    cycles.</li>
+                <li>Filter on tenant at every level of the recursion, not only at entry.</li>
+            </ul>
         </div>
 
     </div>
     <script src="animations.js"></script>
     <script src="sidebar.js?v=2"></script>
 </body>
+
 </html>

@@ -196,28 +196,58 @@
                 <strong>Router</strong> ensures only high-value queries use the most expensive reasoning models.
             </p>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>To audit millions of calls without exploding the budget, the <strong>RSA Sales QA Dashboard</strong> uses
-                <strong>Semantic Caching</strong>. Many insurance agents use identical "Welcome Scripts" and "RSA
-                Disclosure Paragraphs." When the system encounters these redundant segments, it retrieves the audit
-                result from the cache in milliseconds instead of calling an expensive LLM. This scaling strategy has
-                auditors.
-            </p>
+            <h2>Case Study: The Retrieval Funnel Under Load</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent</a> scales retrieval by making each stage see far fewer
+                candidates than the one before, since each stage costs roughly 10-100x more per candidate.</p>
+
+            <table class="intent-table">
+                <tr>
+                    <th>Stage</th>
+                    <th>Candidates in &rarr; out</th>
+                    <th>Cost per query</th>
+                </tr>
+                <tr>
+                    <td>Metadata pre-filter (tenant, solver, version)</td>
+                    <td>120,000 &rarr; 8,000</td>
+                    <td>$0</td>
+                </tr>
+                <tr>
+                    <td>BM25 + vector in parallel, then RRF</td>
+                    <td>8,000 &rarr; 50</td>
+                    <td>near $0</td>
+                </tr>
+                <tr>
+                    <td>Cross-encoder rerank</td>
+                    <td>50 &rarr; 8</td>
+                    <td>~$0.002</td>
+                </tr>
+                <tr>
+                    <td>LLM grade, then assemble</td>
+                    <td>8 &rarr; ~5 &rarr; 1</td>
+                    <td>~$0.044</td>
+                </tr>
+            </table>
+
+            <p>At roughly 2,000 failed steps a month, the all-in retrieval bill lands near $140/month. The scaling
+                lever that matters is the free stage: filtering first prices every later stage against 8,000 candidates
+                instead of 120,000.</p>
+
+            <p>The trap at scale is that approximate vector indexes apply predicates <em>after</em> the scan, so a
+                selective tenant filter silently starves the result set. Partial indexes for the handful of common
+                solver values, partitioning for large tenants, and a bounded iterative-scan fallback handle the long
+                tail. See <a href="retrieval_funnel.html">The Retrieval Funnel</a>.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: Semantic Caching for Profits</span>
-                <span class="keyword">from</span> langchain.cache <span class="keyword">import</span> RedisSemanticCache
-
-                set_llm_cache(RedisSemanticCache(
-                redis_url=<span class="string">"redis://localhost:6379"</span>,
-                embedding=embed_model,
-                score_threshold=0.9
-                ))
-
-                <span class="comment"># If an advisor uses a standard disclosure script, the result is cached.</span>
+                <span class="comment"># Both branches filter inside the same CTE, before fusion</span>
+                <span class="keyword">WITH</span> filtered <span class="keyword">AS</span> (
+                <span class="keyword">SELECT</span> chunk_id, content, content_tsv, embedding
+                <span class="keyword">FROM</span> doc_chunks
+                <span class="keyword">WHERE</span> tenant_id <span class="keyword">IN</span> ($5, <span class="string">'__shared__'</span>)
+                <span class="keyword">AND</span> solver = $2 <span class="keyword">AND</span> valid_to <span class="keyword">IS NULL</span>
+                )
             </div>
 
-            <h2>Key Takeaways</h2>
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ Scale decides the architecture, not the model.<br>
                 ✅ Semantic caching is the highest ROI for cost reduction.<br>

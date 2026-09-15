@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedding Migration &amp; Corpus Versioning</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link rel="stylesheet" href="agent_docs.css?v=1">
+</head>
+
+<body>
+    <header>
+        <h1>Embedding Migration &amp; Corpus Versioning</h1>
+        <div class="subtitle">Changing the model under a live index, and keeping stale content from answering</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>Two upgrades that look similar and are not</h3>
+            <div class="answer">
+                <div class="one-liner">A new embedding model invalidates every vector. A new corpus release
+                    invalidates the <em>meaning</em> of chunks whose vectors are still fine.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th></th>
+                        <th>Embedding model change</th>
+                        <th>Corpus version change</th>
+                    </tr>
+                    <tr>
+                        <td>What breaks</td>
+                        <td>Vectors are no longer comparable</td>
+                        <td>Content is superseded but still retrievable</td>
+                    </tr>
+                    <tr>
+                        <td>Symptom</td>
+                        <td>Nonsense distances, recall collapses</td>
+                        <td>Confident answers for the wrong release</td>
+                    </tr>
+                    <tr>
+                        <td>Errors?</td>
+                        <td>None</td>
+                        <td>None</td>
+                    </tr>
+                    <tr>
+                        <td>Fix</td>
+                        <td>Dual-write migration with a model stamp</td>
+                        <td>Validity window plus a version predicate</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Neither raises an exception, which is what makes both expensive to
+                    discover.</div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Why you cannot mix two embedding models in one index</h3>
+            <div class="answer">
+                <div class="one-liner">Vectors from different models occupy different spaces. Distance between them is
+                    a number without meaning.</div>
+
+                <p>Two embedding models trained separately place "AMG solver diverged" in unrelated positions. Cosine
+                    distance between a vector from model A and one from model B is computable and meaningless, so a
+                    mixed index returns confidently wrong neighbours with no error at any layer.</p>
+
+                <p>Dimension count compounds it. Index implementations cap vector dimensions, and a model exceeding
+                    that cap cannot go into the same column at all.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Embedding-model upgrade forces a full re-embed</div>
+                    <p><strong>Symptom:</strong> a better embedding model looks like an unbounded migration nobody
+                        wants to start.</p>
+                    <p><strong>Cause:</strong> vectors from two models are not comparable in one index, and the
+                        dimension cap may block the new model from sharing the column.</p>
+                    <p><strong>Mitigation:</strong> store <code>embedding_model</code> on every row. Write to a new
+                        column, backfill off-peak, dual-read during cutover, then drop the old column. The risk is
+                        dimension mismatch and rebuild time, not the token bill.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>The dual-write cutover</h3>
+            <div class="answer">
+                <div class="one-liner">Five phases, each reversible, with no window where retrieval is broken.</div>
+
+                <div class="mermaid">
+                    flowchart TD
+                    P1["1. Add column + index<br/>embedding_v2, model stamped"] --> P2["2. Dual-write<br/>new ingests fill both"]
+                    P2 --> P3["3. Backfill off-peak<br/>oldest first, rate-limited"]
+                    P3 --> P4["4. Dual-read + compare<br/>shadow queries, measure recall"]
+                    P4 --> P5["5. Cut over, then drop v1"]
+                </div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Phase</th>
+                        <th>Reads served by</th>
+                        <th>Rollback</th>
+                    </tr>
+                    <tr>
+                        <td>1. Schema</td>
+                        <td>v1</td>
+                        <td>Drop the column</td>
+                    </tr>
+                    <tr>
+                        <td>2. Dual-write</td>
+                        <td>v1</td>
+                        <td>Stop writing v2</td>
+                    </tr>
+                    <tr>
+                        <td>3. Backfill</td>
+                        <td>v1</td>
+                        <td>Pause; v1 untouched throughout</td>
+                    </tr>
+                    <tr>
+                        <td>4. Dual-read</td>
+                        <td>v1, with v2 shadowed and compared</td>
+                        <td>Stop shadowing</td>
+                    </tr>
+                    <tr>
+                        <td>5. Cut over</td>
+                        <td>v2</td>
+                        <td>Flip back while v1 exists</td>
+                    </tr>
+                </table>
+                <div class="table-caption">v1 stays authoritative until measurements say otherwise.</div>
+
+                <p>Phase 4 is the one people skip, and it is the one that makes the decision defensible. Run the same
+                    queries against both columns and compare recall against a labelled set. "The new model is better"
+                    should be a measurement on your corpus, not the vendor's benchmark on someone else's.</p>
+
+                <p>The query-side predicate is what keeps a half-migrated index honest:</p>
+
+                <pre class="code-block"><code>WHERE tenant_id IN ($5, '__shared__')
+  AND embedding_model = $4        -- never mix vectors from two models
+  AND valid_to IS NULL</code></pre>
+
+                <p>Every index carrying vectors needs this, including the memory graph. Its nodes are entered by vector
+                    search, so an upgrade that skips them breaks precedent recall silently. See
+                    <a href="agent_memory_systems.html">Agent Memory Systems</a>.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Corpus versioning: enforce it three times</h3>
+            <div class="answer">
+                <div class="one-liner">Stale-but-plausible content passes every surface check, so one guard is not
+                    enough.</div>
+
+                <p>Product documentation reissues per release. A page from an older release can be topically
+                    near-identical to a current failure, cite correctly, grade as relevant, and still be wrong. The
+                    remediation then consumes an approval and a long solve before failing.</p>
+
+                <ul>
+                    <li><strong>As a pre-filter predicate,</strong> so off-version chunks never enter the candidate
+                        pool. Documentation with no version applies to all, expressed explicitly rather than as
+                        <code>NULL</code> ambiguity.</li>
+                    <li><strong>As a grader rule.</strong> A version mismatch alone downgrades <code>correct</code> to
+                        <code>ambiguous</code>, even when the content matches perfectly. The grader is told this
+                        directly.</li>
+                    <li><strong>As a visible citation field,</strong> so a human reviewing a proposal sees which
+                        release the evidence came from.</li>
+                </ul>
+
+                <p>Retirement uses a validity window rather than a delete. Setting <code>valid_to = now()</code> on
+                    superseded chunks removes them from retrieval while keeping them for audit, which matters when
+                    somebody asks six months later why a run made a particular decision.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Index drift after a product release</div>
+                    <p><strong>Symptom:</strong> the week after a release, diagnoses cite the previous version and
+                        confidence drops, with nothing erroring.</p>
+                    <p><strong>Cause:</strong> docs are a versioned artefact but the index is not release-aware, so old
+                        chunks keep retrieving alongside new ones.</p>
+                    <p><strong>Mitigation:</strong> retire superseded chunks on ingest with <code>valid_to</code>, and
+                        alert on drift between the version retrieved and the version running.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Refresh cadence per source</h3>
+            <div class="answer">
+                <div class="one-liner">Each source changes on someone else's schedule, and the ingest trigger should
+                    match it.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Source</th>
+                        <th>Trigger</th>
+                        <th>Why that trigger</th>
+                    </tr>
+                    <tr>
+                        <td>Solver logs</td>
+                        <td>On failure, synchronously</td>
+                        <td>The log for <em>this</em> failure must be searchable before diagnosis runs</td>
+                    </tr>
+                    <tr>
+                        <td>Product docs</td>
+                        <td>Per release, diffed by content hash</td>
+                        <td>Only changed pages need re-embedding</td>
+                    </tr>
+                    <tr>
+                        <td>Skills</td>
+                        <td>On every git merge</td>
+                        <td>Small, and the source of truth is version control</td>
+                    </tr>
+                    <tr>
+                        <td>Past runs</td>
+                        <td>On confirmed-green completion</td>
+                        <td>Write-back discipline gates entry</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Synchronous ingest for logs is a correctness requirement, not a performance
+                    choice.</div>
+
+                <p>Diffing docs by content hash is what keeps a per-release re-index affordable. A release usually
+                    changes a small fraction of pages, and re-embedding only those turns a full rebuild into a modest
+                    incremental job.</p>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Never mix vectors from two models in one index. Stamp <code>embedding_model</code> on every row and
+                    filter on it.</li>
+                <li>Migrate by dual-write: new column, backfill off-peak, dual-read and compare, cut over, drop.</li>
+                <li>Measure the new model's recall on your corpus before cutting over.</li>
+                <li>Enforce version three times: pre-filter predicate, grader rule, visible citation.</li>
+                <li>Retire with a validity window rather than a delete, so audit survives.</li>
+                <li>Match refresh cadence to each source. Logs ingest synchronously because diagnosis depends on
+                    them.</li>
+            </ul>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

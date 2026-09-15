@@ -3359,28 +3359,36 @@ def research(question):
 
       <!-- Case Study Section -->
       <div class="topic-section">
-        <h2>Case Study: RSA Sales QA Dashboard (Interview Perspective)</h2>
-        <p>In an interview setting, applying the concepts to a concrete example like the RSA Sales QA Dashboard is
-          crucial. Here's how you might frame the integration of these 5 phases:</p>
+        <h2>Case Study: Agentic Simulation Runs (Interview Perspective)</h2>
+        <p>In an interview, the concepts land better against one concrete system. Here is how the
+          <a href="sysdesign_saf_agent.html">SAF agent</a> ties the phases together, with the numbers an interviewer
+          will ask for.</p>
 
         <div class="qa-container">
-          <h3>How would you architect the RSA QA system end-to-end?</h3>
+          <h3>How would you architect an agent that runs long simulation jobs end-to-end?</h3>
           <div class="answer">
-            <p><strong>1. Foundations & Search:</strong> We use specialized embeddings (like BGE) to encode call
-              transcripts and policy documents, enabling semantic search to find compliance violations even if agents
-              use different phrasing.</p>
-            <p><strong>2. RAG Pipeline:</strong> When auditing a call, we retrieve relevant policy clauses (chunked
-              semantically) and inject them into the LLM's context, mitigating hallucinations about company policy.</p>
-            <p><strong>3. Structured Outputs:</strong> To populate the QA dashboard, we force the LLM to output a strict
-              JSON schema containing `{ "compliance_score": 85, "violations": [...], "summary": "..." }`. We use
-              NL-to-SQL to allow managers to query the dashboard naturally (e.g., "Show me agents failing the greeting
-              policy").</p>
-            <p><strong>4. Fine-Tuning:</strong> If the generic LLM struggles to parse our proprietary insurance jargon
-              (ACV, subrogation) consistently, we apply LoRA to adapt a smaller open-source model like Llama-3
-              specifically on our past manually-audited calls, improving accuracy while lowering inference costs.</p>
-            <p><strong>5. Agency:</strong> We wrap this in a ReAct loop. An auditor agent can decide to search the
-              policy DB first, realize it needs more info, query the CRM for the customer's history, and only then
-              render a final compliance decision.</p>
+            <p><strong>1. Lead with the gap, not the tech.</strong> The platform ships an HTTP API, a state engine and
+              an MCP tool surface. What it lacks is planning, durable waiting, memory and approval gates. Naming nine
+              specific gaps beats a generic "add AI" pitch.</p>
+            <p><strong>2. Name the spine.</strong> A durable workflow owns the run's state: status, plan reference,
+              step cursor, budget, pending approval. Planner, Executor and Diagnoser are bounded roles the workflow
+              calls as activities, because every LLM call and HTTP call is non-deterministic I/O a replay cannot
+              trust.</p>
+            <p><strong>3. Retrieval as a priced funnel.</strong> Filter, hybrid search, RRF, rerank, LLM grade:
+              120,000 candidates down to 5 for about $0.046, each stage seeing 10-100x fewer candidates than the one
+              before because each costs 10-100x more per candidate.</p>
+            <p><strong>4. Diagnosis as a bounded agentic loop.</strong> Four sources that are not interchangeable, so
+              choosing between them is the diagnostic judgement. Four iterations, a nine-call ceiling, three stop
+              conditions, and corrective grading inside every iteration.</p>
+            <p><strong>5. Guardrails as code, not a second opinion.</strong> An allow-list, a budget checked before
+              every priced call, evidence-ID validation, and approval gated on action class rather than step count. A
+              closed six-value enum means injected text cannot name an action that does not exist.</p>
+            <p><strong>6. Always have a number ready.</strong> A 600-second wait ceiling that forces polling out of the
+              request, a 2 MB payload limit that forces the claim-check pattern, $0.046 per diagnosis, a 4.0
+              solver-hour cap. A design without numbers reads as unbuilt.</p>
+            <p><strong>7. State the trade-off you accepted.</strong> Postgres over a dedicated vector database, agentic
+              retrieval over a fixed fallback order, a durable orchestrator over plain asyncio. Say what you gave up,
+              not only what you gained.</p>
           </div>
         </div>
       </div>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loop Engineering</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link rel="stylesheet" href="agent_docs.css?v=1">
+</head>
+
+<body>
+    <header>
+        <h1>Loop Engineering</h1>
+        <div class="subtitle">Iteration caps, stop conditions, and budgets that live in code</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>What an agent loop actually is</h3>
+            <div class="answer">
+                <div class="one-liner">The model reads state and a tool list, picks one tool and arguments, something
+                    outside the model runs it and feeds the result back as new state. Repeat until the model says
+                    done.</div>
+
+                <p>There is no hidden reasoning engine and no separate planning module inside the model. Every "plan",
+                    "decide", or "diagnose" step in any agent framework is this same loop wearing a different prompt
+                    and a narrower tool list.</p>
+
+                <p>The loop has one structural weakness worth naming early: the model's own output decides what happens
+                    next. If nothing stands between the model's text and a real side effect, then starting a cluster
+                    job or writing a field is one unsupervised step away from a hallucinated argument. Everything
+                    interesting in agent design is about how much you let the raw loop touch, and how much you wrap in
+                    validation, typed contracts, and places to stop and ask a human.</p>
+
+                <div class="teaching">
+                    <div class="tp-title">Why "let the model decide when to stop" fails</div>
+                    <p>A model asked to stop when it has enough information will sometimes decide that on iteration
+                        two and sometimes on iteration forty. The variance is not a prompt problem. The model has no
+                        reliable sense of how much it has already spent, and no view of what the next call costs.</p>
+                    <p>Loop control belongs in the calling code, where the iteration count and the running spend are
+                        ordinary variables. The model contributes evidence; the code decides whether that is enough.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>A loop contract, written out</h3>
+            <div class="answer">
+                <div class="one-liner">Four iterations, two LLM calls per iteration, one final call: a hard ceiling of
+                    nine calls, enforced in Python.</div>
+
+                <p>The SAF Diagnoser's loop is a useful shape because every number in it is defensible. Per iteration
+                    it makes one tool-choice call and one batched grading call. After the loop it makes one proposal
+                    call. Four iterations gives a ceiling of nine LLM calls, and the loop exits on whichever of three
+                    conditions fires first.</p>
+
+                <div class="mermaid">
+                    flowchart TD
+                    F["Failure record"] --> C["Choose tool and query"]
+                    C --> R["Retrieve top-k evidence"]
+                    R --> G["Grade the batch<br/>(one call, not one per candidate)"]
+                    G --> D{"3+ correct?<br/>no new evidence?<br/>iteration 4?"}
+                    D -- "no, budget remains" --> C
+                    D -- "yes" --> P["Propose RemediationAction"]
+                    P --> W["Return to workflow"]
+                </div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Stop condition</th>
+                        <th>Meaning</th>
+                        <th>What it prevents</th>
+                    </tr>
+                    <tr>
+                        <td>At least 3 items graded <code>correct</code></td>
+                        <td>Sufficiency reached</td>
+                        <td>Paying for evidence you no longer need</td>
+                    </tr>
+                    <tr>
+                        <td>Two iterations return nothing outside the seen set</td>
+                        <td>The corpus has nothing more</td>
+                        <td>Rewriting a query that keeps finding the same chunks</td>
+                    </tr>
+                    <tr>
+                        <td>Iteration 4, or budget exhausted</td>
+                        <td>Hard ceiling</td>
+                        <td>Unbounded spend on a hard failure</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Three exits; every one of them produces a typed action, including "found
+                    nothing".</div>
+
+                <pre class="code-block"><code>MAX_ITERS = 4
+MIN_CORRECT = 3
+
+async def diagnose_agentic(failure, tools, grade, propose) -&gt; RemediationAction:
+    query = build_signature(failure)
+    kept: list[GradedEvidence] = []
+    seen: set[str] = set()
+
+    for _ in range(MAX_ITERS):
+        tool_name, query, k = await choose_tool(failure, query, kept)
+        cands = [e for e in await tools[tool_name](query, k) if e.ref not in seen]
+        if not cands:
+            break                                   # stop: no new evidence
+        seen.update(e.ref for e in cands)
+        graded = await grade(failure, cands)        # one batched call
+        kept += [g for g in graded if g.grade != "incorrect"]
+        if sum(1 for g in kept if g.grade == "correct") &gt;= MIN_CORRECT:
+            break                                   # stop: sufficiency
+
+    if not kept:
+        return RemediationAction(kind=RemediationKind.ESCALATE,
+                                 reason="no evidence graded relevant after retrieval",
+                                 evidence=[], confidence=0.0, requires_approval=True)
+    return await propose(failure, kept)</code></pre>
+
+                <p>Notice what the empty case does. Finding nothing returns a typed escalation, not an exception and
+                    not a guess. A loop that cannot express "I found nothing" will invent something instead.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Budgets that survive a crash</h3>
+            <div class="answer">
+                <div class="one-liner">A counter in a local variable is lost on restart. Budget belongs in durable
+                    state, checked before the call that would exceed it.</div>
+
+                <pre class="code-block"><code>class Budget(BaseModel):
+    max_usd: float = 25.0
+    max_wall_clock_s: int = 6 * 3600
+    max_llm_calls: int = 60
+    max_solver_hours: float = 4.0
+
+def check_budget(budget, spent_usd, llm_calls, solver_hours, *, kind: str) -&gt; None:
+    if spent_usd &gt;= budget.max_usd:
+        raise BudgetExceeded(f"cost {spent_usd:.2f} &gt;= cap {budget.max_usd:.2f}")
+    if kind == "llm" and llm_calls &gt;= budget.max_llm_calls:
+        raise BudgetExceeded(f"llm call cap {budget.max_llm_calls} reached")
+    if kind == "solver" and solver_hours &gt;= budget.max_solver_hours:
+        raise BudgetExceeded(f"solver-hour cap {budget.max_solver_hours} reached")</code></pre>
+
+                <p>Two details matter more than the code. First, the check runs <em>before</em> the call rather than
+                    after, so the call that would breach the cap never fires. Checking afterwards means you always
+                    overspend by exactly one call, which is fine at $0.001 and painful at a solver-hour.</p>
+
+                <p>Second, the budget lives on durable workflow state rather than in a side table. Because the
+                    orchestrator's state replays deterministically, the number cannot be double-counted by a retry or
+                    lost to a crash, and it can be read live by a status query without a separate accounting
+                    system.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Runaway loops</div>
+                    <p><strong>Symptom:</strong> a run burns its entire call budget without making progress.</p>
+                    <p><strong>Cause:</strong> a replan or diagnosis loop keeps calling the same tool with a
+                        near-identical query, undetected.</p>
+                    <p><strong>Mitigation:</strong> check the budget before every call, and track a <code>seen</code>
+                        set of evidence IDs so a rewrite that keeps re-finding the same chunks terminates the loop
+                        instead of paying for it four times.</p>
+                </div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Retry storms</div>
+                    <p><strong>Symptom:</strong> one schema-invalid output burns dozens of retries across every
+                        concurrent run at once.</p>
+                    <p><strong>Cause:</strong> the retry policy defaults to unlimited attempts, and a validation
+                        failure looks like any other exception unless it is told otherwise.</p>
+                    <p><strong>Mitigation:</strong> set an explicit maximum attempts on every LLM activity, and mark
+                        validation failures non-retryable so a bad plan goes to a replan with feedback instead of
+                        retrying the identical prompt.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Latency: iterations multiply, so batch inside them</h3>
+            <div class="answer">
+                <div class="one-liner">Four iterations of sequential per-candidate grading is the difference between a
+                    7-second diagnosis and a 40-second one.</div>
+
+                <p>The loop above grades a whole batch of candidates in one call rather than one call per candidate.
+                    With eight candidates and four iterations, per-candidate grading is 32 sequential round trips. The
+                    same work batched is four.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Shape</th>
+                        <th>LLM round trips</th>
+                        <th>Typical wall clock</th>
+                    </tr>
+                    <tr>
+                        <td>Grade each candidate, sequential</td>
+                        <td>32</td>
+                        <td>~40 s</td>
+                    </tr>
+                    <tr>
+                        <td>Grade the batch, one call per iteration</td>
+                        <td>4</td>
+                        <td>~7.5 s</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Same tokens, different round-trip count.</div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Retrieval latency in the loop</div>
+                    <p><strong>Symptom:</strong> a diagnosis takes 40 seconds and starts closing in on the activity
+                        heartbeat timeout.</p>
+                    <p><strong>Cause:</strong> four iterations of retrieval and grading, each run sequentially per
+                        candidate.</p>
+                    <p><strong>Mitigation:</strong> gather the grading calls concurrently, hold the iteration cap and
+                        <em>k</em> as constants, and give the activity a hard deadline that returns an escalation on
+                        timeout rather than hanging.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Where the loop cap belongs in the prompt: nowhere</h3>
+            <div class="answer">
+                <div class="one-liner">"Use at most four iterations" in a system prompt is a request. A
+                    <code>for</code> loop is a guarantee.</div>
+
+                <p>This is the recurring lesson across every control in an agent. Anything expressed as an instruction
+                    to the model is advice it usually follows. Anything expressed in the calling code holds whether or
+                    not the model behaves as expected, including when retrieved text is actively trying to change its
+                    behaviour.</p>
+
+                <p>The same principle drives allow-lists over "please only call these tools", SQL tenant predicates
+                    over "only consider tenant A's data", and closed enums over "return one of these six actions". See
+                    <a href="structured_outputs_guardrails.html">Structured Outputs &amp; Guardrails</a>.</p>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Loop control belongs in code. The model contributes evidence; the calling code decides whether it
+                    is enough.</li>
+                <li>Name every exit. Sufficiency, no-new-evidence, and a hard iteration cap, each producing a typed
+                    result.</li>
+                <li>A loop that cannot say "I found nothing" will invent something. Make the empty case a first-class
+                    return value.</li>
+                <li>Check the budget before the call, not after, and keep it in durable state so a crash cannot lose
+                    it.</li>
+                <li>Batch inside iterations. 32 sequential round trips becomes 4 for the same tokens.</li>
+            </ul>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Retrieval Funnel</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link rel="stylesheet" href="agent_docs.css?v=1">
+</head>
+
+<body>
+    <header>
+        <h1>The Retrieval Funnel</h1>
+        <div class="subtitle">Filter, hybrid search, fusion, rerank, grade, with candidate counts and per-stage
+            cost</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>The organising principle</h3>
+            <div class="answer">
+                <div class="one-liner">Each stage costs roughly 10-100x more per candidate than the one before, so it
+                    must see 10-100x fewer candidates. Everything else follows from that.</div>
+
+                <div class="mermaid">
+                    flowchart TD
+                    S["Failure signature"] --> F1["1. Metadata pre-filter<br/>tenant, solver, version"]
+                    F1 -- "120,000 → 8,000 · $0" --> F2["2. BM25 + vector, parallel"]
+                    F2 -- "8,000 → 200 · ~$0" --> F3["3. Reciprocal rank fusion"]
+                    F3 -- "200 → 50 · $0" --> F4["4. Cross-encoder rerank"]
+                    F4 -- "50 → 8 · ~$0.002" --> F5["5. LLM grade (Haiku 4.5)"]
+                    F5 -- "8 → ~5 · ~$0.017" --> F6["6. Assemble and answer (Sonnet 5)"]
+                    F6 -- "~$0.027" --> R["Answer with citations"]
+                </div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Stage</th>
+                        <th>In → out</th>
+                        <th>Unit cost driver</th>
+                        <th>Cost, one query</th>
+                    </tr>
+                    <tr>
+                        <td>1-3: filter, BM25 + vector, RRF</td>
+                        <td>120,000 → 50</td>
+                        <td>Postgres time, one query embedding</td>
+                        <td>near $0</td>
+                    </tr>
+                    <tr>
+                        <td>4: cross-encoder rerank</td>
+                        <td>50 → 8</td>
+                        <td>One search unit</td>
+                        <td>~$0.002</td>
+                    </tr>
+                    <tr>
+                        <td>5: LLM grade, 8 candidates</td>
+                        <td>8 → ~5</td>
+                        <td>~1,850 in / 60 out each</td>
+                        <td>~$0.017</td>
+                    </tr>
+                    <tr>
+                        <td>6: assemble and answer</td>
+                        <td>~5 → 1</td>
+                        <td>~9,800 in / ~700 out</td>
+                        <td>~$0.027</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total, one pass</strong></td>
+                        <td>&mdash;</td>
+                        <td>&mdash;</td>
+                        <td><strong>~$0.046</strong></td>
+                    </tr>
+                </table>
+                <div class="table-caption">Per-query cost by stage. At 2,000 failed steps a month with a third needing
+                    a second iteration, the all-in bill is roughly $140/month.</div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Why filter first</h3>
+            <div class="answer">
+                <div class="one-liner">Metadata filtering is free, and it is a correctness boundary rather than an
+                    optimisation.</div>
+
+                <p>Filtering on tenant, solver and version comes first because a 2025R2 run must never see 2023R1
+                    documentation, and one tenant must never see another's logs. Those are correctness properties, not
+                    performance tuning. Filtering first also prices every later stage against 8,000 candidates rather
+                    than 120,000.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Approximate indexes filter after the scan</div>
+                    <p><strong>Symptom:</strong> a selective filter returns 4 rows when you asked for 40, and nobody
+                        notices because 4 results still look like results.</p>
+                    <p><strong>Cause:</strong> HNSW and similar approximate indexes apply a predicate <em>after</em>
+                        the vector scan. With a search breadth of 40 and a predicate matching 10% of rows, roughly 4
+                        survive. This breaks the naive reading of "filter first", which is a logical ordering, not
+                        automatically the physical one.</p>
+                    <p><strong>Mitigation:</strong> partial indexes for the handful of high-cardinality values,
+                        partitioning by tenant for large tenants, and an iterative-scan fallback bounded by a maximum
+                        tuple count.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Why keyword search is not optional</h3>
+            <div class="answer">
+                <div class="one-liner">Engineers write tokens that carry no semantics, and an embedding model has no
+                    reason to place "217" near "217".</div>
+
+                <p>A failure signature contains things like <code>mapdl.err</code>, <code>SIGSEGV</code>, and
+                    <code>Error code 217</code>. Embeddings encode meaning, and these strings have none. Exact-match
+                    retrieval finds them reliably; vector search may not.</p>
+
+                <p>The opposite case is equally real. "Solution failed to converge" and "solver exited with code 217"
+                    describe the same event with almost no shared words, and only embeddings connect them. Neither
+                    method is strictly better, which is why both run.</p>
+
+                <pre class="code-block"><code>WITH filtered AS (
+    SELECT chunk_id, content, uri, content_tsv, embedding
+    FROM   doc_chunks
+    WHERE  tenant_id IN ($5, '__shared__')
+      AND  solver = $2
+      AND  (solver_version = $3 OR solver_version IS NULL)
+      AND  embedding_model = $4
+      AND  valid_to IS NULL
+), kw AS (
+    SELECT chunk_id,
+           RANK() OVER (ORDER BY ts_rank_cd(content_tsv, q) DESC) AS rank
+    FROM   filtered, websearch_to_tsquery('simple', $6) q
+    WHERE  content_tsv @@ q
+    LIMIT  100
+), vec AS (
+    SELECT chunk_id,
+           RANK() OVER (ORDER BY embedding &lt;=&gt; $1::vector) AS rank
+    FROM   filtered
+    ORDER  BY embedding &lt;=&gt; $1::vector
+    LIMIT  100
+)
+SELECT f.chunk_id, f.uri, f.content,
+       COALESCE(1.0 / (60 + kw.rank), 0.0) +
+       COALESCE(1.0 / (60 + vec.rank), 0.0) AS rrf_score
+FROM   kw FULL OUTER JOIN vec USING (chunk_id)
+JOIN   filtered f USING (chunk_id)
+ORDER  BY rrf_score DESC
+LIMIT  50;</code></pre>
+
+                <div class="trap">
+                    <code>'simple'</code> rather than <code>'english'</code> is deliberate. The English stemmer mangles
+                    identifiers like <code>mapdl.err</code>, so error-code search needs the unstemmed dictionary.
+                </div>
+
+                <p>Both branches filter inside the same CTE, so the isolation boundary cannot be bypassed by fusing
+                    afterwards. Wall-clock cost is the larger of the two branches, not the sum, because they run
+                    against the same pre-filtered set in one round trip.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Why fuse before reranking</h3>
+            <div class="answer">
+                <div class="one-liner">Reciprocal rank fusion produces one candidate pool from two lists that overlap
+                    unpredictably, so you rerank once instead of twice.</div>
+
+                <p>RRF combines two ranked lists using ranks only, never raw scores:
+                    <code>score = Σ 1 / (k + rank)</code> with <code>k = 60</code> conventionally. Using ranks sidesteps
+                    the problem that a text-search score and a cosine distance are not comparable quantities and have
+                    no principled normalisation between them.</p>
+
+                <p>Reranking each list separately and fusing afterwards would double the rerank spend on partially
+                    overlapping sets, then throw away the cross-encoder's actual scores in favour of rank positions.
+                    Fuse first, rerank once.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Why rerank before the LLM grades, and when to drop the reranker</h3>
+            <div class="answer">
+                <div class="one-liner">A cross-encoder scores candidates comparably against each other; the grader
+                    answers a binary question about one candidate in isolation and cannot rank at all.</div>
+
+                <p>The grader sees a query and one excerpt and returns a verdict. It has no view of the other 49
+                    candidates, so it cannot say which is best. A cross-encoder reads query and document jointly and
+                    produces comparable scores across candidates, which is exactly the "pick the best 8 of 50"
+                    problem.</p>
+
+                <p>Cost makes the same argument. Grading all 50 directly instead of 8 costs roughly five times the
+                    tokens and needs 50 concurrent calls, which is where a rate limit bites.</p>
+
+                <p>The grader still runs afterwards, because it answers something no cross-encoder knows: a 2023R1
+                    page can be topically near-identical to a 2025R2 failure and still be the wrong answer. A version
+                    mismatch downgrades a verdict from correct to ambiguous.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Situation</th>
+                        <th>Rerank?</th>
+                        <th>Reason</th>
+                    </tr>
+                    <tr>
+                        <td>Pool &gt; 3x final top-k</td>
+                        <td>Yes</td>
+                        <td>There is real ordering left to buy</td>
+                    </tr>
+                    <tr>
+                        <td>Log chunks scoped to one run and step (20-30 candidates for a top-8)</td>
+                        <td>No</td>
+                        <td>Pre-filter already narrowed to near the answer width</td>
+                    </tr>
+                    <tr>
+                        <td>Skills, a few dozen after the solver filter</td>
+                        <td>No</td>
+                        <td>Same reason; skip the hop</td>
+                    </tr>
+                    <tr>
+                        <td>Product docs, thousands after filtering</td>
+                        <td>Always</td>
+                        <td>Ordering is the whole problem</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Rule of thumb: rerank only when the pre-filtered pool exceeds ~3x the final
+                    top-k.</div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Rerank latency spikes</div>
+                    <p><strong>Symptom:</strong> p99 retrieval latency jumps to 3 seconds while p50 is unchanged.</p>
+                    <p><strong>Cause:</strong> the reranker is a third-party HTTP call in a hot loop, and oversized
+                        documents auto-chunk into multiple inferences invisibly.</p>
+                    <p><strong>Mitigation:</strong> a hard client timeout falling through to plain fusion ordering,
+                        since worse order beats no answer. Keep chunks under the auto-chunking threshold and cache by
+                        query hash, document IDs and model.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Where the caching actually helps</h3>
+            <div class="answer">
+                <div class="one-liner">Precomputing at ingest beats caching at query time, and the grader's prompt is
+                    too short to cache.</div>
+
+                <p>Three layers do most of the remaining work. Computing contextualised chunks once at ingest rather
+                    than per query is the largest lever in absolute dollars. Prompt caching on the final assembly
+                    call's stable prefix pays back after a couple of reads inside the cache window.</p>
+
+                <p>The grader is the interesting case. Its prompt is a few hundred tokens, well under the minimum
+                    cacheable prefix on a small model, so prompt caching does nothing. Cache grader <em>verdicts</em>
+                    instead, keyed by query hash, evidence ID and model. See
+                    <a href="model_routing_cost.html">Model Routing &amp; Cost Engineering</a>.</p>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>Order stages by cost per candidate. Each stage should see 10-100x fewer candidates than the one
+                    before.</li>
+                <li>Filter first for correctness, not speed, and know that approximate indexes apply predicates after
+                    the scan.</li>
+                <li>Run keyword and vector together. Error codes have no semantics; paraphrases have no shared
+                    words.</li>
+                <li>Fuse with RRF before reranking so you pay the expensive stage once.</li>
+                <li>Drop the reranker when the pre-filtered pool is already near the answer width, roughly 3x top-k.
+                </li>
+            </ul>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

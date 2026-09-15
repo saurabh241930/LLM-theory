@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Design for Agents</title>
+    <link rel="stylesheet" href="wikipedia.css?v=2">
+    <link rel="stylesheet" href="agent_docs.css?v=1">
+</head>
+
+<body>
+    <header>
+        <h1>Tool Design for Agents</h1>
+        <div class="subtitle">Typed schemas, errors that guide the next call, and knowing when not to add one</div>
+    </header>
+    <div class="content-wrapper">
+
+        <div class="qa-container">
+            <h3>The schema is the only thing the model sees</h3>
+            <div class="answer">
+                <div class="one-liner">A model cannot read your implementation. Whatever the schema fails to express,
+                    the model has to guess.</div>
+
+                <p>This is the whole discipline in one sentence, and it explains most bad tool calls. The commonest
+                    mistake is a permissive parameter type that carries no information at all.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title"><code>value: Any</code> is not a contract</div>
+                    <p><strong>Symptom:</strong> the model writes <code>"0.5"</code> where a float is expected, or a
+                        velocity in the wrong units, and the failure surfaces much later as a confusing solver error
+                        rather than a clear rejection.</p>
+                    <p><strong>Cause:</strong> <code>set_field(..., value: Any)</code> compiles to an empty JSON Schema
+                        <code>{}</code>. A model calling it sees no type, no unit, and no range, so it is guessing.</p>
+                    <p><strong>Mitigation:</strong> build a typed field schema from the system's own reflection at
+                        worker start, and coerce or reject every value in your wrapper before the call ever reaches the
+                        backing API.</p>
+                </div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Weak</th>
+                        <th>Strong</th>
+                        <th>What the model gains</th>
+                    </tr>
+                    <tr>
+                        <td><code>value: Any</code></td>
+                        <td><code>value: float</code> with unit in the description</td>
+                        <td>Type and unit, so no guess</td>
+                    </tr>
+                    <tr>
+                        <td><code>kind: str</code></td>
+                        <td><code>kind: RemediationKind</code> (enum)</td>
+                        <td>The full set of legal values</td>
+                    </tr>
+                    <tr>
+                        <td><code>step: str</code></td>
+                        <td><code>step: str</code> + validation naming valid steps</td>
+                        <td>Membership, via the error path</td>
+                    </tr>
+                    <tr>
+                        <td><code>content: bytes</code></td>
+                        <td><code>content: FileRef</code> (a URI)</td>
+                        <td>A 2 GB mesh never enters the context window</td>
+                    </tr>
+                </table>
+                <div class="table-caption">An enum field constrains generation directly; a bare string constrains
+                    nothing.</div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Errors are prompts</h3>
+            <div class="answer">
+                <div class="one-liner">The model reads your error message and immediately decides what to do next, so
+                    the message should say what would work.</div>
+
+                <pre class="code-block"><code># Names the problem. The model has to guess the fix.
+raise ValueError("invalid step")
+
+# Names the problem and enumerates the way out.
+raise ValueError(f"unknown step {step!r}; known: {sorted(schema.steps)}")</code></pre>
+
+                <p>The second message turns a failure into a correction. Feeding it back as context means the model
+                    fixes itself in one retry instead of looping through plausible guesses. Cap the enumeration at a
+                    reasonable count so a schema with 400 fields does not produce a 400-item error.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Error carries</th>
+                        <th>Effect on the next call</th>
+                    </tr>
+                    <tr>
+                        <td>What was wrong</td>
+                        <td>The model knows it failed</td>
+                    </tr>
+                    <tr>
+                        <td>What the valid options are</td>
+                        <td>The model can pick correctly</td>
+                    </tr>
+                    <tr>
+                        <td>Whether retrying is pointless</td>
+                        <td>Your retry policy can stop burning tokens</td>
+                    </tr>
+                </table>
+                <div class="table-caption">A validation failure should be marked non-retryable so it triggers a
+                    replan, not a repeat of the identical prompt.</div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Asymmetric returns, and the handle problem</h3>
+            <div class="answer">
+                <div class="one-liner">A tool that sometimes returns a result and sometimes returns nothing at all is
+                    where agents quietly break.</div>
+
+                <p>In the running system, a short transaction returns its value on the same call, while a long-running
+                    one hands back a handle and nothing else. A shipped tool surface that returns bare
+                    <code>None</code> for the long-running case gives the model no way to tell "done, no output" from
+                    "started, come back later".</p>
+
+                <p>Two rules follow. Never let the model see an ambiguous return: the agent's wrapper converts the
+                    handle into a typed object the workflow understands, and the model is never shown a bare
+                    <code>None</code>. And never persist a client-side handle object, because it usually has no
+                    server-side identity and cannot be rebuilt in another process.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">A handle you cannot pick back up</div>
+                    <p><strong>Symptom:</strong> after a worker restart, nothing can retrieve the result of a
+                        transaction that is still running.</p>
+                    <p><strong>Cause:</strong> the handle is a client-side object with no server identity, rebuilt from
+                        private attributes on a proxy. Its wait/return value cannot be retrieved from a different
+                        context than the one that launched it.</p>
+                    <p><strong>Mitigation:</strong> persist the identifiers <code>(project, step, transaction)</code>
+                        as the durable key and reconstruct state from a fresh status read on every poll.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Never put a file through the model</h3>
+            <div class="answer">
+                <div class="one-liner">A tool signature taking raw bytes means the file's contents become tokens.</div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Uploading a 2 GB mesh through the model</div>
+                    <p><strong>Symptom:</strong> an upload step fails outright, or silently consumes most of the
+                        context window before the transaction that needs the file even runs.</p>
+                    <p><strong>Cause:</strong> a signature like <code>upload_file(content: bytes)</code> puts the
+                        file's bytes into the tool-call arguments. Fine for a kilobyte config, unworkable for a CAD
+                        mesh.</p>
+                    <p><strong>Mitigation:</strong> the tool takes a <code>FileRef</code>, an object-storage URI. Your
+                        executor streams the transfer directly between object storage and the backing service, and the
+                        model only ever reasons about a URI string.</p>
+                </div>
+
+                <p>This generalises. Any argument whose size is unbounded by the domain should be a reference, and any
+                    result that could be large should be a reference plus a summary. That is the claim-check pattern,
+                    and it applies to logs, plans and approval payloads as much as to files.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Idempotency belongs in the tool layer</h3>
+            <div class="answer">
+                <div class="one-liner">Retries are automatic, so a tool that submits work needs a ledger check before
+                    it acts.</div>
+
+                <pre class="code-block"><code>def run_transaction(client, project, step, transaction, args, *,
+                    idempotency_key: str, long_running: bool):
+    if already_applied(idempotency_key):
+        return load_handle(idempotency_key)      # resume, never resubmit
+    step_proxy = getattr(client.get_project(project).steps, step)
+    result = getattr(step_proxy, transaction)(**args)
+    handle = RunHandle(project, step, transaction, step_proxy._url,
+                       datetime.now(timezone.utc))
+    record(idempotency_key, handle)
+    return handle if long_running else result</code></pre>
+
+                <p>The key is derived from identifiers the caller already has, such as run ID, step ordinal and
+                    transaction name, so it computes identically on every retry. A UUID generated inside the function
+                    is a different key each attempt and protects nothing. See
+                    <a href="agentic_workflows.html">Agentic Workflows</a>.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>New tool or new skill?</h3>
+            <div class="answer">
+                <div class="one-liner">Add a tool when the model lacks a verb. Add a skill when it has the verbs and
+                    lacks the judgement.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Situation</th>
+                        <th>Answer</th>
+                        <th>Why</th>
+                    </tr>
+                    <tr>
+                        <td>No way to check whether a step is genuinely done</td>
+                        <td>New tool</td>
+                        <td>A missing capability; no playbook substitutes for it</td>
+                    </tr>
+                    <tr>
+                        <td>Knowing what to do when a solver diverges</td>
+                        <td>New skill</td>
+                        <td>The verbs exist; the judgement does not</td>
+                    </tr>
+                    <tr>
+                        <td>A tool growing a <code>mode</code> parameter with six values</td>
+                        <td>Probably a skill</td>
+                        <td>A decision tree is leaking into a signature</td>
+                    </tr>
+                    <tr>
+                        <td>The model calls one primitive forty times in a row</td>
+                        <td>Probably a tool</td>
+                        <td>A missing batch verb</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Confusing the two gives you either a bloated tool surface or an unusable
+                    monolithic prompt.</div>
+
+                <p>Keep the tool surface small. Every tool definition costs tokens on every call, and a large surface
+                    makes tool selection itself harder. See <a href="agent_skills.html">Agent Skills</a>.</p>
+            </div>
+        </div>
+
+        <div class="takeaways">
+            <h3>Takeaways</h3>
+            <ul>
+                <li>The schema is the model's only view of your function. Enums and typed fields constrain generation;
+                    <code>Any</code> constrains nothing.</li>
+                <li>Write errors that enumerate valid options, and mark validation failures non-retryable.</li>
+                <li>Never show the model an ambiguous return, and never persist a client-side handle.</li>
+                <li>Pass file references, never bytes.</li>
+                <li>Put the idempotency check in the tool wrapper, keyed by identifiers the caller already has.</li>
+                <li>A missing verb is a tool. Missing judgement is a skill.</li>
+            </ul>
+        </div>
+
+    </div>
+    <script src="animations.js"></script>
+    <script src="sidebar.js?v=2"></script>
+</body>
+
+</html>

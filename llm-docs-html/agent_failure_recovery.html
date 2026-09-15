@@ -171,26 +171,36 @@
                     approval for high-risk actions (e.g., spending money or deleting data).</li>
             </ul>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>During a high-volume audit, the <strong>RSA Sales QA Dashboard</strong> encountered a <strong>Tool
-                    Hallucination</strong> failure where the agent tried to call a non-existent
-                <code>verify_customer_bank_balance()</code> tool. To recover, the system used a <strong>Cognitive
-                    Fallback</strong>: it caught the error, informed the LLM that "Bank access is not a permitted tool,"
-                and provided a list of valid alternatives. The agent then pivoted to using the
-                the entire production pipeline.
-            </p>
+            <h2>Case Study: Surviving a Worker Crash Mid-Solve</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent</a> treats recovery as an architectural property rather
+                than as error handling. The orchestrator is a durable workflow: every command it issues and every
+                result it receives is recorded, so a replacement worker replays that history and lands exactly where
+                the dead one stopped. The plan, the step cursor and the remaining budget are ordinary Python
+                attributes that happen to be crash-proof.</p>
+
+            <p>Replay alone is not enough, because a retry re-runs the whole activity including side effects the first
+                attempt already committed. If an activity submitted a four-hour solve and the worker died before
+                recording the result, a naive retry charges for that solve twice.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: Cognitive Fallback Loop</span>
-                <span class="keyword">try</span>:
-                action = agent.invoke(query)
-                <span class="keyword">except</span> ToolNotFoundError <span class="keyword">as</span> e:
-                <span class="comment"># Feed error back to LLM to re-evaluate strategy</span>
-                feedback = f<span class="string">"Error: {e}. Valid tools: ['sql_search', 'policy_search']"</span>
-                action = agent.invoke(query + <span class="string">"\n"</span> + feedback)
+                <span class="comment"># Idempotency key derived from identifiers the caller already has</span>
+                key = f<span class="string">"{run_id}:{step.ordinal}:{step.transaction}"</span>
+
+                <span class="keyword">def</span> <span class="class-name">run_transaction</span>(client, project, step, transaction, args, *, idempotency_key):
+                <span class="keyword">if</span> already_applied(idempotency_key):
+                <span class="keyword">return</span> load_handle(idempotency_key) <span class="comment"># resume, never resubmit</span>
+                result = invoke(client, project, step, transaction, args)
+                record(idempotency_key, result)
+                <span class="keyword">return</span> result
             </div>
 
-            <h2>Key Takeaways</h2>
+            <p>A key computed from a fresh UUID inside the activity would differ on every attempt and protect nothing.
+                The related failure is a retry storm: an unlimited retry policy treats a schema-invalid plan like a
+                transient outage and burns the token budget on the identical prompt. Marking validation failures
+                non-retryable routes them to a replan with feedback instead. See
+                <a href="agentic_workflows.html">Durable Execution</a>.</p>
+
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ Set a hard limit on the number of steps (Max Steps = 10).<br>
                 ✅ Use JSON Schema to prevent parameter type mismatches.<br>

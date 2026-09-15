@@ -206,34 +206,56 @@
                 </tbody>
             </table>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>For a production dashboard auditing thousands of daily RSA sales, <strong>Continuous Evaluation</strong>
-                is mandatory. The system uses <strong>RAGAS Faithfulness</strong> to ensure that when the AI flags a
-                "Compliance Failure," it is actually citing the call transcript and not hallucinating a legal violation.
-                If the <strong>Context Recall</strong> drops (meaning the system misses actual mentions of RSA), the
-                engineers are alerted to check if the speech-to-text model is failing to transcribe specific insurance
-                acronyms correctly, causing a silent failure in the retrieval pipeline.</p>
+            <h2>Case Study: Evaluating the Diagnoser</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent</a> evaluates at four levels, cheapest first, because a
+                suite that only runs expensive end-to-end checks is too slow to block a merge.</p>
+
+            <table class="intent-table">
+                <tr>
+                    <th>Metric</th>
+                    <th>Definition</th>
+                    <th>Target</th>
+                </tr>
+                <tr>
+                    <td>Plan validity rate</td>
+                    <td>Planner outputs passing DAG validation first try</td>
+                    <td>&ge; 90%</td>
+                </tr>
+                <tr>
+                    <td>Unassisted completion rate</td>
+                    <td>Runs completing with zero approvals or escalations</td>
+                    <td>&ge; 70%</td>
+                </tr>
+                <tr>
+                    <td>Mean time-to-diagnose</td>
+                    <td>Failure to proposed remediation, wall clock</td>
+                    <td>&lt; 60 s budget</td>
+                </tr>
+                <tr>
+                    <td>Grader precision</td>
+                    <td>correct verdicts confirmed against a frozen labelled set</td>
+                    <td>&ge; 85%</td>
+                </tr>
+            </table>
+
+            <p>Two habits make these numbers trustworthy. The suite splits by determinism rather than by speed:
+                deterministic evals block merges, while golden runs against real solver fixtures page only on a trend,
+                because a real solver differs at the last decimal and an intermittent red build teaches people to
+                ignore red builds.</p>
+
+            <p>And the grader is pinned to an exact model ID. A floating alias moving underneath you shows up as a
+                slowly rising escalation rate with no code change, which is the hardest kind of regression to
+                attribute. See <a href="agent_evals.html">Evaluating Agent Systems</a>.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: Faithfulness Evaluation</span>
-                <span class="keyword">from</span> ragas <span class="keyword">import</span> evaluate
-                <span class="keyword">from</span> ragas.metrics <span class="keyword">import</span> faithfulness
-
-                data = {
-                <span class="string">"question"</span>: [<span class="string">"Was RSA mentioned as optional?"</span>],
-                <span class="string">"contexts"</span>: [[<span class="string">"Transcript: Advisor said RSA is a great
-                    mandatory add-on."</span>]],
-                <span class="string">"answer"</span>: [<span class="string">"The advisor correctly stated RSA is
-                    optional."</span>]
-                }
-
-                result = evaluate(dataset, metrics=[faithfulness])
-                <span class="keyword">print</span>(f<span class="string">"Faithfulness Score:
-                    {result['faithfulness']}"</span>)
-                <span class="comment"># Output: 0.1 (Hallucination detected - Answer contradicts context)</span>
+                <span class="comment"># Golden runs assert with tolerances, against real fixtures not mocks</span>
+                <span class="keyword">assert</span> result.plan_valid, result.plan_errors
+                <span class="keyword">assert</span> result.tool_calls_outside_allowlist == []
+                <span class="keyword">assert</span> result.cost_usd &lt;= golden.budget.max_usd
+                <span class="keyword">assert</span> actual == pytest.approx(value, rel=golden.tolerance)
             </div>
 
-            <h2>Key Takeaways</h2>
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ RAGAS isolates Retrieval errors from Generation errors.<br>
                 ✅ Faithfulness measures grounding; Recall measures retrieval breadth.<br>

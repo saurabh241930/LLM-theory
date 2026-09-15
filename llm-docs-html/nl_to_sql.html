@@ -206,28 +206,35 @@
                 </tbody>
             </table>
 
-            <h2>Case Study: RSA Sales QA Dashboard</h2>
-            <p>Management uses the <strong>RSA Sales QA Dashboard</strong> to perform complex analytics using natural
-                language. A manager can ask: <em>"Which advisors in the New York branch sold the most RSA policies but
-                    have more than 3 compliance flags?"</em> The NL-to-SQL pipeline translates this into a multi-table
-                JOIN between the <code>Advisors</code>, <code>Sales</code>, and <code>Compliance_Flags</code> tables.
-                This allows the team to instantly identify high-performing but high-risk agents without waiting for a
-                data analyst to write and run custom SQL scripts.</p>
+            <h2>Case Study: Natural Language to a Typed Plan</h2>
+            <p>The <a href="sysdesign_saf_agent.html">SAF agent</a> takes the same input text-to-SQL takes, an
+                engineer's sentence, and deliberately does not generate SQL. It generates a typed
+                <code>Plan</code> validated against a dependency graph, because the downstream action is a four-hour
+                solve rather than a read-only query.</p>
+
+            <p>The distinction is about blast radius. A wrong SQL query returns wrong numbers and costs a few seconds. A
+                wrong plan starts a cluster job. So the output binds to a schema, and then four checks run before
+                anything executes: every step and transaction must exist, every input must be produced upstream, the
+                transaction must be allow-listed, and long-running flags must match reality.</p>
 
             <div class="code-block">
-                <span class="comment"># RSA Case Study: Managerial SQL Agent</span>
-                prompt = f<span class="string">"""Query: {user_question}
-                    Schema: Table Advisors (id, name, branch), Sales (id, advisor_id, product)
-                    Rule: product MUST be 'RSA'
-                    SQL:"""</span>
-
-                <span class="keyword">if</span> <span class="string">"DROP"</span> <span class="keyword">in</span>
-                generated_sql.upper():
-                <span class="keyword">raise</span> SecurityError(<span class="string">"Destructive query
-                    blocked."</span>)
+                <span class="comment"># Not "generate SQL" - "generate a typed object we can check"</span>
+                <span class="keyword">class</span> <span class="class-name">PlanStep</span>(BaseModel):
+                ordinal: int
+                step: str <span class="comment"># must exist in the solution schema</span>
+                transaction: str <span class="comment"># must be allow-listed for this role</span>
+                inputs: dict[str, Any] = {}
+                expected_outputs: list[str] = []
+                long_running: bool
+                approval_required: bool = <span class="keyword">False</span>
             </div>
 
-            <h2>Key Takeaways</h2>
+            <p>SQL does still appear in the system, on the retrieval side, where it is hand-written rather than
+                generated: the hybrid search query carrying the tenant predicate. That is the right split. Generated
+                SQL is a liability at a trust boundary, and tenant isolation is exactly a trust boundary. See
+                <a href="multi_tenancy_isolation.html">Multi-Tenancy &amp; Isolation</a>.</p>
+
+<h2>Key Takeaways</h2>
             <div class="side-note">
                 ✅ NL-to-SQL democratizes data access for non-technical users.<br>
                 ✅ Structured schema context is the "Truth" for the generator.<br>
