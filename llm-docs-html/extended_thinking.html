@@ -11,90 +11,97 @@
 
 <body>
     <header>
-        <h1>Extended Thinking &amp; Test-Time Compute</h1>
-        <div class="subtitle">Paying for reasoning at inference, and the calls where it is wasted</div>
+        <h1>Extended Thinking</h1>
+        <div class="subtitle">Paying for reasoning, and where it is wasted</div>
     </header>
     <div class="content-wrapper">
 
         <div class="qa-container">
-            <h3>What "thinking" buys</h3>
+            <h3>What you are buying</h3>
             <div class="answer">
-                <div class="one-liner">The model generates intermediate reasoning tokens before its answer, trading
-                    latency and output cost for accuracy on problems with a search or verification structure.</div>
+                <div class="one-liner">The model writes reasoning tokens before its answer. Those bill as output,
+                    which is the expensive kind.</div>
 
-                <p>Scaling used to mean training a larger model. Test-time compute scales the other axis: spend more
-                    tokens at inference on the problem in front of you. The model emits a reasoning block first, and
-                    that block can consider approaches, check its own work, and discard dead ends before committing to
-                    an answer.</p>
-
-                <p>Thinking tokens bill as output tokens, which are the expensive kind. A 4,000-token reasoning block
-                    on a mid-tier model costs more than the entire input prompt on most calls. That makes "where does
-                    it pay" the only question worth asking.</p>
-
-                <div class="teaching">
-                    <div class="tp-title">Which tasks improve, and which do not</div>
-                    <p>Reasoning helps where the task has structure to search: multi-step planning with ordering
-                        constraints, arithmetic and unit conversion, debugging from indirect evidence, and anything
-                        where a wrong first instinct can be caught by checking.</p>
-                    <p>It does not help on retrieval-bound questions ("what does error 217 mean" is a lookup),
-                        classification against a clear rubric, or formatting and extraction. On those the reasoning
-                        block restates the rubric and then applies it, which is what it would have done anyway.</p>
+                <div class="mermaid">
+                    flowchart LR
+                    P["Prompt"] --> TH["Reasoning block<br/><i>considers, checks, discards</i>"]
+                    TH --> A["Answer"]
+                    TH -.->|"billed as output<br/>never cached"| C["💰"]
                 </div>
+
+                <p>A 4,000-token reasoning block costs more than the entire input prompt on most calls. So the only
+                    question worth asking is where it pays.</p>
+
+                <div class="mermaid">
+                    flowchart TD
+                    Q{"Does the task have<br/>something to search<br/>or verify?"}
+                    Q -->|yes| Y["<b>Pays</b><br/>multi-step planning<br/>ordering constraints<br/>arithmetic and units<br/>debugging from clues"]
+                    Q -->|no| N["<b>Wasted</b><br/>lookups<br/>rubric classification<br/>extraction and formatting"]
+                </div>
+
+                <p>On the right-hand tasks the reasoning block restates the rubric, then applies it. That is what it
+                    would have done anyway.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Mapping it onto the roles</h3>
+            <h3>Budget by volume, not by importance</h3>
             <div class="answer">
-                <div class="one-liner">One role in the running system has a reasoning-shaped job. The high-volume ones
-                    do not.</div>
+                <div class="one-liner">Same logic as model routing: cost of being wrong, divided by how often the call
+                    happens.</div>
+
+                <div class="mermaid">
+                    flowchart TD
+                    R["A call in your system"] --> V{"How often<br/>per run?"}
+                    V -->|"1–2"| W{"Wrong answer<br/>expensive?"}
+                    V -->|"tens"| NO["<b>No budget</b><br/>reasoning would dominate cost"]
+                    W -->|yes| YES["<b>Generous budget</b>"]
+                    W -->|no| SM["<b>Small or none</b>"]
+                </div>
 
                 <table class="spec">
                     <tr>
                         <th>Role</th>
-                        <th>Task shape</th>
-                        <th>Thinking budget</th>
+                        <th>Calls</th>
+                        <th>Budget</th>
                         <th>Why</th>
                     </tr>
                     <tr>
                         <td>Planner</td>
-                        <td>Order steps under DAG constraints, spot missing inputs</td>
+                        <td>1-2 per run</td>
                         <td>Generous</td>
-                        <td>Runs 1-2 times per run; a wrong order wastes solver-hours</td>
+                        <td>A wrong order wastes solver-hours</td>
                     </tr>
                     <tr>
                         <td>Proposal</td>
-                        <td>Weigh graded evidence into one action</td>
+                        <td>1 per diagnosis</td>
                         <td>Moderate</td>
-                        <td>Once per diagnosis, and it must justify itself</td>
+                        <td>Must weigh evidence and justify itself</td>
                     </tr>
                     <tr>
                         <td>Tool choice</td>
-                        <td>Pick one of four sources</td>
+                        <td>up to 4</td>
                         <td>None</td>
-                        <td>Up to 4x per diagnosis; a four-way choice with a clear rubric</td>
+                        <td>A four-way pick with a clear rubric</td>
                     </tr>
                     <tr>
                         <td>Grader</td>
-                        <td>Three-way classification against a rubric</td>
+                        <td>up to 32</td>
                         <td>None</td>
-                        <td>Highest volume in the system; reasoning would dominate cost</td>
+                        <td>Highest volume; the rubric already decides</td>
                     </tr>
                 </table>
-                <div class="table-caption">Thinking budget follows the same logic as model routing: cost of being
-                    wrong, divided by call volume.</div>
 
-                <p>The grader is the clearest case. Up to 32 grading calls per diagnosis, each a three-way
-                    classification with an explicit rubric. Adding even 500 reasoning tokens per call would multiply
-                    the system's dominant cost line for a judgement the rubric already determines.</p>
+                <p>The grader is the clearest case. Adding 500 reasoning tokens to 32 calls multiplies the system's
+                    biggest cost line for a judgement the rubric already determines.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>How it interacts with everything else</h3>
+            <h3>What it interacts with</h3>
             <div class="answer">
-                <div class="one-liner">Reasoning blocks affect caching, latency budgets, structured outputs and
-                    determinism, and each interaction has a practical consequence.</div>
+                <div class="one-liner">Two of these surprise people: no cache discount, and latency multiplied by loop
+                    iterations.</div>
 
                 <table class="spec">
                     <tr>
@@ -103,77 +110,73 @@
                     </tr>
                     <tr>
                         <td>Prompt caching</td>
-                        <td>Caching applies to the input prefix. Thinking is output, so it is never cached and never
-                            discounted.</td>
+                        <td>Caching covers input. Thinking is output, so never discounted.</td>
                     </tr>
                     <tr>
                         <td>Structured outputs</td>
-                        <td>The reasoning block precedes the schema-bound answer. Parse the final content block, never
-                            the reasoning.</td>
+                        <td>Reasoning comes first. Parse the final block, never the reasoning.</td>
                     </tr>
                     <tr>
-                        <td>Latency budgets</td>
-                        <td>A 4,000-token reasoning block is seconds of generation. Inside a bounded loop, that
-                            multiplies by the iteration count.</td>
+                        <td>Latency</td>
+                        <td>Seconds of generation, multiplied by loop iterations.</td>
                     </tr>
                     <tr>
                         <td>Durable replay</td>
-                        <td>No change: the call is still a non-deterministic activity. Reasoning does not make it
-                            reproducible.</td>
+                        <td>No change. Still a non-deterministic activity.</td>
                     </tr>
                     <tr>
                         <td>Observability</td>
-                        <td>Record reasoning token counts separately, or a cost regression looks like a traffic
-                            increase.</td>
+                        <td>Record reasoning tokens separately, or a cost jump looks like traffic.</td>
                     </tr>
                     <tr>
                         <td>Injection defence</td>
-                        <td>Unchanged. Reasoning happens inside the model; the closed output enum is still the
-                            backstop.</td>
+                        <td>Unchanged. The closed output enum is still the backstop.</td>
                     </tr>
                 </table>
-                <div class="table-caption">Two of these surprise people: no cache discount, and latency multiplied by
-                    loop iterations.</div>
+
+                <div class="mermaid">
+                    flowchart TD
+                    subgraph BAD["Budget per iteration"]
+                    B1["iter 1: 2,000"] --> B2["iter 2: 2,000"] --> B3["iter 3: 2,000"] --> B4["iter 4: 2,000"]
+                    B4 --> BT["<b>8,000 tokens</b><br/>before any answer"]
+                    end
+                    subgraph GOOD["Budget once, at the end"]
+                    G1["4 cheap iterations<br/>gather evidence"] --> G2["one considered decision<br/><b>2,000 tokens</b>"]
+                    end
+                </div>
 
                 <div class="chokepoint">
                     <div class="cp-title">Reasoning budget inside a bounded loop</div>
-                    <p><strong>Symptom:</strong> enabling thinking on a loop's per-iteration call pushes diagnosis
-                        latency past its deadline, and the activity starts timing out.</p>
-                    <p><strong>Cause:</strong> the budget applies per call. Four iterations of a 2,000-token reasoning
-                        block is 8,000 generated tokens before any answer is produced.</p>
-                    <p><strong>Mitigation:</strong> put the reasoning budget on the single proposal call at the end,
-                        not on the per-iteration calls. One considered decision over collected evidence beats four
-                        deliberations over partial evidence.</p>
+                    <p><strong>Symptom:</strong> enabling thinking pushes diagnosis past its deadline and the activity
+                        times out.</p>
+                    <p><strong>Cause:</strong> the budget applies per call, so four iterations multiply it.</p>
+                    <p><strong>Mitigation:</strong> put the budget on the single proposal call at the end. One
+                        considered decision over collected evidence beats four deliberations over partial
+                        evidence.</p>
                 </div>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Deciding the budget by measurement</h3>
+            <h3>Find the knee</h3>
             <div class="answer">
-                <div class="one-liner">Treat the thinking budget as a parameter you sweep against an eval set, not a
-                    setting you pick once.</div>
+                <div class="one-liner">Treat the budget as a parameter you sweep, not a setting you pick once.</div>
 
-                <p>Returns flatten. Going from no reasoning to a moderate budget often produces most of the available
-                    gain on a reasoning-shaped task; doubling again typically produces much less for twice the output
-                    bill. Where that knee sits depends on your task, so measure it.</p>
+                <div class="mermaid">
+                    flowchart LR
+                    S1["Pick the metric<br/>that role owns"] --> S2["Sweep the budget<br/>across a few values"]
+                    S2 --> S3["Plot metric<br/>vs cost per call"]
+                    S3 --> S4["Take the knee"]
+                    S4 -->|"model version changes"| S1
+                </div>
 
-                <ol>
-                    <li>Pick the metric the role actually owns. For the Planner that is plan validity rate on first
-                        attempt, not a general benchmark.</li>
-                    <li>Sweep the budget across a few values against a frozen labelled set.</li>
-                    <li>Plot the metric against cost per call and find the knee.</li>
-                    <li>Re-run the sweep when the model version changes, because the knee moves.</li>
-                </ol>
-
-                <p>This is the same discipline as routing: a number decides it. See
-                    <a href="model_routing_cost.html">Model Routing &amp; Cost Engineering</a> and
-                    <a href="agent_evals.html">Evaluating Agent Systems</a>.</p>
+                <p>Returns flatten. Going from none to a moderate budget usually gives most of the gain. Doubling
+                    again gives much less for twice the output bill, and where that knee sits depends on your task.</p>
 
                 <div class="trap">
-                    Do not treat a reasoning block as an explanation for a user. It is the model's working, not an
-                    audit trail, and it can describe a path that differs from how the answer was actually produced. The
-                    auditable record is the typed output plus the validated evidence IDs that justify it.
+                    A reasoning block is the model's working, not an audit trail. It can describe a path that differs
+                    from how the answer was produced. The auditable record is the typed output plus its validated
+                    evidence IDs.
                 </div>
             </div>
         </div>
@@ -181,13 +184,11 @@
         <div class="takeaways">
             <h3>Takeaways</h3>
             <ul>
-                <li>Thinking tokens bill as output and are never cached, so the volume calls are exactly where they
-                    hurt most.</li>
-                <li>Spend the budget on low-volume, high-stakes reasoning: planning and final proposals.</li>
-                <li>Skip it on rubric-bound classification, retrieval lookups, and extraction.</li>
-                <li>Inside a bounded loop, budget once at the end rather than per iteration.</li>
-                <li>Sweep the budget against an eval metric and find the knee; re-run it when the model changes.</li>
-                <li>A reasoning block is working, not an audit trail.</li>
+                <li>Thinking tokens bill as output and are never cached, so volume calls are where they hurt.</li>
+                <li>Spend on low-volume, high-stakes reasoning: planning and final proposals.</li>
+                <li>Skip it on lookups, rubric classification, and extraction.</li>
+                <li>Inside a loop, budget once at the end rather than per iteration.</li>
+                <li>Sweep against a metric and take the knee. Re-run when the model changes.</li>
             </ul>
         </div>
 

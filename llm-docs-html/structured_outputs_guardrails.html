@@ -11,27 +11,28 @@
 
 <body>
     <header>
-        <h1>Structured Outputs &amp; Guardrails</h1>
-        <div class="subtitle">Constrained decoding, allow-lists, and gates the model cannot argue with</div>
+        <h1>Structured Outputs</h1>
+        <div class="subtitle">Make bad output impossible, not just unlikely</div>
     </header>
     <div class="content-wrapper">
 
         <div class="qa-container">
-            <h3>Structured outputs: removing a failure class rather than defending against it</h3>
+            <h3>Constrained decoding</h3>
             <div class="answer">
-                <div class="one-liner">Constrained decoding makes a token that would violate your schema impossible to
-                    emit, so "the model returned prose instead of JSON" stops being a thing that happens.</div>
+                <div class="one-liner">You hand the provider a schema. A token that would break it cannot be
+                    emitted.</div>
 
-                <p>A language model is a text generator. Left alone, it answers a question about a plan with prose that
-                    <em>contains</em> JSON somewhere: maybe fenced in backticks, maybe not, maybe with a trailing
-                    sentence explaining its reasoning. Parsing that with a regular expression is the single most common
-                    source of silent failure in early agent systems. A stray comma, a fence the model forgot to close,
-                    an extra field it helpfully added, and your parser either throws or succeeds on garbage.</p>
-
-                <p>Structured outputs remove that class structurally. You hand the provider a JSON Schema, generated
-                    from your own model definition, and decoding itself is constrained so a token that would violate
-                    the schema cannot be emitted. What comes back is guaranteed to be syntactically valid JSON matching
-                    that shape, every time.</p>
+                <div class="mermaid">
+                    flowchart TD
+                    subgraph OLD["Parse prose"]
+                    O1["Model writes text"] --> O2["Regex hunts for JSON"] --> O3{"Valid?"}
+                    O3 -->|no| O4["Throws"]
+                    O3 -->|"looks valid"| O5["Succeeds on garbage"]
+                    end
+                    subgraph NEW["Constrained decoding"]
+                    N1["Schema sent with request"] --> N2["Decoder cannot emit<br/>an invalid token"] --> N3["Valid JSON, every time"]
+                    end
+                </div>
 
                 <pre class="code-block"><code>resp = await claude.messages.create(
     model="claude-opus-5",
@@ -39,222 +40,144 @@
     messages=[{"role": "user", "content": req.intent}],
     output_config={"format": {"type": "json_schema",
                               "schema": Plan.model_json_schema()}},
-    max_tokens=8000,
 )
 plan = Plan.model_validate_json(resp.content[0].text)
 validate_plan(plan, req.solution_id)        # semantics, separately</code></pre>
 
                 <div class="trap">
-                    <strong>Structural validity is necessary, not sufficient.</strong> A schema-valid
-                    <code>Plan</code> can still name a step that does not exist or write a field in the wrong units.
-                    The schema constrains <em>shape</em>, not <em>membership</em>.
+                    This removes malformed output. It does not make the content correct. The schema constrains
+                    <strong>shape</strong>, not <strong>membership</strong>.
                 </div>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>The gap the schema leaves open</h3>
+            <h3>The gap the schema leaves</h3>
             <div class="answer">
-                <div class="one-liner">A <code>str</code> field compiles to "any string", so nothing stops a
-                    plausible-sounding invention.</div>
+                <div class="one-liner">A <code>str</code> field means "any string". Nothing stops a plausible
+                    invention.</div>
+
+                <div class="mermaid">
+                    flowchart LR
+                    P["step: str"] --> S["JSON Schema:<br/>type = string"]
+                    S --> M["Model emits<br/><b>'meshing'</b>"]
+                    M --> V{"Validate against<br/>real schema"}
+                    V -->|"not in {geometry, mesh, solve}"| F["Reject + list valid names"]
+                    F -->|"as feedback"| R["Replan, correct in one try"]
+                </div>
 
                 <div class="chokepoint">
                     <div class="cp-title">Hallucinated step names</div>
-                    <p><strong>Symptom:</strong> the first activity fails immediately with
-                        <code>unknown step 'meshing'</code>, on a solution whose step is clearly named
-                        <code>mesh</code>.</p>
-                    <p><strong>Cause:</strong> <code>step: str</code> compiles to a JSON Schema type of
-                        <code>"string"</code>. Nothing in constrained decoding stops the model from generating a
-                        plausible name that never appeared in its prompt, especially under a long context or a
-                        paraphrased intent.</p>
-                    <p><strong>Mitigation:</strong> cross-check every step and transaction against the real schema
-                        before anything runs, and put the valid names in the error. That error becomes the feedback for
-                        the next attempt, so the model corrects itself in one replan rather than looping.</p>
+                    <p><strong>Symptom:</strong> first activity fails with <code>unknown step 'meshing'</code> on a
+                        solution whose step is <code>mesh</code>.</p>
+                    <p><strong>Cause:</strong> structured outputs constrain shape, not membership.</p>
+                    <p><strong>Mitigation:</strong> check every identifier against the real schema before anything
+                        runs, and put the valid names in the error so it becomes usable feedback.</p>
                 </div>
 
                 <pre class="code-block"><code>def validate_plan(plan: Plan, solution_id: str) -&gt; None:
     schema = SolutionSchema.for_solution(solution_id)
-    order = {name: i for i, name in enumerate(schema.dag.toplogical_sort())}
-    produced: set[str] = set()
-
     for s in plan.steps:
         if s.step not in schema.steps:
             raise ValueError(f"unknown step {s.step!r}; known: {sorted(schema.steps)}")
-        if s.transaction not in schema.steps[s.step].transaction_names:
-            raise ValueError(f"unknown transaction {s.step}.{s.transaction!r}")
         if not is_allowed(solution_id, s.step, s.transaction):
-            raise ValueError(f"{s.step}.{s.transaction} is not allow-listed for this role")
-        for field in s.inputs:
-            if (s.step, field) not in order and (s.step, field) not in produced:
-                raise ValueError(f"{s.step}.{field} has no upstream producer in this plan")
-        produced.update((s.step, name) for name in s.expected_outputs)</code></pre>
+            raise ValueError(f"{s.step}.{s.transaction} is not allow-listed")</code></pre>
 
-                <p>Four checks, none of them touching the network, all running against structures loaded at worker
-                    start. A plan earns the right to spend a solver-hour by passing them. A validation failure is not
-                    an error; it is feedback for the next planning attempt.</p>
-
-                <div class="trap">
-                    Structured-output schemas reject some constraints outright. Numeric bounds, string length limits,
-                    and recursive types are frequently not representable in the constrained grammar providers support.
-                    Keep those checks in validator methods on your model rather than in field constraints, and the
-                    schema stays acceptable to the API.
-                </div>
+                <p>These checks touch no network. They run against structures loaded at startup, in microseconds,
+                    ahead of an action that costs cluster-hours.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Closed enums: the backstop that holds under attack</h3>
+            <h3>Closed enums</h3>
             <div class="answer">
-                <div class="one-liner">If the model's action must be one of six values, no prompt injection can invent
-                    a seventh.</div>
+                <div class="one-liner">Six values means a compromised model cannot name a seventh.</div>
 
                 <pre class="code-block"><code>class RemediationKind(StrEnum):
-    RETRY           = "retry"
-    ADJUST_FIELD    = "adjust_field"
-    RERUN_UPSTREAM  = "rerun_upstream"
-    SWITCH_SKILL    = "switch_skill"
-    ESCALATE        = "escalate"
-    ABORT           = "abort"</code></pre>
+    RETRY          = "retry"
+    ADJUST_FIELD   = "adjust_field"
+    RERUN_UPSTREAM = "rerun_upstream"
+    SWITCH_SKILL   = "switch_skill"
+    ESCALATE       = "escalate"
+    ABORT          = "abort"</code></pre>
 
-                <p>This is the most valuable line of defence in the whole system, and it is six lines of Python. A
-                    compromised diagnosis, whatever a poisoned solver log talked the model into believing, cannot name
-                    an action outside this set. There is no <code>delete_project</code> to reach for, because the type
-                    does not admit one.</p>
+                <div class="mermaid">
+                    flowchart TD
+                    I["Poisoned log says:<br/><i>'delete every project'</i>"] --> M["Model is persuaded"]
+                    M --> E{"Output binds to<br/>RemediationKind"}
+                    E --> R["Can only return one of six.<br/><b>delete_project is not one.</b>"]
+                    R --> W["Worst case: a wasted retry.<br/>Recoverable."]
+                </div>
 
-                <p>An enum also fails loudly on a typo, unlike a plain string, and comparisons against it are
-                    deterministic and replay-safe in a way that matching on model prose never is.</p>
+                <p>Six lines of Python, and it is the strongest control in the system. An enum also fails loudly on a
+                    typo, and comparisons against it are replay-safe in a way matching on prose never is.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Guardrails: deterministic code, not a second opinion</h3>
+            <h3>Layer the checks, cheapest first</h3>
             <div class="answer">
-                <div class="one-liner">An allow-list, a budget, and an approval gate keyed to an action class. All
-                    three run whether or not the model behaves.</div>
+                <div class="one-liner">Each layer catches something the one before it cannot.</div>
 
-                <p>The tempting design is to ask a second model whether the first model's action is safe. That doubles
-                    cost, adds latency, and gives you two non-deterministic components instead of one. Guardrails
-                    worth the name are ordinary code.</p>
-
-                <table class="spec">
-                    <tr>
-                        <th>Action class</th>
-                        <th>Gate</th>
-                        <th>Approver</th>
-                        <th>Timeout default</th>
-                    </tr>
-                    <tr>
-                        <td><code>read_only</code></td>
-                        <td>None, always executes</td>
-                        <td>&mdash;</td>
-                        <td>&mdash;</td>
-                    </tr>
-                    <tr>
-                        <td><code>mutating</code></td>
-                        <td>Auto-executes if confidence &ge; 0.75 and kind is allow-listed</td>
-                        <td>Engineer who started the run</td>
-                        <td>4 hours</td>
-                    </tr>
-                    <tr>
-                        <td><code>expensive</code></td>
-                        <td>Approval always</td>
-                        <td>Engineer, or team lead above a cost threshold</td>
-                        <td>4 hours, then escalate</td>
-                    </tr>
-                    <tr>
-                        <td><code>destructive</code></td>
-                        <td>Approval always</td>
-                        <td>Team lead</td>
-                        <td>2 hours, then escalate</td>
-                    </tr>
-                    <tr>
-                        <td><code>ip_sensitive</code></td>
-                        <td>Approval always</td>
-                        <td>Platform admin</td>
-                        <td>1 hour, then escalate</td>
-                    </tr>
-                </table>
-                <div class="table-caption">The gate depends on the class of action, never on which specific step is
-                    running.</div>
-
-                <p>Gating on action class rather than on step count is what keeps approval meaningful. Gate everything
-                    and reviewers approve without reading, which protects nothing. See
-                    <a href="agentic_workflows.html">Agentic Workflows</a> for the durable-wait mechanics.</p>
-
-                <p>The default posture is deny. A transaction absent from the allow-list is never offered to the
-                    Planner as an option in the first place, which is a cheaper guarantee than trusting the model to
-                    decline it on its own.</p>
-
-                <h4>Validating evidence IDs</h4>
-                <p>One more check runs on every model output before the allow-list: the evidence list in a proposed
-                    action is validated server-side against the IDs retrieval actually returned. An invented citation
-                    is rejected rather than displayed. Without this, a confident fabricated reference is
-                    indistinguishable from a real one in the UI.</p>
-            </div>
-        </div>
-
-        <div class="qa-container">
-            <h3>Layering the defences</h3>
-            <div class="answer">
-                <div class="one-liner">Each layer catches a different failure, and the cheapest ones run first.</div>
+                <div class="mermaid">
+                    flowchart TD
+                    A["Constrained decoding<br/><i>free</i>"] --> B["Model validation<br/><i>microseconds</i>"]
+                    B --> C["Semantic check vs ground truth<br/><i>microseconds</i>"]
+                    C --> D["Allow-list<br/><i>set lookup</i>"]
+                    D --> E["Evidence-ID check<br/><i>set lookup</i>"]
+                    E --> F["Budget check<br/><i>3 comparisons</i>"]
+                    F --> G["Approval gate<br/><i>minutes to hours</i>"]
+                    G --> H["Action runs"]
+                </div>
 
                 <table class="spec">
                     <tr>
                         <th>Layer</th>
                         <th>Catches</th>
-                        <th>Cost</th>
                     </tr>
                     <tr>
                         <td>Constrained decoding</td>
-                        <td>Malformed or non-JSON output</td>
-                        <td>Free, provider-side</td>
+                        <td>Malformed output</td>
                     </tr>
                     <tr>
-                        <td>Pydantic model validation</td>
-                        <td>Wrong types, missing fields, unknown fields</td>
-                        <td>Microseconds</td>
+                        <td>Model validation</td>
+                        <td>Wrong types, unknown fields</td>
                     </tr>
                     <tr>
-                        <td>Semantic validation against ground truth</td>
-                        <td>Invented step names, impossible order, missing inputs</td>
-                        <td>Microseconds, in-memory lookup</td>
+                        <td>Semantic check</td>
+                        <td>Invented names, impossible order</td>
                     </tr>
                     <tr>
                         <td>Allow-list</td>
                         <td>Actions this role may never take</td>
-                        <td>A set membership test</td>
                     </tr>
                     <tr>
-                        <td>Evidence-ID validation</td>
+                        <td>Evidence-ID check</td>
                         <td>Invented citations</td>
-                        <td>A set membership test</td>
                     </tr>
                     <tr>
                         <td>Budget check</td>
-                        <td>Spend beyond what the user authorised</td>
-                        <td>Three comparisons</td>
-                    </tr>
-                    <tr>
-                        <td>Approval gate</td>
-                        <td>Everything above, judged by a human</td>
-                        <td>Minutes to hours of wall clock</td>
+                        <td>Spend past what was authorised</td>
                     </tr>
                 </table>
-                <div class="table-caption">A microsecond check ahead of a solver-hour is never a close call.</div>
+
+                <p>Default to deny. An action absent from the allow-list is never offered to the model as an option,
+                    which is cheaper than trusting it to decline.</p>
+
+                <p>Runtime controls — action classes, circuit breakers, kill switches — are in
+                    <a href="guardrails.html">Guardrails</a>.</p>
             </div>
         </div>
 
         <div class="takeaways">
             <h3>Takeaways</h3>
             <ul>
-                <li>Constrained decoding removes malformed output as a category. It does not make the content
-                    correct.</li>
-                <li>Validate semantics against ground truth the system owns, and put the valid options in the error so
-                    it becomes usable feedback.</li>
-                <li>A closed enum is the cheapest strong defence in an agent. Injected text cannot name an action the
-                    type does not admit.</li>
-                <li>Gate on action class, not step count, or approval becomes a reflex.</li>
-                <li>Default to deny: an action absent from the allow-list is never offered as an option.</li>
+                <li>Constrained decoding removes malformed output. It says nothing about correctness.</li>
+                <li>Check identifiers against ground truth the system owns, and return the valid options as
+                    feedback.</li>
+                <li>A closed enum is the cheapest strong defence. Injected text cannot name what the type forbids.</li>
+                <li>Layer checks cheapest first. A microsecond ahead of a solver-hour is never a close call.</li>
+                <li>Default to deny.</li>
             </ul>
         </div>
 

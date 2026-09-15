@@ -11,94 +11,73 @@
 
 <body>
     <header>
-        <h1>Agent Memory Systems</h1>
-        <div class="subtitle">Working state, durable memory, and the discipline that keeps memory honest</div>
+        <h1>Memory Systems</h1>
+        <div class="subtitle">Three things get called memory</div>
     </header>
     <div class="content-wrapper">
 
         <div class="qa-container">
-            <h3>Three things get called memory</h3>
+            <h3>Separate them or get predictable bugs</h3>
             <div class="answer">
-                <div class="one-liner">Conversation buffer, run state, and cross-run knowledge have different
-                    lifetimes, different stores, and different failure modes.</div>
+                <div class="one-liner">Different lifetimes, different stores, different failure modes.</div>
 
-                <table class="spec">
-                    <tr>
-                        <th>Kind</th>
-                        <th>Lifetime</th>
-                        <th>Where it lives</th>
-                        <th>Fails by</th>
-                    </tr>
-                    <tr>
-                        <td>Working context</td>
-                        <td>One model call</td>
-                        <td>The prompt</td>
-                        <td>Growing until it crowds out the current task</td>
-                    </tr>
-                    <tr>
-                        <td>Run state</td>
-                        <td>One run, hours to days</td>
-                        <td>Durable workflow history</td>
-                        <td>Lost on a crash if kept in process memory</td>
-                    </tr>
-                    <tr>
-                        <td>Long-term memory</td>
-                        <td>Months, across runs and users</td>
-                        <td>A database, queried deliberately</td>
-                        <td>Accumulating confident nonsense</td>
-                    </tr>
-                </table>
-                <div class="table-caption">Most "agent memory" libraries solve the first and quietly ignore the third.
+                <div class="mermaid">
+                    flowchart LR
+                    A["<b>Working context</b><br/>one model call<br/><i>the prompt</i>"] --> B["<b>Run state</b><br/>hours to days<br/><i>durable history</i>"]
+                    B --> C["<b>Long-term memory</b><br/>months, across runs<br/><i>a database</i>"]
+                    A -.- A1["fails by: crowding out<br/>the current task"]
+                    B -.- B1["fails by: vanishing<br/>on a crash"]
+                    C -.- C1["fails by: accumulating<br/>confident nonsense"]
                 </div>
 
-                <p>Conflating them produces predictable bugs. Treating run state as conversation means a worker restart
-                    loses the plan. Treating long-term memory as a conversation buffer means every past run gets
-                    stuffed into context whether or not it is relevant. Treating working context as durable means
-                    nothing survives the request.</p>
+                <p>Most "agent memory" libraries solve the first and quietly ignore the third.</p>
+
+                <p>Conflate them and the bugs are predictable. Run state treated as conversation means a restart loses
+                    the plan. Long-term memory treated as a buffer means every past run gets stuffed into context.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Run state: the part people put in the wrong place</h3>
+            <h3>Run state belongs in durable storage</h3>
             <div class="answer">
-                <div class="one-liner">A run's status, plan, cursor and budget are not conversation. They are state,
-                    and they need to survive a process dying.</div>
-
-                <p>An ordinary Python process keeps its state in local variables and on the stack. Kill it and the
-                    state is gone; you rebuild from whatever you remembered to write to a database. Durable execution
-                    inverts that: the orchestrator is an ordinary function whose local variables survive a crash,
-                    because every decision it makes and every result it receives is recorded in an append-only history.
-                    A replacement worker replays that history through the same function and lands at exactly the point
-                    it left off.</p>
+                <div class="one-liner">Status, plan, cursor and budget are state, not conversation.</div>
 
                 <pre class="code-block"><code>class RunSolutionWorkflow:
     def __init__(self):
         self.status = "PLANNING"
-        self.plan_ref: str | None = None      # object-storage URI, not the plan
+        self.plan_ref: str | None = None      # a URI, not the plan
         self.cursor = 0
         self.decision: ApprovalDecision | None = None
         self.budget: Budget | None = None</code></pre>
 
-                <p>Those five attributes are the run's entire memory. No status column, no reconciler cron job, no
-                    separate accounting table for spend. The budget cannot be double-counted by a retry because the
-                    replay is deterministic, and it can be read live by a status query.</p>
+                <p>Five attributes are the run's entire memory. No status column, no reconciler, no separate spend
+                    table. Because replay is deterministic, the budget cannot be double-counted by a retry.</p>
 
-                <p>Note <code>plan_ref</code> rather than <code>plan</code>. A plan with many steps and assumptions can
-                    approach a payload limit when passed on every step transition. Storing a reference and loading the
-                    object when something genuinely needs it is the claim-check pattern, covered in
-                    <a href="agentic_workflows.html">Agentic Workflows</a>.</p>
+                <p>Note <code>plan_ref</code> rather than <code>plan</code>. A large plan passed on every step
+                    transition approaches the payload limit. See
+                    <a href="agentic_workflows.html">Durable Execution</a>.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Long-term memory as a graph, not a chat log</h3>
+            <h3>Long-term memory as a graph</h3>
             <div class="answer">
-                <div class="one-liner">The useful cross-run question is "what fixed something like this before",
-                    which is a relationship lookup, not a similarity search over transcripts.</div>
+                <div class="one-liner">"What fixed something like this?" is a relationship lookup, not a similarity
+                    search over transcripts.</div>
 
-                <p>Storing past conversations and retrieving similar ones is the common design and a weak one. A
-                    transcript is mostly narration. What you want back is a structured fact: this failure signature,
-                    this remediation kind, this outcome.</p>
+                <div class="mermaid">
+                    flowchart LR
+                    subgraph T["Transcripts"]
+                    T1["20 stories<br/>~12,000 tokens"] --> T2["model infers<br/>the pattern"]
+                    end
+                    subgraph G["Graph"]
+                    G1["vector lookup<br/>→ entry node"] --> G2["2-hop walk"]
+                    G2 --> G3["10 rows<br/>~150 tokens<br/>with win rates"]
+                    end
+                </div>
+
+                <p>A transcript is mostly narration. What you want back is a structured fact: this signature, this fix,
+                    this outcome.</p>
 
                 <div class="mermaid">
                     erDiagram
@@ -110,136 +89,96 @@
                     MEM_NODES ||--o{ MEM_EDGES : connects
                 </div>
 
-                <p>Two tables carry it. <code>mem_nodes</code> holds one row per failure signature, remediation kind,
-                    or skill tag, each with an embedding. <code>mem_edges</code> holds typed, weighted relationships
-                    between them: <code>fixed_by</code>, <code>similar_to</code>, <code>cites</code>.</p>
+                <p>Two tables carry it. <code>mem_nodes</code> holds failure signatures, fix kinds and skill tags.
+                    <code>mem_edges</code> holds typed weighted relations: <code>fixed_by</code>,
+                    <code>similar_to</code>, <code>cites</code>.</p>
 
                 <pre class="code-block"><code>WITH RECURSIVE hop(node_id, relation, depth, path) AS (
     SELECT n.node_id, NULL::text, 0, ARRAY[n.node_id]
-    FROM   mem_nodes n
-    WHERE  n.node_id = $1                    -- nearest failure-signature node
+    FROM   mem_nodes n WHERE n.node_id = $1
   UNION ALL
     SELECT e.dst_node_id, e.relation, h.depth + 1, h.path || e.dst_node_id
-    FROM   hop h
-    JOIN   mem_edges e ON e.src_node_id = h.node_id
+    FROM   hop h JOIN mem_edges e ON e.src_node_id = h.node_id
     WHERE  h.depth &lt; 2                       -- cap at two hops
       AND  NOT e.dst_node_id = ANY(h.path)   -- no cycles
 )
 SELECT n.node_id, n.node_type, h.relation, h.depth
-FROM   hop h
-JOIN   mem_nodes n ON n.node_id = h.node_id
-WHERE  h.depth &gt; 0
-  AND  n.tenant_id = $2
-ORDER  BY h.depth, h.node_id;</code></pre>
+FROM   hop h JOIN mem_nodes n ON n.node_id = h.node_id
+WHERE  h.depth &gt; 0 AND n.tenant_id = $2
+ORDER  BY h.depth;</code></pre>
 
-                <p>A bounded two-hop walk, one SQL round trip, zero LLM calls. This is the narrow case where a graph
-                    beats a flat index, and the reason is that the relationships are small, structured, durable, and
-                    written as a side effect of work that was happening anyway. See
-                    <a href="graph_rag.html">Graph RAG</a> for when that stops being true.</p>
+                <p>One SQL round trip, zero LLM calls. Embeddings find the door; edges walk the building. See
+                    <a href="graph_rag.html">Graph RAG</a> for when that stops being the right shape.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Write-back discipline: how memory gets poisoned</h3>
+            <h3>How memory gets poisoned</h3>
             <div class="answer">
                 <div class="one-liner">The dangerous failure is not forgetting. It is remembering a coincidence as a
-                    lesson, then recommending it confidently for months.</div>
+                    lesson.</div>
 
-                <p>The naive rule is to write back whenever a run succeeds after a remediation. That rule records
-                    coincidences. A retry happens to pass because an unrelated cluster queue cleared; the system
-                    records "lowering the Courant number fixed AMG divergence" and starts recommending it. Nothing
-                    about the row looks wrong afterward, which is what makes it hard to find.</p>
-
-                <table class="spec">
-                    <tr>
-                        <th>Guard</th>
-                        <th>Rule</th>
-                        <th>Stops</th>
-                    </tr>
-                    <tr>
-                        <td>Strict terminal success</td>
-                        <td>Write only when the retry reached terminal success</td>
-                        <td>Recording partial or ambiguous outcomes</td>
-                    </tr>
-                    <tr>
-                        <td>Sole-change</td>
-                        <td>The remediation must be the only thing that changed</td>
-                        <td>Crediting a fix for someone else's change</td>
-                    </tr>
-                    <tr>
-                        <td>Weight decay</td>
-                        <td>Edge weight decays when a reused fix stops working</td>
-                        <td>Stale advice outliving its usefulness</td>
-                    </tr>
-                    <tr>
-                        <td>Human gate on novelty</td>
-                        <td>A remediation kind not seen before needs approval to enter memory</td>
-                        <td>A single bad run teaching the system a new bad habit</td>
-                    </tr>
-                </table>
-                <div class="table-caption">Four guards, each cheap, each catching a different way memory goes wrong.
+                <div class="mermaid">
+                    flowchart TD
+                    R["Retry passes"] --> Q1{"Terminal success?"}
+                    Q1 -->|no| D["Do not write"]
+                    Q1 -->|yes| Q2{"Was the fix the<br/>only change?"}
+                    Q2 -->|no| D
+                    Q2 -->|yes| Q3{"Novel fix kind?"}
+                    Q3 -->|yes| H["Human approval first"]
+                    Q3 -->|no| W["Write the edge"]
+                    W --> DEC["Weight decays if<br/>reuse stops working"]
                 </div>
 
-                <p>Weight decay matters more than it looks. Without it, nothing ever leaves memory, and removing a bad
-                    row requires somebody to notice it is bad. Decay means a fix that stops working loses influence on
-                    its own.</p>
+                <p>The naive rule writes back whenever a run succeeds after a fix. That records coincidences. A retry
+                    passes because an unrelated queue cleared, and the system learns the wrong lesson. Nothing about
+                    the row looks wrong afterward, which is what makes it hard to find.</p>
 
                 <div class="chokepoint">
-                    <div class="cp-title">Poisoned write-back memory</div>
-                    <p><strong>Symptom:</strong> a remediation marked successful because an unrelated change fixed the
-                        run, then recommended confidently later.</p>
+                    <div class="cp-title">Poisoned write-back</div>
+                    <p><strong>Symptom:</strong> a fix marked successful for an unrelated reason, recommended
+                        confidently for months.</p>
                     <p><strong>Cause:</strong> the write-back rule credited a coincidence.</p>
-                    <p><strong>Mitigation:</strong> strict terminal-success semantics plus the sole-change rule, weight
-                        decay on reuse failure, and human approval for novel fix kinds. All four are cheap; the bug is
-                        expensive and silent.</p>
+                    <p><strong>Mitigation:</strong> all four guards above. Weight decay matters most — without it
+                        nothing ever leaves memory unless somebody notices it is wrong.</p>
                 </div>
 
                 <div class="chokepoint">
-                    <div class="cp-title">Embedding model change invalidates the memory index</div>
-                    <p><strong>Symptom:</strong> similar-failure recall stops surfacing precedent after an embedding
-                        upgrade, with no error.</p>
-                    <p><strong>Cause:</strong> vectors from two models are not comparable, and mixing them returns
-                        nonsense distances.</p>
-                    <p><strong>Mitigation:</strong> stamp <code>embedding_model</code> on every row, dual-write during
-                        cutover, and drop the old column once every reader has moved. See
-                        <a href="embedding_migration_versioning.html">Embedding Migration &amp; Versioning</a>.</p>
+                    <div class="cp-title">Embedding change breaks the index</div>
+                    <p><strong>Symptom:</strong> recall stops surfacing precedent after an upgrade, with no error.</p>
+                    <p><strong>Cause:</strong> vectors from two models are not comparable.</p>
+                    <p><strong>Mitigation:</strong> stamp <code>embedding_model</code> per row, dual-write during
+                        cutover, drop the old column once every reader moves. See
+                        <a href="embedding_migration_versioning.html">Embedding Migration</a>.</p>
                 </div>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Retention, tenancy, and the right to delete</h3>
+            <h3>Memory is customer data</h3>
             <div class="answer">
-                <div class="one-liner">Memory is customer data. Every row carries a tenant, and stored text is the
-                    scrubbed version.</div>
+                <div class="one-liner">Every row carries a tenant, and stored text is the scrubbed version.</div>
 
-                <p>A memory graph built from real runs contains real customer detail: part numbers, file paths,
-                    hostnames, usernames. Two rules keep that from becoming a liability.</p>
+                <p>A memory graph built from real runs contains part numbers, file paths, hostnames and usernames.</p>
 
-                <p>Every node and edge carries <code>tenant_id</code>, and every query filters on it in the SQL
-                    <code>WHERE</code> clause rather than in a prompt instruction. That makes deletion on request a
-                    normal delete rather than a research project, and it makes cross-tenant leakage a testable
-                    property. See <a href="multi_tenancy_isolation.html">Multi-Tenancy &amp; Isolation</a>.</p>
+                <p>Every node and edge carries <code>tenant_id</code>, filtered in the SQL <code>WHERE</code> clause
+                    rather than a prompt instruction. That makes deletion an ordinary delete and cross-tenant leakage a
+                    testable property. See <a href="multi_tenancy_isolation.html">Multi-Tenancy &amp; Isolation</a>.</p>
 
-                <p>Chunk text stored in memory is always the scrubbed version, never the raw log. Paths keep their
-                    basename and lose their directory; hostnames, usernames and licence-server names are stripped. A
-                    customer's internal detail should not end up in a shared index by way of "we remembered a
-                    fix".</p>
+                <p>Stored chunk text is always scrubbed, never the raw log. A path keeps its basename and loses its
+                    directory.</p>
             </div>
         </div>
 
         <div class="takeaways">
             <h3>Takeaways</h3>
             <ul>
-                <li>Separate working context, run state, and long-term memory. They have different lifetimes and
-                    different failure modes.</li>
-                <li>Run state belongs in durable orchestrator state, not a process variable and not a status column.
-                </li>
-                <li>Store structured outcomes, not transcripts. "What fixed something like this" is a relationship
-                    lookup.</li>
-                <li>Write-back needs four guards: terminal success, sole change, weight decay, and a human gate on
-                    novel fixes.</li>
-                <li>Every memory row carries a tenant, and stored text is scrubbed before it lands.</li>
+                <li>Separate working context, run state and long-term memory.</li>
+                <li>Run state belongs in durable orchestrator state, not a process variable.</li>
+                <li>Store structured outcomes, not transcripts.</li>
+                <li>Write-back needs four guards: terminal success, sole change, weight decay, human gate on novel
+                    fixes.</li>
+                <li>Every row carries a tenant, and text is scrubbed before it lands.</li>
             </ul>
         </div>
 

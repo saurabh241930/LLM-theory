@@ -11,74 +11,40 @@
 
 <body>
     <header>
-        <h1>Evaluating Agent Systems</h1>
-        <div class="subtitle">The eval pyramid, metrics that move, and judges that drift</div>
+        <h1>Evals</h1>
+        <div class="subtitle">Numbers that move when you change a prompt</div>
     </header>
     <div class="content-wrapper">
 
         <div class="qa-container">
-            <h3>Why a unit test cannot do this job</h3>
+            <h3>Why a unit test cannot do this</h3>
             <div class="answer">
-                <div class="one-liner">A unit test asserts a fixed input produces a fixed output. An LLM rarely does
-                    that, even at temperature zero, and never across model versions.</div>
-
-                <p>Evals assert properties of behaviour instead of exact output, and they work at four levels with
-                    very different cost and very different failure coverage. Running only the expensive top layer is
-                    the common mistake, and it produces a suite too slow to block a merge.</p>
+                <div class="one-liner">A unit test asserts fixed input gives fixed output. A model rarely does that,
+                    even at temperature zero.</div>
 
                 <div class="mermaid">
                     flowchart TD
-                    A["Unit evals<br/>plan validity, schema conformance<br/><i>deterministic, milliseconds</i>"] --> B["Component evals<br/>retrieval recall@k, grader precision<br/><i>labelled set, seconds</i>"]
-                    B --> C["End-to-end evals<br/>golden runs against real fixtures<br/><i>minutes to hours</i>"]
-                    C --> D["LLM-as-judge<br/>diagnosis quality against a rubric<br/><i>expensive, drifts</i>"]
+                    A["<b>Unit evals</b><br/>plan validity, schema conformance<br/><i>deterministic · milliseconds</i>"] --> B["<b>Component evals</b><br/>grader precision, recall@k<br/><i>labelled set · seconds</i>"]
+                    B --> C["<b>End-to-end</b><br/>golden runs, real fixtures<br/><i>tolerances · minutes</i>"]
+                    C --> D["<b>LLM-as-judge</b><br/>quality against a rubric<br/><i>expensive · drifts</i>"]
+                    A -.- G1["blocks merges"]
+                    B -.- G1
+                    C -.- G2["pages on a trend"]
+                    D -.- G2
                 </div>
 
-                <table class="spec">
-                    <tr>
-                        <th>Layer</th>
-                        <th>Asserts</th>
-                        <th>Deterministic</th>
-                        <th>Runs on</th>
-                    </tr>
-                    <tr>
-                        <td>Unit</td>
-                        <td>A plan validates against the DAG; grader output conforms to its schema</td>
-                        <td>Yes</td>
-                        <td>Every commit, blocks merge</td>
-                    </tr>
-                    <tr>
-                        <td>Component</td>
-                        <td>Grader precision and recall against a hand-labelled set</td>
-                        <td>Mostly</td>
-                        <td>Every commit, blocks merge</td>
-                    </tr>
-                    <tr>
-                        <td>End-to-end</td>
-                        <td>A golden intent completes against real fixtures, within tolerance</td>
-                        <td>No, tolerances</td>
-                        <td>Nightly, paged on trend</td>
-                    </tr>
-                    <tr>
-                        <td>LLM-as-judge</td>
-                        <td>Diagnosis quality against an explicit rubric</td>
-                        <td>No</td>
-                        <td>Sparingly, on rubric-sensitive changes</td>
-                    </tr>
-                </table>
-                <div class="table-caption">Cheap and deterministic at the base; expensive and judgement-based at the
-                    top.</div>
+                <p>Evals assert properties of behaviour instead of exact output. Running only the expensive top layer
+                    is the common mistake, and it makes the suite too slow to block a merge.</p>
 
-                <p>Split the suite by determinism, not by speed. Deterministic evals block merges. Golden runs page
-                    only on a trend, because a real solver is non-deterministic at the last decimal and an intermittent
-                    red build teaches people to ignore red builds.</p>
+                <p>Split by determinism, not by speed. Real solvers differ at the last decimal, so an intermittent red
+                    build teaches people to ignore red builds.</p>
             </div>
         </div>
 
         <div class="qa-container">
             <h3>Metrics with targets</h3>
             <div class="answer">
-                <div class="one-liner">Five numbers that tell you whether the system is healthy, each with a target
-                    somebody committed to.</div>
+                <div class="one-liner">Five numbers that say whether the system is healthy.</div>
 
                 <table class="spec">
                     <tr>
@@ -88,280 +54,173 @@
                     </tr>
                     <tr>
                         <td>Plan validity rate</td>
-                        <td>Planner outputs passing DAG validation on the first attempt</td>
+                        <td>Plans passing validation first try</td>
                         <td>&ge; 90%</td>
                     </tr>
                     <tr>
-                        <td>Unassisted completion rate</td>
-                        <td>Runs reaching completion with zero approvals or escalations</td>
+                        <td>Unassisted completion</td>
+                        <td>Runs finishing with no approval or escalation</td>
                         <td>&ge; 70%</td>
                     </tr>
                     <tr>
-                        <td>Mean time-to-diagnose</td>
-                        <td>Wall clock from a failed state to a proposed remediation</td>
-                        <td>&lt; 60 s budget, ~15 s typical</td>
+                        <td>Time-to-diagnose</td>
+                        <td>Failure to proposed fix</td>
+                        <td>&lt; 60 s</td>
                     </tr>
                     <tr>
                         <td>Cost per run</td>
-                        <td>Total LLM spend across one run</td>
-                        <td>Well under the $25 ceiling</td>
+                        <td>Total LLM spend</td>
+                        <td>Well under the cap</td>
                     </tr>
                     <tr>
                         <td>Grader precision</td>
-                        <td><code>correct</code> verdicts confirmed against the frozen labelled set</td>
+                        <td><code>correct</code> verdicts confirmed on a frozen set</td>
                         <td>&ge; 85%</td>
                     </tr>
                 </table>
-                <div class="table-caption">A prompt change becomes a number that moves, rather than an opinion about
-                    whether it felt better.</div>
 
                 <div class="trap">
-                    A rising escalation rate is not automatically bad. If every escalation is a correct "I don't
-                    know", the system is behaving well and the corpora are the gap. Read escalation rate next to
-                    grader precision, never alone.
+                    A rising escalation rate is not automatically bad. If every escalation is a correct "I don't know",
+                    the system is fine and the corpora are the gap. Read escalation rate next to grader precision,
+                    never alone.
                 </div>
-            </div>
-        </div>
-
-        <div class="qa-container">
-            <h3>Golden runs against real fixtures</h3>
-            <div class="answer">
-                <div class="one-liner">A fixed input/output pair used as a regression check, run against the real
-                    system rather than a mock.</div>
-
-                <pre class="code-block"><code>@pytest.mark.parametrize("golden", GOLDEN_RUNS, ids=lambda g: g.id)
-def test_golden_run(golden, session_glow, function_project, is_docker_enabled):
-    if golden.needs_docker and not is_docker_enabled:
-        pytest.skip("golden run needs --docker")
-
-    result = run_agent(intent=golden.intent,
-                       project_name=function_project.project_name,
-                       api_url=function_project.api_url,
-                       budget=golden.budget)
-
-    assert result.plan_valid, result.plan_errors
-    assert result.tool_calls_outside_allowlist == []
-    assert set(result.completed_steps) &gt;= set(golden.required_steps)
-    assert result.cost_usd &lt;= golden.budget.max_usd
-
-    for name, value in golden.expected_outputs.items():
-        assert json.loads(result.outputs[name]) == pytest.approx(value,
-                                                                 rel=golden.tolerance)</code></pre>
-
-                <p>Using real test fixtures rather than mocking the backing API matters more than it looks. A mock
-                    cannot confirm that the executor's field coercion matches a live schema, and field coercion is
-                    exactly the kind of thing that breaks silently on an upstream release.</p>
-
-                <div class="chokepoint">
-                    <div class="cp-title">Flaky fixtures teach people to ignore red builds</div>
-                    <p><strong>Symptom:</strong> the nightly suite fails intermittently on solver noise, and the team
-                        stops reading the results.</p>
-                    <p><strong>Cause:</strong> real solvers differ at the last decimal, and queue timing varies run to
-                        run.</p>
-                    <p><strong>Mitigation:</strong> assert with tolerances rather than equality, split the suite so
-                        deterministic evals block merges and golden runs page only on a trend, and share fixture setup
-                        so one slow provisioning step is not repeated per test.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="qa-container">
-            <h3>LLM-as-judge, and how it rots</h3>
-            <div class="answer">
-                <div class="one-liner">Use a judge only where no deterministic check exists, pin its model, and check
-                    it against a human-labelled holdout.</div>
-
-                <p>A judge is a model scoring another model's output against a rubric. It earns its place for genuinely
-                    subjective properties, such as whether a diagnosis explains the failure in a way an engineer can
-                    act on. It is the wrong tool for anything a schema check or a lookup can answer.</p>
-
-                <p>The judge is itself subject to every failure mode it is meant to catch, including drift.</p>
-
-                <div class="chokepoint">
-                    <div class="cp-title">Grader drift</div>
-                    <p><strong>Symptom:</strong> the escalation rate creeps upward over weeks with no code change.</p>
-                    <p><strong>Cause:</strong> the grader model moved behind a floating alias, or a prompt edit shifted
-                        the boundary between <code>ambiguous</code> and <code>incorrect</code>.</p>
-                    <p><strong>Mitigation:</strong> pin exact model IDs, never a floating alias. Keep a frozen labelled
-                        set and run it in CI on every prompt or model change, and alert on a shift in the verdict
-                        distribution rather than waiting for someone to notice the escalation rate.</p>
-                </div>
-
-                <p>Making the grader testable in isolation is worth the design effort. Bind it to a strict schema at
-                    temperature zero, returning a parsed object rather than free text. Then every production call logs
-                    a <code>(query, evidence, verdict, reason)</code> tuple, and those logs become next quarter's eval
-                    set. Hand-label a few hundred and you can measure precision and recall per class without running
-                    the rest of the pipeline.</p>
             </div>
         </div>
 
         <div class="qa-container">
             <h3>Where the eval set comes from</h3>
             <div class="answer">
-                <div class="one-liner">Nobody has a labelled dataset on day one. You harvest it from production, and
-                    the harvesting has to be designed in before it can happen.</div>
+                <div class="one-liner">Nobody has one on day one. You harvest it, and the harvesting has to be
+                    designed in first.</div>
 
-                <p>The usual failure is waiting until you need an eval set to start building one, at which point the
-                    only option is hand-writing synthetic cases that share none of production's weirdness. The fix is
-                    structural: make every judgement call log the tuple that would let you grade it later.</p>
+                <div class="mermaid">
+                    flowchart LR
+                    P["Every grader call<br/>in production"] --> L["Logs one row<br/>(query, evidence, verdict, reason, model)"]
+                    L --> H["Hand-label a few hundred"]
+                    H --> F["<b>Frozen eval set</b>"]
+                    F --> CI["Runs in CI"]
+                    F --> HO["Hold out a slice<br/>you never tune against"]
+                </div>
 
-                <pre class="code-block"><code># Every grader call in production writes one row. This is next quarter's eval set.
-(query_hash, failure_signature, evidence_id, verdict, reason, model, ts)</code></pre>
-
-                <p>Hand-label a few hundred of those and you can measure precision and recall per verdict class without
-                    running the rest of the pipeline. That works because the grader was deliberately built to be
-                    testable in isolation: strict schema, temperature zero, a parsed object rather than free text.</p>
+                <p>The usual failure is waiting until you need a set to start building one. Then the only option is
+                    synthetic cases that share none of production's weirdness.</p>
 
                 <table class="spec">
                     <tr>
-                        <th>Source of cases</th>
+                        <th>Source</th>
                         <th>Good for</th>
-                        <th>Watch out for</th>
+                        <th>Watch out</th>
                     </tr>
                     <tr>
-                        <td>Production logs, sampled</td>
+                        <td>Sampled production</td>
                         <td>Realistic distribution</td>
-                        <td>Over-represents the common case</td>
+                        <td>Over-represents the easy case</td>
                     </tr>
                     <tr>
-                        <td>Escalations and human overrides</td>
-                        <td>The hard cases, already flagged by a person</td>
-                        <td>Biased toward failure; keep successes too</td>
+                        <td>Escalations and overrides</td>
+                        <td>Hard cases a person already flagged</td>
+                        <td>Biased to failure; keep successes too</td>
                     </tr>
                     <tr>
                         <td>Past incidents</td>
-                        <td>Regression protection on bugs you already paid for</td>
-                        <td>Small; each is worth keeping forever</td>
+                        <td>Regressions you already paid for</td>
+                        <td>Small; keep each forever</td>
                     </tr>
                     <tr>
                         <td>Synthetic and adversarial</td>
-                        <td>Coverage of rare or hostile inputs</td>
-                        <td>Never a substitute for real distribution</td>
+                        <td>Rare and hostile inputs</td>
+                        <td>Never a substitute for real traffic</td>
                     </tr>
                 </table>
-                <div class="table-caption">Stratify deliberately. A set that is 90% easy cases reports a number that
-                    barely moves.</div>
 
-                <p>Two rules keep the set trustworthy. <strong>Freeze it and version it</strong>, because a set that
-                    drifts alongside the system measures nothing. <strong>Hold out a slice you never tune against</strong>,
-                    or you are fitting prompts to the eval rather than to the problem.</p>
+                <p>Freeze and version it. A set that drifts with the system measures nothing.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Offline, online, and what to gate a release on</h3>
+            <h3>Offline gates the merge, online judges the ship</h3>
             <div class="answer">
-                <div class="one-liner">Offline evals tell you whether to ship. Online metrics tell you whether
-                    shipping worked, and they disagree more often than people expect.</div>
-
-                <table class="spec">
-                    <tr>
-                        <th></th>
-                        <th>Offline</th>
-                        <th>Online</th>
-                    </tr>
-                    <tr>
-                        <td>Runs against</td>
-                        <td>A frozen labelled set</td>
-                        <td>Live traffic</td>
-                    </tr>
-                    <tr>
-                        <td>Answers</td>
-                        <td>"Is this change better on cases we understand?"</td>
-                        <td>"Is it better on the cases we have?"</td>
-                    </tr>
-                    <tr>
-                        <td>Latency of signal</td>
-                        <td>Minutes</td>
-                        <td>Days</td>
-                    </tr>
-                    <tr>
-                        <td>Blind spot</td>
-                        <td>Anything not in the set</td>
-                        <td>No ground truth; only proxies</td>
-                    </tr>
-                </table>
-                <div class="table-caption">Neither replaces the other. Gate merges on offline; judge success on
-                    online.</div>
-
-                <p><strong>What gates a merge:</strong> deterministic unit evals at 100%, and component evals
-                    (grader precision, retrieval recall@k) at or above their thresholds against the frozen set. These
-                    run in minutes and block.</p>
-
-                <p><strong>What does not gate a merge:</strong> golden end-to-end runs against real fixtures. Real
-                    solvers differ at the last decimal and queue timing varies, so these page on a trend rather than
-                    failing a build. An intermittent red build teaches people to ignore red builds, which costs more
-                    than the bug it was meant to catch.</p>
-
-                <p><strong>Rolling out a prompt or model change</strong> follows the same shape as any risky deploy.
-                    Shadow the new version first, running it alongside production on real traffic without acting on its
-                    output, and compare verdict distributions. Then a percentage rollout keyed on tenant so one
-                    customer sees one consistent system rather than a coin flip per request. Watch unassisted
-                    completion rate and cost per successful outcome, not just the headline accuracy number.</p>
-
-                <div class="chokepoint">
-                    <div class="cp-title">Optimising a metric into a worse system</div>
-                    <p><strong>Symptom:</strong> escalation rate drops and everyone celebrates, then human-override
-                        rate climbs a month later.</p>
-                    <p><strong>Cause:</strong> the change made the system more willing to answer rather than more
-                        likely to be right. Escalation rate read alone rewards confidence.</p>
-                    <p><strong>Mitigation:</strong> never read escalation rate without grader precision beside it. A
-                        rising escalation rate where every escalation is a correct "I don't know" is a healthy system,
-                        and the pair distinguishes the two cases.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="qa-container">
-            <h3>Observability: the trace is the eval you did not write</h3>
-            <div class="answer">
-                <div class="one-liner">One run is one trace, with the workflow, each activity, and each model call as
-                    spans in the same tree.</div>
-
-                <p>Current OpenTelemetry GenAI conventions give the span attributes names worth using rather than
-                    inventing your own: <code>gen_ai.provider.name</code>, <code>gen_ai.request.model</code>,
-                    <code>gen_ai.usage.input_tokens</code> and <code>.output_tokens</code>,
-                    <code>gen_ai.response.finish_reasons</code>.</p>
-
-                <p>Prompt content stays out of the tracing backend. Store it externally, keyed by run and call ordinal,
-                    and put only a reference attribute on the span. Solver output and customer data do not belong in a
-                    telemetry system that has a different retention policy and a different access list.</p>
+                <div class="one-liner">They disagree more often than people expect.</div>
 
                 <div class="mermaid">
                     flowchart TD
-                    W["invoke_workflow<br/>RunSolutionWorkflow"] --> E["execute_step activity"]
-                    W --> D["diagnose_failure activity"]
-                    E --> L1["chat sonnet-5<br/>LLM span"]
-                    E --> T1["execute_tool set_field<br/>tool span"]
-                    T1 --> H["HTTP span<br/>via trace propagation"]
-                    D --> L2["chat haiku-4-5<br/>grader span"]
-                    D --> T2["execute_tool search_logs<br/>tool span"]
+                    C["Change a prompt or model"] --> O{"Offline evals<br/>on the frozen set"}
+                    O -->|"below threshold"| STOP["Blocked"]
+                    O -->|pass| SH["Shadow on real traffic<br/><i>run it, do not act on it</i>"]
+                    SH --> CMP{"Verdict distribution<br/>shifted?"}
+                    CMP -->|yes| STOP
+                    CMP -->|no| ROLL["Roll out by tenant<br/><i>not per request</i>"]
+                    ROLL --> WATCH["Watch unassisted completion<br/>and cost per successful outcome"]
                 </div>
 
-                <p>Typed search attributes on the trace turn "show me every diverged run this week" into a query
-                    instead of a support ticket. Dashboards plot the five metrics above over time and version, and
-                    alerts fire on a validity drop, an escalation rise, or a cache-read ratio hitting zero, which is
-                    usually the first sign someone reordered a prompt.</p>
+                <p>Roll out keyed on tenant so one customer sees one consistent system, rather than a coin flip per
+                    request.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Optimising into a worse system</div>
+                    <p><strong>Symptom:</strong> escalation rate drops, everyone celebrates, human-override rate climbs
+                        a month later.</p>
+                    <p><strong>Cause:</strong> the change made the system more willing to answer, not more likely to be
+                        right. Escalation rate alone rewards confidence.</p>
+                    <p><strong>Mitigation:</strong> never read it without grader precision beside it.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Judges drift</h3>
+            <div class="answer">
+                <div class="one-liner">Use a judge only where no deterministic check exists, then pin it.</div>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Grader drift</div>
+                    <p><strong>Symptom:</strong> escalation rate creeps up over weeks with no code change.</p>
+                    <p><strong>Cause:</strong> the model moved behind a floating alias, or a prompt edit shifted the
+                        boundary between <code>ambiguous</code> and <code>incorrect</code>.</p>
+                    <p><strong>Mitigation:</strong> pin exact model IDs. Run the frozen set in CI on every prompt or
+                        model change, and alert on a shift in the verdict distribution.</p>
+                </div>
+
+                <p>Make the grader testable in isolation: strict schema, temperature zero, a parsed object rather than
+                    free text. Then every production call logs a gradeable tuple.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>The trace is the eval you did not write</h3>
+            <div class="answer">
+                <div class="one-liner">One run is one trace, with workflow, activities and model calls in the same
+                    tree.</div>
+
+                <div class="mermaid">
+                    flowchart TD
+                    W["invoke_workflow"] --> E["execute_step activity"]
+                    W --> D["diagnose_failure activity"]
+                    E --> L1["chat sonnet-5"]
+                    E --> T1["tool: set_field"]
+                    T1 --> H["HTTP span"]
+                    D --> L2["chat haiku-4-5 (grader)"]
+                    D --> T2["tool: search_logs"]
+                </div>
+
+                <p>Use the standard GenAI span attributes rather than inventing your own:
+                    <code>gen_ai.provider.name</code>, <code>gen_ai.request.model</code>,
+                    <code>gen_ai.usage.input_tokens</code>.</p>
+
+                <p>Keep prompt content out of the tracing backend. Store it externally and put a reference on the span.
+                    Telemetry has a different retention policy and a different access list.</p>
             </div>
         </div>
 
         <div class="takeaways">
             <h3>Takeaways</h3>
             <ul>
-                <li>Build the pyramid bottom-up. Deterministic checks at the base catch most regressions for
-                    milliseconds.</li>
-                <li>Split by determinism: deterministic evals block merges, golden runs page on a trend.</li>
-                <li>Assert with tolerances against real fixtures. A mock cannot confirm behaviour against a live
-                    schema.</li>
-                <li>Pin judge model IDs and check them against a frozen human-labelled holdout.</li>
-                <li>Log grader tuples in production; they become next quarter's eval set. Design that in before you
-                    need it.</li>
-                <li>Freeze and version the eval set, stratify it deliberately, and hold out a slice you never tune
-                    against.</li>
-                <li>Gate merges on offline evals; judge success on online metrics. Shadow first, then roll out by
-                    tenant.</li>
+                <li>Build the pyramid bottom-up. Deterministic checks catch most regressions for milliseconds.</li>
+                <li>Deterministic evals block merges; golden runs page on a trend.</li>
+                <li>Log gradeable tuples in production before you need an eval set.</li>
+                <li>Freeze and version the set, and hold out a slice you never tune against.</li>
+                <li>Pin judge model IDs, and alert on verdict-distribution shift.</li>
                 <li>Never read escalation rate without grader precision beside it.</li>
-                <li>Keep prompt content out of the tracing backend; store a reference.</li>
             </ul>
         </div>
 

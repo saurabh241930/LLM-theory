@@ -12,228 +12,170 @@
 <body>
     <header>
         <h1>Tokenomics</h1>
-        <div class="subtitle">Architectural ways to cut token cost, starting with what you never retrieve</div>
+        <div class="subtitle">The cheapest token is the one you never send</div>
     </header>
     <div class="content-wrapper">
 
         <div class="qa-container">
-            <h3>The cheapest token is the one you never send</h3>
+            <h3>Where the savings actually are</h3>
             <div class="answer">
-                <div class="one-liner">Most token-cost advice starts at the call: shorter prompts, compression,
-                    caching. The large savings are upstream, in deciding what enters the context at all.</div>
+                <div class="one-liner">Most advice starts at the call. The big wins are upstream, in deciding what
+                    enters the context at all.</div>
 
-                <p>A RAG pipeline over simulation data makes this concrete. The naive shape is to answer a question by
-                    retrieving generously and letting the model sort it out: the last few thousand lines of a solver
-                    log, the top twenty documentation chunks, and twenty past-run write-ups. That is a defensible
-                    prototype and an indefensible production bill, because almost all of it is repetition the model
-                    must read past.</p>
-
-                <p>The levers below are ordered by how much they save, which is roughly the reverse of how often they
-                    get discussed.</p>
+                <div class="mermaid">
+                    flowchart TD
+                    T1["<b>1 · Architectural</b><br/>what you retrieve"] --> T2["<b>2 · Assembly</b><br/>how you build the prompt"]
+                    T2 --> T3["<b>3 · Call</b><br/>how you spend per request"]
+                    T3 --> T4["<b>4 · Serving</b><br/>compression, KV cache"]
+                    T1 -.- S1["biggest saving<br/>least discussed"]
+                    T4 -.- S4["smallest saving<br/>most discussed"]
+                </div>
 
                 <table class="spec">
                     <tr>
                         <th>Tier</th>
                         <th>Lever</th>
-                        <th>Mechanism</th>
-                        <th>Typical effect</th>
+                        <th>Effect</th>
                     </tr>
                     <tr>
-                        <td rowspan="5"><strong>1. Architectural</strong><br><em>what you retrieve</em></td>
+                        <td rowspan="4"><strong>1 · Architectural</strong></td>
                         <td>Graph + ontology over narrative retrieval</td>
-                        <td>Return typed rows, not prose to be re-read</td>
                         <td>10-40x on that slice</td>
                     </tr>
                     <tr>
-                        <td>Retrieval funnel</td>
-                        <td>Send 5-8 candidates, not 50</td>
+                        <td>Retrieval funnel: send 5-8, not 50</td>
                         <td>5-10x on retrieved context</td>
                     </tr>
                     <tr>
                         <td>Summarise repetition at ingest</td>
-                        <td>60,000 numeric lines become one summary chunk</td>
-                        <td>Removes the largest source entirely</td>
+                        <td>Removes the largest block entirely</td>
                     </tr>
                     <tr>
-                        <td>Claim-check</td>
-                        <td>Pass a URI and a hash, not the payload</td>
-                        <td>Unbounded to ~20 tokens</td>
+                        <td>Claim-check: pass a URI, not the payload</td>
+                        <td>Unbounded → ~20 tokens</td>
                     </tr>
                     <tr>
-                        <td>Refuse to index low-signal sources</td>
-                        <td>Unversioned scrapes, raw numeric tables</td>
-                        <td>Smaller index, fewer near-duplicate hits</td>
-                    </tr>
-                    <tr>
-                        <td rowspan="5"><strong>2. Assembly</strong><br><em>how you build the prompt</em></td>
+                        <td rowspan="4"><strong>2 · Assembly</strong></td>
                         <td>Progressive disclosure</td>
-                        <td>Registry resident, bodies on trigger</td>
-                        <td>75,000 to ~5,000 tokens</td>
+                        <td>75,000 → ~5,000</td>
                     </tr>
                     <tr>
-                        <td>Order by volatility</td>
-                        <td>Stable blocks first so the prefix cache hits</td>
+                        <td>Order by volatility for prefix caching</td>
                         <td>Up to ~90% off repeated input</td>
                     </tr>
                     <tr>
-                        <td>Minimise the tool surface</td>
-                        <td>Every tool schema is paid on every call</td>
+                        <td>Trim the tool surface</td>
                         <td>50-200 tokens per tool removed</td>
                     </tr>
                     <tr>
                         <td>Field projection</td>
-                        <td>Send the fields the task needs, not the row</td>
                         <td>2-5x on structured context</td>
                     </tr>
                     <tr>
-                        <td>History compaction</td>
-                        <td>Summarise and restart before history dominates</td>
-                        <td>Caps unbounded growth</td>
-                    </tr>
-                    <tr>
-                        <td rowspan="5"><strong>3. Call</strong><br><em>how you spend per request</em></td>
+                        <td rowspan="4"><strong>3 · Call</strong></td>
                         <td>Model routing</td>
-                        <td>Cheap model absorbs the volume calls</td>
                         <td>5-10x on high-frequency work</td>
                     </tr>
                     <tr>
-                        <td>Batching</td>
-                        <td>One call over N candidates, not N calls</td>
+                        <td>Batch inside loops</td>
                         <td>Removes N-1 prompt copies</td>
                     </tr>
                     <tr>
-                        <td>Typed output with tight caps</td>
-                        <td>A schema-bound object, not an explained essay</td>
-                        <td>Output tokens are the expensive ones</td>
+                        <td>Typed output, tight caps</td>
+                        <td>Output tokens cost several times input</td>
                     </tr>
                     <tr>
-                        <td>Thinking budget discipline</td>
-                        <td>Reasoning only on low-volume, high-stakes calls</td>
-                        <td>Avoids multiplying the dominant cost line</td>
+                        <td>Cache results when prompts are too short to cache</td>
+                        <td>Full call elimination</td>
                     </tr>
                     <tr>
-                        <td>Result caching</td>
-                        <td>Cache verdicts when prompts are too short to prefix-cache</td>
-                        <td>Full call elimination on repeats</td>
-                    </tr>
-                    <tr>
-                        <td><strong>4. Serving</strong></td>
+                        <td><strong>4 · Serving</strong></td>
                         <td>Compression, KV cache, speculative decoding</td>
-                        <td>Inference-level, mostly your provider's job</td>
                         <td>See <a href="token_optimization_strategies.html">Token Optimization</a></td>
                     </tr>
                 </table>
-                <div class="table-caption">Tier 1 changes the architecture. Tier 4 is where most articles start.</div>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>The worked example: graph and ontology instead of narrative retrieval</h3>
+            <h3>Worked example: graph and ontology instead of narratives</h3>
             <div class="answer">
-                <div class="one-liner">"What fixed something like this before?" is a relationship question. Answering
-                    it by retrieving twenty past-run write-ups makes the model re-derive, from prose, a fact you could
-                    have stored as a row.</div>
+                <div class="one-liner">"What fixed this before?" is a relationship question. Answering it with twenty
+                    write-ups makes the model re-derive, from prose, a fact you could have stored as a row.</div>
 
-                <h4>What the naive pipeline sends</h4>
+                <div class="mermaid">
+                    flowchart LR
+                    subgraph N["Narrative retrieval"]
+                    N1["Top-20 past runs"] --> N2["20 × 600 tokens<br/><b>~12,000</b>"]
+                    N2 --> N3["Model reads 20 stories,<br/>notices a pattern,<br/>infers the answer"]
+                    end
+                    subgraph G["Graph + ontology"]
+                    G1["1 vector lookup<br/>→ canonical FailureMode"] --> G2["2-hop SQL walk,<br/>aggregated"]
+                    G2 --> G3["10 rows<br/><b>~150 tokens</b><br/>with success rates"]
+                    end
+                </div>
 
-                <p>A simulation step fails. Without a graph, every source is a pile of text, and breadth is the only
-                    way to be confident:</p>
+                <p>The twenty narratives are near-duplicates. The same failure recurs, so most of those 12,000 tokens
+                    restate one event in different words.</p>
+
+                <h4>The ontology</h4>
+
+                <p>An ontology is the typed vocabulary of your domain: what kinds of thing exist, and which
+                    relationships are allowed. For a simulation platform it is small.</p>
+
+                <div class="mermaid">
+                    flowchart LR
+                    FM["FailureMode"] -->|occurs_in| SV["Solver<br/>+ Version"]
+                    FM -->|fixed_by| REM["Remediation"]
+                    REM -->|adjusts| PAR["Parameter"]
+                    REM -->|results_in| OUT["Outcome"]
+                    SK["Skill"] -->|covers| FM
+                    FM -->|similar_to| FM
+                </div>
+
+                <p>Seven entity kinds, six relations. Three things follow, each saving tokens for a different
+                    reason.</p>
 
                 <table class="spec">
                     <tr>
-                        <th>Block</th>
-                        <th>What it is</th>
-                        <th>Input tokens</th>
+                        <th>Property</th>
+                        <th>What it removes</th>
                     </tr>
                     <tr>
-                        <td>System prompt and rules</td>
-                        <td>Instructions, tool schemas</td>
-                        <td>~800</td>
+                        <td>Normalisation</td>
+                        <td>Fourteen phrasings of "AMG diverged" collapse to one node. You stop retrieving the same
+                            fact fourteen times.</td>
                     </tr>
                     <tr>
-                        <td>Solver log tail</td>
-                        <td>Last ~2,000 lines, mostly residual tables</td>
-                        <td>~26,000</td>
+                        <td>Typed relations</td>
+                        <td>You query <code>fixed_by</code> edges instead of hoping the right narratives rank
+                            highly.</td>
                     </tr>
                     <tr>
-                        <td>Documentation chunks</td>
-                        <td>Top 20 at ~800 tokens</td>
-                        <td>~16,000</td>
-                    </tr>
-                    <tr>
-                        <td>Past-run write-ups</td>
-                        <td>Top 20 narratives at ~600 tokens</td>
-                        <td>~12,000</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Total per diagnosis call</strong></td>
-                        <td>&mdash;</td>
-                        <td><strong>~54,800</strong></td>
+                        <td>Aggregation in SQL</td>
+                        <td>The database counts wins. The model receives the conclusion, not the evidence for it.</td>
                     </tr>
                 </table>
-                <div class="table-caption">Modelled, not measured: a plausible "retrieve generously" baseline for one
-                    diagnosis.</div>
 
-                <p>Two things are wrong beyond the size. The twenty past-run narratives are near-duplicates of each
-                    other, because the same failure family recurs, so most of those 12,000 tokens restate the same
-                    event in different words. And the model has to <em>infer</em> the answer from them: read twenty
-                    stories, notice that lowering the Courant number appears in fourteen of them, notice that eleven of
-                    those ended green, and conclude. That inference is exactly the work a database does for free.</p>
-
-                <h4>What the ontology changes</h4>
-
-                <p>An ontology is the typed vocabulary of your domain: the entity kinds that exist, and the
-                    relationships allowed between them. For a simulation platform it is small.</p>
-
-                <pre class="code-block"><code>Entities            Relationships
----------           -------------------------------------
-Solver              FailureMode  --occurs_in-->  Solver
-SolverVersion       FailureMode  --fixed_by-->   Remediation
-FailureMode         Remediation  --adjusts-->    Parameter
-Parameter           Remediation  --results_in--> Outcome
-Remediation         Skill        --covers-->     FailureMode
-Outcome             FailureMode  --similar_to--> FailureMode
-Skill</code></pre>
-
-                <p>Three things follow from having it, and each one saves tokens for a different reason.</p>
-
-                <p><strong>Normalisation kills the duplicates.</strong> Fourteen write-ups describing "AMG solver
-                    diverged" in fourteen phrasings collapse to one canonical <code>FailureMode</code> node. You stop
-                    paying to retrieve the same fact fourteen times.</p>
-
-                <p><strong>Typed relations let you query instead of search.</strong> "What fixed this" becomes a walk
-                    along <code>fixed_by</code> edges filtered by solver and version, rather than a similarity search
-                    hoping the right narratives rank highly.</p>
-
-                <p><strong>Aggregation happens in SQL, not in the context window.</strong> The database counts the
-                    successes and computes the rates. The model receives the conclusion, not the evidence for it.</p>
-
-                <pre class="code-block"><code>-- Two-hop walk, filtered by tenant and version, aggregated in the database
-SELECT r.kind, r.adjusts_parameter,
+                <pre class="code-block"><code>SELECT r.kind, r.adjusts_parameter,
        count(*) FILTER (WHERE o.succeeded) AS wins,
-       count(*)                            AS tries,
-       round(avg(e.weight)::numeric, 2)    AS confidence
+       count(*)                            AS tries
 FROM   mem_nodes f
 JOIN   mem_edges e ON e.src_node_id = f.node_id AND e.relation = 'fixed_by'
 JOIN   remediations r ON r.node_id = e.dst_node_id
 JOIN   outcomes    o ON o.remediation_id = r.id
-WHERE  f.node_id = $1            -- canonical FailureMode, found by one vector lookup
-  AND  f.tenant_id = $2
-  AND  r.solver_version = $3
+WHERE  f.node_id = $1 AND f.tenant_id = $2 AND r.solver_version = $3
 GROUP  BY r.kind, r.adjusts_parameter
-ORDER  BY wins DESC
-LIMIT  10;</code></pre>
-
-                <p>What comes back is ten rows, and they go into the prompt as ten rows:</p>
+ORDER  BY wins DESC LIMIT 10;</code></pre>
 
                 <pre class="code-block"><code>kind          | parameter        | wins | tries | confidence
 adjust_field  | courant_number   |   11 |    14 | 0.86
 switch_skill  | coupled_pseudo   |    4 |     5 | 0.71
 rerun_upstream| mesh.element_size|    2 |     9 | 0.24</code></pre>
 
-                <p>Roughly <strong>150 tokens</strong>, against ~12,000 for the narratives, and it carries information
-                    the narratives did not: success <em>rates</em>. A 0.24 confidence on re-meshing is a fact no amount
-                    of reading twenty stories reliably produces.</p>
+                <p>About 150 tokens against 12,000, and it carries something the prose did not: success
+                    <em>rates</em>. A 0.24 on re-meshing is a fact no amount of reading twenty stories reliably
+                    produces.</p>
 
                 <h4>The whole prompt, re-costed</h4>
 
@@ -241,32 +183,32 @@ rerun_upstream| mesh.element_size|    2 |     9 | 0.24</code></pre>
                     <tr>
                         <th>Block</th>
                         <th>Naive</th>
-                        <th>Graph + funnel</th>
+                        <th>Engineered</th>
                         <th>How</th>
                     </tr>
                     <tr>
                         <td>System and rules</td>
                         <td>~800</td>
-                        <td>~800 (cached after first call)</td>
-                        <td>Ordered first so the prefix cache holds it</td>
+                        <td>~800 cached</td>
+                        <td>Ordered first, so the prefix cache holds it</td>
                     </tr>
                     <tr>
                         <td>Solver log</td>
                         <td>~26,000</td>
                         <td>~2,400</td>
-                        <td>Structure-aware chunks: header, error windows, computed residual summary, tail</td>
+                        <td>Structure-aware chunks + a computed residual summary</td>
                     </tr>
                     <tr>
                         <td>Documentation</td>
                         <td>~16,000</td>
                         <td>~4,800</td>
-                        <td>Funnel narrows 120,000 candidates to 6 graded-relevant chunks</td>
+                        <td>Funnel narrows 120,000 candidates to 6</td>
                     </tr>
                     <tr>
                         <td>Prior fixes</td>
                         <td>~12,000</td>
                         <td>~150</td>
-                        <td>Two-hop graph walk, aggregated in SQL</td>
+                        <td>Two-hop graph walk, aggregated</td>
                     </tr>
                     <tr>
                         <td><strong>Total input</strong></td>
@@ -275,69 +217,81 @@ rerun_upstream| mesh.element_size|    2 |     9 | 0.24</code></pre>
                         <td><strong>~6.7x smaller</strong></td>
                     </tr>
                 </table>
-                <div class="table-caption">Modelled comparison for one diagnosis. The prior-fixes row is the 80x
-                    improvement; the log row is the one that saves the most absolute tokens.</div>
+                <div class="table-caption">Modelled, not measured. The prior-fixes row is the 80x improvement; the log
+                    row saves the most absolute tokens.</div>
 
-                <p>At mid-tier input pricing that is roughly $0.11 against $0.016 per call. The multiplier that
-                    matters is what sits outside this table: a diagnosis loop runs up to four iterations, so the naive
-                    shape is paying fifty-thousand-token prompts four times over, and a busy month is thousands of
+                <p>Roughly $0.11 against $0.016 per call at mid-tier input pricing. The multiplier is what sits outside
+                    the table: a diagnosis loop runs up to four iterations, and a busy month is thousands of
                     diagnoses.</p>
 
                 <div class="chokepoint">
-                    <div class="cp-title">The graph is not free, and the ontology is the cost</div>
-                    <p><strong>Symptom:</strong> a graph project stalls after six months with a half-populated schema
-                        nobody trusts.</p>
+                    <div class="cp-title">The ontology is the cost, not the graph</div>
+                    <p><strong>Symptom:</strong> a graph project stalls after six months, half-populated and
+                        distrusted.</p>
                     <p><strong>Cause:</strong> the ontology was designed to be complete rather than to answer specific
-                        questions, so every new source needs a modelling debate before it can be ingested.</p>
-                    <p><strong>Mitigation:</strong> derive the ontology backwards from the two or three questions you
-                        actually ask. Seven entity kinds and six relations answered the question above. Add an entity
-                        kind only when a real query needs it, and write edges as a side effect of work already
-                        happening rather than as a separate curation project. See
-                        <a href="graph_rag.html">Graph RAG</a>.</p>
+                        questions, so every new source needs a modelling debate.</p>
+                    <p><strong>Mitigation:</strong> derive it backwards from the two or three questions you actually
+                        ask. Seven entity kinds answered the question above. Write edges as a side effect of work
+                        already happening. See <a href="graph_rag.html">Graph RAG</a>.</p>
                 </div>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Summarise repetition at ingest</h3>
+            <h3>Store the conclusion, not the evidence</h3>
             <div class="answer">
-                <div class="one-liner">The largest single block in the naive prompt was a solver log that is ~95%
-                    near-identical numeric rows.</div>
+                <div class="one-liner">The largest block in the naive prompt was a log that is ~95% near-identical
+                    numeric rows.</div>
 
-                <p>An 84,000-line solver log is mostly iteration-by-iteration residual tables. No query is ever
-                    answered by finding one row of a residual table, so indexing them buys nothing and costs a
-                    ballooned chunk count where every chunk matches any residual query equally well.</p>
+                <div class="mermaid">
+                    flowchart LR
+                    L["84,000-line log"] --> H["header"]
+                    L --> E["error windows"]
+                    L --> R["60,000 residual rows"]
+                    L --> T["tail"]
+                    R --> SUM["<b>one summary chunk</b><br/>'residuals rose over 23<br/>iterations, diverging from 1e-3'"]
+                    H --> IDX[("index")]
+                    E --> IDX
+                    SUM --> IDX
+                    T --> IDX
+                </div>
 
-                <p>Computing one summary at ingest replaces them: <em>"residuals rose over 23 consecutive iterations,
-                    diverging from 1e-3"</em>. That sentence is the fact the 60,000 rows were evidence for. It is
-                    written once and read on every retrieval, so the cost amortises to nothing.</p>
+                <p>No query is ever answered by finding one row of a residual table. Indexing them buys nothing and
+                    balloons the chunk count, where every chunk matches any residual query equally well.</p>
 
-                <p>The general rule: when a source is repetitive, store the conclusion rather than the evidence, and
-                    keep a reference to the raw data for the rare case somebody needs it. See
+                <p>Written once at ingest, read on every retrieval. The cost amortises to nothing. See
                     <a href="chunking_strategies.html">Chunking In Depth</a>.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Progressive disclosure and prefix ordering</h3>
+            <h3>Two assembly habits</h3>
             <div class="answer">
-                <div class="one-liner">Two assembly habits that cost nothing to adopt and are hard to retrofit.</div>
+                <div class="one-liner">Cheap to adopt, awkward to retrofit.</div>
 
-                <p><strong>Progressive disclosure.</strong> Fifty operational playbooks pasted into a system prompt is
-                    ~75,000 tokens on every call, roughly 2% of it relevant to the failure actually present. Splitting
-                    each into a ~100-token descriptor that stays resident and a body that loads only when its trigger
-                    matches turns that into ~5,000 tokens, plus ~1,500 when one fires. The registry is what you pay
-                    for; the bodies are free until read. See <a href="agent_skills.html">Agent Skills</a>.</p>
+                <div class="mermaid">
+                    flowchart TD
+                    subgraph W["Wrong order"]
+                    W1["retrieved chunk"] --> W2["instructions"] --> W3["tool schemas"]
+                    W3 --> W4["<b>cache hit rate: 0%</b>"]
+                    end
+                    subgraph R["Ordered by volatility"]
+                    R1["instructions"] --> R2["tool schemas"] --> R3["resources"] --> R4["retrieved chunk"]
+                    R4 --> R5["<b>everything above cached</b>"]
+                    end
+                </div>
 
-                <p><strong>Ordering by volatility.</strong> Prefix caching keys on an exact byte-for-byte prefix, so a
-                    single retrieved chunk placed above your stable instructions invalidates everything after it. Put
-                    instructions, tool schemas and resources first, retrieved evidence last.</p>
+                <p>Prefix caching keys on an exact prefix. One retrieved chunk placed high invalidates everything
+                    after it.</p>
+
+                <p>Progressive disclosure is the other. Fifty playbooks pasted in is ~75,000 tokens per call, ~2% of it
+                    relevant. A ~100-token descriptor each, plus one body on a trigger, is ~5,000 + ~1,500. See
+                    <a href="agent_skills.html">Agent Skills</a>.</p>
 
                 <div class="trap">
-                    Prefix caching has a minimum cacheable length, and small models often require more than their
-                    prompts reach. A grader prompt of a few hundred tokens gets no benefit at all. Cache the grader's
-                    <em>verdicts</em> instead, keyed by query hash, evidence ID and model, since the verdict is a pure
-                    function of those three.
+                    Prefix caching has a minimum length, and small models often need more than their prompts reach. A
+                    grader prompt of a few hundred tokens gets nothing. Cache the grader's <em>verdicts</em> instead,
+                    keyed by query hash, evidence ID and model.
                 </div>
             </div>
         </div>
@@ -345,42 +299,59 @@ rerun_upstream| mesh.element_size|    2 |     9 | 0.24</code></pre>
         <div class="qa-container">
             <h3>Call-level levers</h3>
             <div class="answer">
-                <div class="one-liner">Smaller wins individually, but they apply to every call and compound.</div>
+                <div class="one-liner">Smaller individually, but they apply to every call.</div>
 
-                <ul>
-                    <li><strong>Route by job.</strong> Planning is once or twice per run and wants the strongest
-                        reasoning. Grading is up to 32 calls per diagnosis against an explicit rubric and does not.
-                        Routing the volume work to a small model changes cost per run by roughly an order of magnitude.
-                        See <a href="model_routing_cost.html">Model Routing &amp; Cost Engineering</a>.</li>
-                    <li><strong>Batch inside loops.</strong> Grading eight candidates one call each repeats the whole
-                        instruction block eight times. One batched call sends it once, and cuts 32 sequential round
-                        trips to 4.</li>
-                    <li><strong>Cap output, and make it typed.</strong> Output tokens cost several times input. A
-                        schema-bound object with a tight <code>max_tokens</code> cannot pad itself with an explanation
-                        nobody reads.</li>
-                    <li><strong>Spend thinking budget where volume is low.</strong> Reasoning tokens bill as output and
-                        are never cached, so adding even 500 per grading call multiplies the dominant cost line. Put
-                        the budget on the single final proposal instead. See
-                        <a href="extended_thinking.html">Extended Thinking</a>.</li>
-                    <li><strong>Track a seen-set.</strong> A retrieval loop that re-finds the same chunks pays for them
-                        every iteration. Deduplicating by evidence ID both terminates the loop earlier and stops the
-                        repeat charge.</li>
-                    <li><strong>Project fields.</strong> Passing a whole row when the task needs three columns is the
-                        structured-data version of retrieving twenty narratives.</li>
-                </ul>
+                <div class="mermaid">
+                    flowchart LR
+                    subgraph A["8 calls"]
+                    A1["prompt + cand 1"]
+                    A2["prompt + cand 2"]
+                    A3["… ×8"]
+                    end
+                    subgraph B["1 call"]
+                    B1["prompt + all 8 candidates"]
+                    end
+                    A -.->|"drops 7 prompt copies<br/>32 round trips → 4"| B
+                </div>
+
+                <table class="spec">
+                    <tr>
+                        <th>Lever</th>
+                        <th>Rule</th>
+                    </tr>
+                    <tr>
+                        <td>Route by job</td>
+                        <td>Volume work to the small model. Planning is 1-2 calls; grading is up to 32.</td>
+                    </tr>
+                    <tr>
+                        <td>Batch inside loops</td>
+                        <td>One call over N candidates sends the instructions once.</td>
+                    </tr>
+                    <tr>
+                        <td>Cap output, make it typed</td>
+                        <td>A schema-bound object cannot pad itself with an explanation nobody reads.</td>
+                    </tr>
+                    <tr>
+                        <td>Thinking budget where volume is low</td>
+                        <td>Reasoning bills as output and is never cached.</td>
+                    </tr>
+                    <tr>
+                        <td>Track a seen-set</td>
+                        <td>A loop re-finding the same chunks pays for them every iteration.</td>
+                    </tr>
+                    <tr>
+                        <td>Project fields</td>
+                        <td>Sending a whole row for three columns is the structured version of the same mistake.</td>
+                    </tr>
+                </table>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>Measuring it, so a regression is visible</h3>
+            <h3>Measure it, or it regresses</h3>
             <div class="answer">
-                <div class="one-liner">Cost per run belongs on a dashboard next to accuracy, or one of them silently
-                    degrades to improve the other.</div>
-
-                <p>Return cost as part of each activity's typed result rather than writing it to a side table, so it
-                    replays deterministically with the run's history and cannot be double-counted by a retry or lost to
-                    a crash. Record reasoning tokens separately from ordinary output, or a thinking-budget change looks
-                    like a traffic increase.</p>
+                <div class="one-liner">Cost belongs on a dashboard next to accuracy, or one degrades to improve the
+                    other.</div>
 
                 <table class="spec">
                     <tr>
@@ -389,43 +360,44 @@ rerun_upstream| mesh.element_size|    2 |     9 | 0.24</code></pre>
                     </tr>
                     <tr>
                         <td>Input tokens per call, by role</td>
-                        <td>A prompt that quietly grew, or a funnel stage that stopped narrowing</td>
+                        <td>A prompt that grew, or a funnel stage that stopped narrowing</td>
                     </tr>
                     <tr>
                         <td>Cache read ratio</td>
-                        <td>Someone reordered the prompt and killed the prefix cache</td>
+                        <td>Someone reordered the prompt and killed the cache</td>
                     </tr>
                     <tr>
                         <td>Cost per run, median and p95</td>
-                        <td>A long tail of runs looping more than anyone expected</td>
+                        <td>A long tail of runs looping more than expected</td>
                     </tr>
                     <tr>
-                        <td>Cost per successful outcome</td>
-                        <td>Savings that were actually accuracy losses in disguise</td>
+                        <td><strong>Cost per successful outcome</strong></td>
+                        <td>Savings that were accuracy losses in disguise</td>
                     </tr>
                 </table>
-                <div class="table-caption">The last row is the one that keeps the others honest.</div>
 
-                <p>When cost becomes binding, cut in this order: the reranker where the pre-filtered pool is already
-                    within ~3x the final top-k, then route more work to the mid-tier model, then lower the loop
-                    iteration cap. The first two are invisible to quality. The third shows up in the escalation rate,
-                    which is the honest kind of cut: it appears in a number somebody watches.</p>
+                <div class="mermaid">
+                    flowchart LR
+                    C["Cost is binding"] --> C1["1 · Drop the reranker<br/>where pool ≤ 3× top-k"]
+                    C1 --> C2["2 · Route more to the mid model"]
+                    C2 --> C3["3 · Lower the loop cap"]
+                    C1 -.- V1["invisible to quality"]
+                    C2 -.- V1
+                    C3 -.- V2["shows up in escalation rate<br/><i>the honest kind of cut</i>"]
+                </div>
             </div>
         </div>
 
         <div class="takeaways">
             <h3>Takeaways</h3>
             <ul>
-                <li>The biggest savings are upstream of the call. Decide what never enters the context before
-                    optimising what does.</li>
-                <li>A graph plus a small ontology turns "read twenty write-ups and infer" into ten aggregated rows,
-                    roughly 12,000 tokens down to 150, and adds success rates the prose never carried.</li>
-                <li>Derive the ontology backwards from the questions you ask. Seven entity kinds beat a complete
-                    model nobody finishes.</li>
-                <li>Store the conclusion, not the repetitive evidence, and keep a reference to the raw data.</li>
-                <li>Progressive disclosure and volatility ordering are cheap to adopt and awkward to retrofit.</li>
-                <li>Watch cost per <em>successful outcome</em>, not cost per call, or you will optimise your way into
-                    a worse system.</li>
+                <li>Decide what never enters the context before optimising what does.</li>
+                <li>A graph plus a small ontology turns "read twenty write-ups and infer" into ten rows: ~12,000
+                    tokens down to ~150, with success rates the prose never had.</li>
+                <li>Derive the ontology backwards from the questions you ask.</li>
+                <li>Store the conclusion, not the repetitive evidence.</li>
+                <li>Order by volatility, and load playbook bodies only on a trigger.</li>
+                <li>Watch cost per <em>successful outcome</em>, or you optimise into a worse system.</li>
             </ul>
         </div>
 

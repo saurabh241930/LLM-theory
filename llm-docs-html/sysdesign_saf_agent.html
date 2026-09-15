@@ -11,121 +11,121 @@
 
 <body>
     <header>
-        <h1>Designing an Agent for Long-Running Simulation Jobs</h1>
-        <div class="subtitle">The running case study: a durable orchestrator over Ansys SAF</div>
+        <h1>Agentic Simulation Runs</h1>
+        <div class="subtitle">The running case study for this section</div>
     </header>
     <div class="content-wrapper">
 
         <div class="qa-container">
-            <h3>The problem in one paragraph</h3>
+            <h3>The problem</h3>
             <div class="answer">
-                <div class="one-liner">An engineer types "bracket fatigue at 200 Hz" and wants a finished simulation
-                    report. The solve takes four hours, costs cluster-time, and can fail six different ways.</div>
+                <div class="one-liner">An engineer types "bracket fatigue at 200 Hz" and wants a finished report. The
+                    solve takes four hours, costs cluster-time, and can fail six ways.</div>
 
-                <p>Ansys SAF (Solution Application Framework) turns a simulation workflow into a web application. It
-                    ships an HTTP API, a state engine that tracks every field, and an MCP server handing that API to an
-                    LLM as callable tools. What it does not ship is a brain. Nothing plans a run from a sentence, waits
-                    out a four-hour solve without holding a thread, reads a solver log and proposes a fix, or asks a
-                    human before something expensive.</p>
+                <div class="mermaid">
+                    flowchart LR
+                    subgraph S["What SAF ships"]
+                    S1["HTTP API"]
+                    S2["State engine"]
+                    S3["MCP tools"]
+                    end
+                    subgraph M["What is missing"]
+                    M1["planning from a sentence"]
+                    M2["waiting 4 h without a thread"]
+                    M3["reading a log, proposing a fix"]
+                    M4["asking a human first"]
+                    end
+                    S -->|"the gap"| M
+                </div>
 
                 <p>That gap is the design problem. It is a good teaching example because every hard part of agent
-                    engineering shows up for a concrete reason rather than as a topic on a syllabus. The run outlives
-                    the request, so you need durable execution. The solver burns cluster-hours, so you need budgets and
-                    approval gates. The logs are redacted, so you need retrieval. The model can hallucinate a step name,
-                    so you need validation against a real dependency graph.</p>
+                    engineering shows up for a concrete reason.</p>
 
-                <p>Every other page in this section maps its concept back to this system.</p>
+                <p>The run outlives the request, so you need durable execution. The solver burns cluster-hours, so you
+                    need budgets and gates. Logs are redacted, so you need retrieval. The model can invent a step name,
+                    so you need validation.</p>
             </div>
         </div>
 
         <div class="qa-container">
             <h3>Why not a thin ReAct loop?</h3>
             <div class="answer">
-                <div class="one-liner">Three architectures were scored against what a solver run actually needs. Two
-                    lost on durability.</div>
+                <div class="one-liner">Three architectures scored against what a solver run needs. Two lost on
+                    durability.</div>
+
+                <div class="mermaid">
+                    flowchart TD
+                    subgraph A["A · Thin ReAct loop"]
+                    A1["One LLM, one process,<br/>calls tools directly"]
+                    A1 --> A2["❌ crash loses the plan<br/>❌ nothing to pause on<br/>❌ one opaque transcript"]
+                    end
+                    subgraph B["B · Durable orchestrator ✅"]
+                    B1["Workflow owns state.<br/>Three bounded LLM roles."]
+                    B1 --> B2["✅ survives crashes<br/>✅ waits indefinitely<br/>✅ typed, logged steps"]
+                    end
+                    subgraph C["C · Multi-agent swarm"]
+                    C1["Agents negotiate<br/>with each other"]
+                    C1 --> C2["❌ chatter multiplies calls<br/>❌ hard to replay<br/>❌ no one owns the pause"]
+                    end
+                </div>
 
                 <table class="spec">
                     <tr>
                         <th>Criterion</th>
-                        <th>A: Thin ReAct loop</th>
-                        <th>B: Durable orchestrator</th>
-                        <th>C: Multi-agent swarm</th>
+                        <th>A: ReAct</th>
+                        <th>B: Orchestrator</th>
+                        <th>C: Swarm</th>
                     </tr>
                     <tr>
-                        <td>Durability across crashes</td>
-                        <td>None, in-memory conversation</td>
-                        <td>Full, state survives process death</td>
-                        <td>Partial, depends on each agent</td>
+                        <td>Survives a crash</td>
+                        <td>No</td>
+                        <td><strong>Yes</strong></td>
+                        <td>Partial</td>
                     </tr>
                     <tr>
                         <td>Human-in-the-loop</td>
-                        <td>Awkward, nothing to pause</td>
-                        <td>Native, can wait indefinitely</td>
-                        <td>Ambiguous, unclear who owns the pause</td>
+                        <td>Awkward</td>
+                        <td><strong>Native</strong></td>
+                        <td>Ambiguous</td>
                     </tr>
                     <tr>
-                        <td>Determinism / auditability</td>
-                        <td>Low, one opaque transcript</td>
-                        <td>High, typed logged steps</td>
-                        <td>Low, agent chatter is hard to replay</td>
+                        <td>Auditability</td>
+                        <td>Low</td>
+                        <td><strong>High</strong></td>
+                        <td>Low</td>
                     </tr>
                     <tr>
                         <td>Cost predictability</td>
-                        <td>Poor, unbounded conversation</td>
-                        <td>Good, budget checked every step</td>
-                        <td>Poor, inter-agent chatter multiplies calls</td>
-                    </tr>
-                    <tr>
-                        <td>Fit to a DAG workflow</td>
-                        <td>Weak, no structural check</td>
-                        <td>Strong, plan validated against the DAG</td>
-                        <td>Weak, no single place enforces order</td>
+                        <td>Poor</td>
+                        <td><strong>Good</strong></td>
+                        <td>Poor</td>
                     </tr>
                 </table>
-                <div class="table-caption">Three architectures against the requirements a solver run actually has.</div>
 
-                <p>B wins on a checklist, not on taste. A solver run takes hours, so only B survives without holding a
-                    thread the whole time. A run needs a human sign-off that might not arrive for a day, so only B can
-                    pause indefinitely. A step can report <code>Completed</code> while its outputs are
-                    <code>OUTOFDATE</code>, and that is the kind of fact you want checked by typed code between LLM
-                    calls rather than by a model reading its own conversation history.</p>
-
-                <p>Approach A is honest and simple, and it fails the moment a job outlives one request. Approach C adds
-                    coordination overhead without buying back durability, and it makes the audit trail worse: "why did
-                    the agent set this field to 0.85?" gets much harder to reconstruct.</p>
-
-                <div class="saf-map">
-                    <div class="sm-title">Where this shows up</div>
-                    <p>Read <a href="agentic_workflows.html">Agentic Workflows &amp; Durable Execution</a> for the
-                        mechanism, and <a href="multi_agent_systems.html">Multi-Agent Systems</a> for when a swarm does
-                        earn its cost.</p>
-                </div>
+                <p>B wins on a checklist, not on taste. A solve takes hours, so only B survives without holding a
+                    thread. An approval may take a day, so only B can pause indefinitely.</p>
             </div>
         </div>
 
         <div class="qa-container">
             <h3>The system in twelve boxes</h3>
             <div class="answer">
-                <div class="one-liner">An orchestrator owns the run's lifetime. Three narrow LLM roles do the
-                    reasoning. Nothing in the LLM layer talks to SAF directly.</div>
+                <div class="one-liner">Nothing in the LLM layer talks to SAF, and nothing in SAF knows an LLM exists.
+                </div>
 
                 <div class="mermaid">
                     flowchart LR
-                    E["Engineer / UI"] --> G["FastAPI Gateway"]
-                    G --> W["Durable workflow<br/>(RunSolutionWorkflow)"]
-                    W --> P["Planner<br/>(Opus 5)"]
-                    W --> X["Executor<br/>(plain Python)"]
-                    W --> D["Diagnoser<br/>(Sonnet 5 + Haiku 4.5)"]
-                    D --> K["Knowledge:<br/>skills, retrieval, memory graph"]
+                    E["Engineer"] --> G["Gateway"]
+                    G --> W["Durable workflow"]
+                    W --> P["Planner<br/><i>Opus 5</i>"]
+                    W --> X["Executor<br/><i>plain Python</i>"]
+                    W --> D["Diagnoser<br/><i>Sonnet 5 + Haiku 4.5</i>"]
+                    D --> K["Skills · retrieval · memory graph"]
                     X --> API["GLOW HTTP API"]
                     API --> DB[("PostgreSQL")]
-                    API --> S["PIM / HPS solvers"]
-                    W --> O["OTel traces, evals"]
+                    API --> S["Solvers"]
+                    W --> O["Traces · evals"]
                 </div>
-
-                <p>Read it left to right and one fact falls out: nothing in the LLM box talks to SAF, and nothing in
-                    the SAF box knows an LLM exists. The workflow sits between them and decides when each side runs.
-                    That separation is the entire argument for the architecture, drawn as a picture.</p>
 
                 <table class="spec">
                     <tr>
@@ -135,18 +135,18 @@
                     </tr>
                     <tr>
                         <td>Gateway</td>
-                        <td>Validate the OIDC token, start the workflow, stream progress</td>
-                        <td>Business logic, retry logic</td>
+                        <td>Validate the token, start the run, stream progress</td>
+                        <td>Business or retry logic</td>
                     </tr>
                     <tr>
                         <td>Workflow</td>
                         <td>Own status, plan, cursor, budget, pending approval</td>
-                        <td>LLM calls, HTTP calls, disk reads</td>
+                        <td>LLM or HTTP calls</td>
                     </tr>
                     <tr>
                         <td>Planner</td>
-                        <td>Turn one intent into one typed, DAG-validated plan</td>
-                        <td>Execution ability</td>
+                        <td>Turn intent into one validated plan</td>
+                        <td>Ability to execute</td>
                     </tr>
                     <tr>
                         <td>Executor</td>
@@ -155,193 +155,139 @@
                     </tr>
                     <tr>
                         <td>Diagnoser</td>
-                        <td>Turn a failure into a typed remediation, with cited evidence</td>
+                        <td>Turn a failure into a cited, typed fix</td>
                         <td>Authority to apply it</td>
                     </tr>
                 </table>
-                <div class="table-caption">Each component has exactly one job; none overlaps another.</div>
             </div>
         </div>
 
         <div class="qa-container">
             <h3>The main loop</h3>
             <div class="answer">
-                <div class="one-liner">Plan, maybe wait for approval, execute a step, maybe wait for a solver, and on
-                    failure diagnose before deciding what happens next.</div>
+                <div class="one-liner">One entry point for new work. Approval, polling and diagnosis all route back
+                    through it.</div>
 
                 <div class="mermaid">
                     stateDiagram-v2
                     [*] --> PLANNING
-                    PLANNING --> AWAITING_PLAN_APPROVAL: plan needs approval
-                    PLANNING --> RUNNING: plan auto-approved
+                    PLANNING --> AWAITING_PLAN_APPROVAL: needs approval
+                    PLANNING --> RUNNING: auto-approved
                     AWAITING_PLAN_APPROVAL --> RUNNING: approve
                     AWAITING_PLAN_APPROVAL --> ABORTED: reject
-                    RUNNING --> WAITING_SOLVER: long-running transaction
+                    RUNNING --> WAITING_SOLVER: long-running step
                     WAITING_SOLVER --> RUNNING: terminal, next step
-                    WAITING_SOLVER --> DIAGNOSING: MethodState failed
+                    WAITING_SOLVER --> DIAGNOSING: failed
                     RUNNING --> DIAGNOSING: activity error
-                    DIAGNOSING --> RUNNING: retry / adjust_field / rerun_upstream
+                    DIAGNOSING --> RUNNING: retry / adjust / rerun
                     DIAGNOSING --> AWAITING_APPROVAL: escalate
                     AWAITING_APPROVAL --> RUNNING: approve
-                    AWAITING_APPROVAL --> FAILED: reject or SLA timeout
+                    AWAITING_APPROVAL --> FAILED: reject or timeout
                     RUNNING --> COMPLETED: all steps done
                     RUNNING --> FAILED: budget exhausted
                 </div>
 
-                <p>The loop has one entry point for new work, "execute the next step," and approval, polling and
-                    diagnosis all route back through it. That single funnel is what keeps the state machine small
-                    enough to draw. Nothing in the diagram is decided by an LLM reading prose: the workflow branches
-                    only on a validated <code>Plan</code>, a <code>MethodState</code> enum, or a typed
-                    <code>RemediationAction</code>.</p>
+                <p>Nothing here is decided by an LLM reading prose. The workflow branches only on a validated plan, a
+                    status enum, or a typed remediation.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>What it costs, and what it promises</h3>
+            <h3>The numbers</h3>
             <div class="answer">
-                <div class="one-liner">A design without numbers reads as unbuilt. These are the ones to memorise.</div>
+                <div class="one-liner">A design without numbers reads as unbuilt. These are the ones to memorise.
+                </div>
 
                 <table class="spec">
                     <tr>
                         <th>Requirement</th>
                         <th>Target</th>
-                        <th>How it is measured</th>
+                        <th>Measured by</th>
                     </tr>
                     <tr>
                         <td>Durability</td>
-                        <td>A worker crash mid-run loses zero plan state and never resubmits a completed solve</td>
-                        <td>Chaos test: kill a worker mid-poll; idempotency key blocks the duplicate</td>
+                        <td>A crash loses zero plan state, never resubmits a solve</td>
+                        <td>Chaos test: kill a worker mid-poll</td>
                     </tr>
                     <tr>
                         <td>Diagnosis latency</td>
-                        <td>Under 60 s from failure to proposed action</td>
-                        <td>p95 of the diagnose span in the eval harness</td>
+                        <td>Under 60 s</td>
+                        <td>p95 of the diagnose span</td>
                     </tr>
                     <tr>
                         <td>Cost per run</td>
-                        <td>Median LLM spend under $5 against a $25 ceiling</td>
-                        <td>Cost summed across every step result and diagnoser call</td>
+                        <td>Median under $5, cap $25</td>
+                        <td>Summed across step results</td>
                     </tr>
                     <tr>
                         <td>Tenant isolation</td>
-                        <td>Zero cross-tenant rows returned by any retrieval query, ever</td>
-                        <td>Fuzz test queries the store as tenant A asking about tenant B</td>
+                        <td>Zero cross-tenant rows, ever</td>
+                        <td>Two-tenant fuzz test</td>
                     </tr>
                     <tr>
-                        <td>Solver-hours budget</td>
-                        <td>A run halts before exceeding 4.0 solver-hours</td>
-                        <td>Workflow decrements per step and refuses to start one that would exceed it</td>
+                        <td>Solver-hours</td>
+                        <td>Halt before 4.0</td>
+                        <td>Decremented per step, checked before the next</td>
                     </tr>
                 </table>
-                <div class="table-caption">Non-functional requirements, each with a concrete target and a test.</div>
 
-                <h4>Cost of one diagnosis</h4>
-                <table class="spec">
-                    <tr>
-                        <th>Role</th>
-                        <th>Model</th>
-                        <th>Calls</th>
-                        <th>Cost per diagnosis</th>
-                    </tr>
-                    <tr>
-                        <td>Planner</td>
-                        <td>Opus 5</td>
-                        <td>1-2 (replan)</td>
-                        <td>~$0.068 per run</td>
-                    </tr>
-                    <tr>
-                        <td>Tool choice</td>
-                        <td>Haiku 4.5</td>
-                        <td>&le; 4</td>
-                        <td>~$0.004</td>
-                    </tr>
-                    <tr>
-                        <td>Grading (batched)</td>
-                        <td>Haiku 4.5</td>
-                        <td>&le; 4</td>
-                        <td>~$0.068 worst case</td>
-                    </tr>
-                    <tr>
-                        <td>Proposal</td>
-                        <td>Sonnet 5</td>
-                        <td>&le; 1</td>
-                        <td>~$0.027</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Ceiling</strong></td>
-                        <td>&mdash;</td>
-                        <td><strong>9</strong></td>
-                        <td><strong>~$0.11 worst case, ~$0.046 typical</strong></td>
-                    </tr>
-                </table>
-                <div class="table-caption">Per-diagnosis LLM budget; the 9-call ceiling is enforced in code, not asked
-                    for in a prompt.</div>
+                <div class="mermaid">
+                    flowchart LR
+                    P["<b>Planner</b><br/>Opus 5<br/>1-2 calls<br/>~$0.068/run"] --> T["<b>Tool choice</b><br/>Haiku 4.5<br/>≤4 calls<br/>~$0.004"]
+                    T --> G["<b>Grading</b><br/>Haiku 4.5<br/>≤4 batched<br/>~$0.068 worst"]
+                    G --> PR["<b>Proposal</b><br/>Sonnet 5<br/>≤1 call<br/>~$0.027"]
+                    PR --> C["<b>Ceiling: 9 calls</b><br/>~$0.046 typical<br/>~$0.11 worst"]
+                </div>
 
-                <p>Three models rather than one is a deliberate trade. Planning needs the most capable reasoning over
-                    the largest context. Grading is a narrow, high-volume judgement call that does not. Routing this way
-                    costs three cost curves to watch instead of one, and buys roughly an order of magnitude on the
-                    calls that dominate volume. See <a href="model_routing_cost.html">Model Routing &amp; Cost
-                        Engineering</a>.</p>
+                <p>Three models, not one. Planning needs the strongest reasoning over the largest context. Grading is a
+                    narrow, high-volume judgement that does not. See
+                    <a href="model_routing_cost.html">Model Routing &amp; Cost</a>.</p>
             </div>
         </div>
 
         <div class="qa-container">
-            <h3>The failure modes worth knowing</h3>
+            <h3>Failure modes worth knowing</h3>
             <div class="answer">
-                <div class="one-liner">Each of these is a real bug with a symptom you can recognise in a log.</div>
+                <div class="one-liner">Each is a real bug with a symptom you can recognise in a log.</div>
 
                 <div class="chokepoint">
                     <div class="cp-title">The 600-second wait ceiling</div>
-                    <p><strong>Symptom:</strong> the wait tool returns a timeout while the solver is still iterating.
-                    </p>
-                    <p><strong>Cause:</strong> the tool blocks inside one HTTP request and the framework caps it at
-                        600 s, against solver jobs that default to a one-week maximum.</p>
-                    <p><strong>Mitigation:</strong> never wait inside a tool call. Poll status from a durable timer
-                        loop every 30 s with jittered backoff, outside the request that started the transaction.</p>
+                    <p><strong>Symptom:</strong> the wait tool times out while the solver is still running.</p>
+                    <p><strong>Cause:</strong> it blocks inside one HTTP request, capped at 600 s.</p>
+                    <p><strong>Mitigation:</strong> poll from a durable timer, outside the request.</p>
                 </div>
 
                 <div class="chokepoint">
                     <div class="cp-title">Completed and out-of-date coexist</div>
-                    <p><strong>Symptom:</strong> an agent reports a finished run on numbers that no longer match its
-                        inputs.</p>
-                    <p><strong>Cause:</strong> writing a field marks every downstream field stale without touching
-                        method status, so a step reads <code>Completed</code> forever while its outputs go stale
-                        underneath it.</p>
-                    <p><strong>Mitigation:</strong> the done predicate checks both axes: status is
-                        <code>Completed</code> <em>and</em> every expected output is <code>UPTODATE</code>.</p>
+                    <p><strong>Symptom:</strong> the agent reports a finished run on stale numbers.</p>
+                    <p><strong>Cause:</strong> writing a field marks downstream fields stale without touching method
+                        status.</p>
+                    <p><strong>Mitigation:</strong> the done check reads both axes: status is complete <em>and</em>
+                        every output is up to date.</p>
                 </div>
 
                 <div class="chokepoint">
                     <div class="cp-title">Hallucinated step names</div>
-                    <p><strong>Symptom:</strong> the first activity fails with <code>unknown step 'meshing'</code> on a
-                        solution whose step is named <code>mesh</code>.</p>
-                    <p><strong>Cause:</strong> structured outputs constrain <em>shape</em>, not <em>membership</em>. A
-                        string field compiles to a JSON Schema string, and nothing stops a plausible-sounding
-                        invention.</p>
-                    <p><strong>Mitigation:</strong> validate every step and transaction against the real schema before
-                        anything runs, and feed the valid names back as correction so the model fixes itself in one
-                        replan rather than looping.</p>
+                    <p><strong>Symptom:</strong> first activity fails with <code>unknown step 'meshing'</code>.</p>
+                    <p><strong>Cause:</strong> structured outputs constrain shape, not membership.</p>
+                    <p><strong>Mitigation:</strong> validate against the real schema first, and return the valid names
+                        as feedback.</p>
                 </div>
 
                 <div class="chokepoint">
-                    <div class="cp-title">Prompt injection through a solver log</div>
+                    <div class="cp-title">Injection through a solver log</div>
                     <p><strong>Symptom:</strong> a diagnosis recommends downloading every project file.</p>
-                    <p><strong>Cause:</strong> a log line or shared runbook reads as an instruction, and the model
-                        treats it as one.</p>
-                    <p><strong>Mitigation:</strong> retrieved text goes into the prompt inside delimited, labelled
-                        blocks under an explicit policy that embedded instructions are data to report, never commands
-                        to follow. The backstop is a closed enum: injected text cannot name an action that does not
-                        exist. See <a href="prompt_injection_defense.html">Prompt Injection Defence</a>.</p>
+                    <p><strong>Cause:</strong> a log line reads as an instruction and the model obeys.</p>
+                    <p><strong>Mitigation:</strong> labelled blocks, plus a closed enum so injected text cannot name an
+                        action that does not exist.</p>
                 </div>
 
                 <div class="chokepoint">
-                    <div class="cp-title">Poisoned write-back memory</div>
-                    <p><strong>Symptom:</strong> a fix marked successful because a retry happened to pass for an
-                        unrelated reason, then recommended confidently later.</p>
-                    <p><strong>Cause:</strong> the run wrote back a coincidence as a lesson.</p>
-                    <p><strong>Mitigation:</strong> write back only when the retry reached terminal success
-                        <em>and</em> the remediation was the sole change. Decay edge weight when a reused fix stops
-                        working. Require human approval before a novel fix kind enters memory.</p>
+                    <div class="cp-title">Poisoned memory</div>
+                    <p><strong>Symptom:</strong> a fix that never worked, recommended confidently.</p>
+                    <p><strong>Cause:</strong> a coincidence was written back as a lesson.</p>
+                    <p><strong>Mitigation:</strong> write only on terminal success where the fix was the sole change,
+                        and decay weights on reuse failure.</p>
                 </div>
             </div>
         </div>
@@ -349,14 +295,12 @@
         <div class="takeaways">
             <h3>Takeaways</h3>
             <ul>
-                <li>The architecture question is a checklist against real constraints, not a preference. A four-hour
-                    solve and a day-long approval eliminate two of three candidate designs on their own.</li>
-                <li>Keep the orchestrator deterministic. Every LLM call and every HTTP call is a retryable activity,
-                    because both are exactly the kind of I/O a replay cannot trust.</li>
-                <li>The model proposes and the guardrails dispose. Allow-lists, budgets, approval gates and evidence-ID
-                    validation are all deterministic code the model cannot argue with.</li>
-                <li>Have numbers ready: a 600-second wait ceiling, a 9-call diagnosis budget, ~$0.046 per diagnosis, a
-                    4.0 solver-hour cap. A design without numbers reads as unbuilt.</li>
+                <li>Architecture is a checklist against real constraints. A four-hour solve eliminates two of three
+                    candidates on its own.</li>
+                <li>Keep the orchestrator deterministic. Every LLM and HTTP call is a retryable activity.</li>
+                <li>The model proposes; the guardrails dispose.</li>
+                <li>Have numbers ready: 600 s wait ceiling, 9-call budget, ~$0.046 per diagnosis, 4.0 solver-hour
+                    cap.</li>
                 <li>State the trade-off you accepted, not only the property you gained.</li>
             </ul>
         </div>
