@@ -229,8 +229,8 @@ pre.code-block {
     line-height: 1.5;
 }
 
-/* Below ~640px the labels stop being legible when scaled to fit, so scroll instead. */
-@media (max-width: 640px) {
+/* Tall/narrow format scales down well; only very small screens need a floor. */
+@media (max-width: 420px) {
     .bbg-fig { overflow-x: auto; }
-    .bbg-fig .bbg-svg { width: 760px; }
+    .bbg-fig .bbg-svg { width: 420px; }
 }
