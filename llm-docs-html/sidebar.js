@@ -411,10 +411,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(mermaidScript);
     }
 
-    // Inject the interactive widget library if the page uses any widget
+    // Inject the interactive widget library if the page uses any widget.
+    // Source data must load first, so it is appended ahead of the library.
     if (document.querySelector('[data-viz]') && !document.querySelector('script[src*="agent_visualizer"]')) {
+        if (document.querySelector('[data-viz="saf-code"]')) {
+            const srcData = document.createElement('script');
+            srcData.src = 'saf_code.js?v=1';
+            document.body.appendChild(srcData);
+        }
         const vizScript = document.createElement('script');
-        vizScript.src = 'agent_visualizer.js?v=1';
+        vizScript.src = 'agent_visualizer.js?v=2';
         document.body.appendChild(vizScript);
     }
 

@@ -65,6 +65,25 @@
 .viz-ev.now{background:#3366cc;color:#fff;border-color:#3366cc}
 .viz-ev.dead{background:#ffe0e0;border-color:#f0a0a0;text-decoration:line-through}
 @media (max-width:640px){.viz-stage .nm{width:110px}.viz-ctl{gap:9px}}
+.ide{display:flex;min-height:430px;max-height:620px;font-size:.86em}
+.ide-tree{width:266px;flex-shrink:0;border-right:1px solid #e1e4e8;background:#fbfcfd;overflow:auto;padding:8px 0}
+.ide-dir{padding:5px 12px;font-weight:700;color:#57606a;font-size:.84em;letter-spacing:.02em}
+.ide-file{padding:5px 12px 5px 26px;cursor:pointer;color:#24292f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid transparent}
+.ide-file:hover{background:#eef2f6}
+.ide-file.on{background:#e8f0fe;border-left-color:#3366cc;font-weight:600;color:#1a4a99}
+.ide-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.ide-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid #e1e4e8;background:#f6f8fa;font-size:.88em}
+.ide-path{font-family:'Fira Code',Consolas,monospace;color:#24292f;overflow:hidden;text-overflow:ellipsis}
+.ide-meta{color:#57606a;font-size:.86em;white-space:nowrap}
+.ide-code{margin:0;flex:1;overflow:auto;background:#282c34;color:#abb2bf;font-family:'Fira Code',Consolas,monospace;font-size:12.5px;line-height:1.62;padding:0}
+.ide-code table{border-collapse:collapse;width:100%}
+.ide-code td{padding:0;vertical-align:top}
+.ide-ln{width:1%;text-align:right;padding:0 12px 0 14px !important;color:#5c6370;user-select:none;white-space:nowrap;background:#252931}
+.ide-src{padding:0 14px 0 4px !important;white-space:pre}
+.tk-kw{color:#c678dd}.tk-str{color:#98c379}.tk-com{color:#5c6370;font-style:italic}
+.tk-num{color:#d19a66}.tk-def{color:#61afef}.tk-cls{color:#e5c07b}.tk-dec{color:#e06c75}
+@media (max-width:720px){.ide{flex-direction:column;max-height:none}
+.ide-tree{width:auto;max-height:180px;border-right:0;border-bottom:1px solid #e1e4e8}}
 `;
     const style = document.createElement('style');
     style.textContent = CSS;
@@ -532,6 +551,92 @@
         render();
     }
 
+    // ============================================== 7. SAF source explorer
+    function safCode(el) {
+        const FILES = window.SAF_CODE || {};
+        const names = Object.keys(FILES);
+        if (!names.length) { el.innerHTML = '<div class="viz-body">source not loaded</div>'; return; }
+
+        const body = shell(el, 'The agent package',
+            'Click a file. Comments explain the why, not the what.');
+        body.style.padding = '0';
+        body.innerHTML = '<div class="ide"><div class="ide-tree"></div>' +
+            '<div class="ide-main"><div class="ide-bar"><span class="ide-path"></span>' +
+            '<span class="ide-meta"></span></div><pre class="ide-code"></pre></div></div>';
+
+        const tree = body.querySelector('.ide-tree');
+        const dirs = new Map();
+        names.forEach(n => {
+            const i = n.lastIndexOf('/');
+            const d = i === -1 ? '' : n.slice(0, i);
+            if (!dirs.has(d)) dirs.set(d, []);
+            dirs.get(d).push(n);
+        });
+        for (const [d, fs] of dirs) {
+            tree.appendChild($('<div class="ide-dir">' + (d || '/') + '</div>'));
+            fs.forEach(n => tree.appendChild(
+                $('<div class="ide-file" data-f="' + n + '">' +
+                  n.slice(n.lastIndexOf('/') + 1) + '</div>')));
+        }
+
+        const KW = new Set(('def class return if elif else for while in not and or is None True False ' +
+            'import from as with try except finally raise await async lambda yield pass break ' +
+            'continue global assert del').split(' '));
+        const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        const TOK = new RegExp(
+            '(' + ['"""[\\s\\S]*?"""', "'''[\\s\\S]*?'''",
+                   '"(?:[^"\\\\]|\\\\.)*"', "'(?:[^'\\\\]|\\\\.)*'",
+                   '#[^\\n]*', '\\b\\d+(?:\\.\\d+)?\\b',
+                   '\\b[A-Za-z_]\\w*\\b', '\\s+', '[\\s\\S]'].join('|') + ')', 'g');
+
+        function highlight(src) {
+            let outp = '', m, prev = '';
+            TOK.lastIndex = 0;
+            while ((m = TOK.exec(src)) !== null) {
+                const t = m[0];
+                if (t.charAt(0) === '"' || t.charAt(0) === "'") outp += '<span class="tk-str">' + esc(t) + '</span>';
+                else if (t.charAt(0) === '#') outp += '<span class="tk-com">' + esc(t) + '</span>';
+                else if (/^\d/.test(t)) outp += '<span class="tk-num">' + esc(t) + '</span>';
+                else if (KW.has(t)) outp += '<span class="tk-kw">' + esc(t) + '</span>';
+                else if (prev === 'def') outp += '<span class="tk-def">' + esc(t) + '</span>';
+                else if (prev === 'class') outp += '<span class="tk-cls">' + esc(t) + '</span>';
+                else if (/^[A-Z][A-Za-z0-9_]*$/.test(t)) outp += '<span class="tk-cls">' + esc(t) + '</span>';
+                else outp += esc(t);
+                if (t.trim()) prev = t;
+            }
+            return outp;
+        }
+
+        function highlightMd(src) {
+            return esc(src)
+                .replace(/^(---[\s\S]*?---)/, '<span class="tk-dec">$1</span>')
+                .replace(/^(#{1,6} .*)$/gm, '<span class="tk-cls">$1</span>')
+                .replace(/(`[^`\n]+`)/g, '<span class="tk-str">$1</span>');
+        }
+
+        function show(name) {
+            body.querySelectorAll('.ide-file').forEach(f =>
+                f.classList.toggle('on', f.dataset.f === name));
+            const src = FILES[name].replace(/^\n/, '');
+            const md = /\.md$/.test(name);
+            const painted = (md ? highlightMd(src) : highlight(src)).split('\n');
+            body.querySelector('.ide-path').textContent = name;
+            body.querySelector('.ide-meta').textContent =
+                painted.length + ' lines · ' + (md ? 'markdown' : 'python');
+            body.querySelector('.ide-code').innerHTML = '<table>' + painted.map((ln, i) =>
+                '<tr><td class="ide-ln">' + (i + 1) + '</td><td class="ide-src">' +
+                (ln || ' ') + '</td></tr>').join('') + '</table>';
+            body.querySelector('.ide-code').scrollTop = 0;
+        }
+
+        tree.addEventListener('click', e => {
+            const f = e.target.closest('.ide-file');
+            if (f) show(f.dataset.f);
+        });
+        show(names[0]);
+    }
+
     // ------------------------------------------------------------- registry
     const WIDGETS = {
         'prompt-cache': promptCache,
@@ -539,7 +644,8 @@
         'durable-replay': durableReplay,
         'token-levers': tokenLevers,
         'guardrail-gate': guardrailGate,
-        'retrieval-funnel': retrievalFunnel
+        'retrieval-funnel': retrievalFunnel,
+        'saf-code': safCode
     };
 
     function mountAll() {
