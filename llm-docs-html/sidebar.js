@@ -158,9 +158,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'agentic_workflows.html', title: '6. Durable Execution' },
                 { id: 'agent_memory_systems.html', title: '7. Memory Systems' },
                 { id: 'structured_outputs_guardrails.html', title: '8. Structured Outputs & Guardrails' },
-                { id: 'agent_sandboxes.html', title: '9. Sandboxes & Code Execution' },
-                { id: 'extended_thinking.html', title: '10. Extended Thinking' },
-                { id: 'agent_evals.html', title: '11. Evaluating Agent Systems' }
+                { id: 'guardrails.html', title: '9. Guardrails in Depth' },
+                { id: 'agent_sandboxes.html', title: '10. Sandboxes & Code Execution' },
+                { id: 'extended_thinking.html', title: '11. Extended Thinking' },
+                { id: 'agent_evals.html', title: '12. Evaluating Agent Systems' },
+                { id: 'tokenomics.html', title: '13. Tokenomics' }
             ]
         },
         {
@@ -185,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: 'llm_tracing_observability.html', title: '3. Tracing & Observability' },
                 { id: 'llm_cost_caching.html', title: '4. Cost & Caching' },
                 { id: 'model_routing_cost.html', title: '5. Model Routing & Cost' },
+                { id: 'tokenomics.html', title: '5b. Tokenomics' },
                 { id: 'hallucination_detection.html', title: '6. Hallucinations in Production' },
                 { id: 'prompt_injection_defense.html', title: '7. Prompt Injection Defence' },
                 { id: 'multi_tenancy_isolation.html', title: '8. Multi-Tenancy & Isolation' },

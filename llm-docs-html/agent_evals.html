@@ -196,6 +196,123 @@ def test_golden_run(golden, session_glow, function_project, is_docker_enabled):
         </div>
 
         <div class="qa-container">
+            <h3>Where the eval set comes from</h3>
+            <div class="answer">
+                <div class="one-liner">Nobody has a labelled dataset on day one. You harvest it from production, and
+                    the harvesting has to be designed in before it can happen.</div>
+
+                <p>The usual failure is waiting until you need an eval set to start building one, at which point the
+                    only option is hand-writing synthetic cases that share none of production's weirdness. The fix is
+                    structural: make every judgement call log the tuple that would let you grade it later.</p>
+
+                <pre class="code-block"><code># Every grader call in production writes one row. This is next quarter's eval set.
+(query_hash, failure_signature, evidence_id, verdict, reason, model, ts)</code></pre>
+
+                <p>Hand-label a few hundred of those and you can measure precision and recall per verdict class without
+                    running the rest of the pipeline. That works because the grader was deliberately built to be
+                    testable in isolation: strict schema, temperature zero, a parsed object rather than free text.</p>
+
+                <table class="spec">
+                    <tr>
+                        <th>Source of cases</th>
+                        <th>Good for</th>
+                        <th>Watch out for</th>
+                    </tr>
+                    <tr>
+                        <td>Production logs, sampled</td>
+                        <td>Realistic distribution</td>
+                        <td>Over-represents the common case</td>
+                    </tr>
+                    <tr>
+                        <td>Escalations and human overrides</td>
+                        <td>The hard cases, already flagged by a person</td>
+                        <td>Biased toward failure; keep successes too</td>
+                    </tr>
+                    <tr>
+                        <td>Past incidents</td>
+                        <td>Regression protection on bugs you already paid for</td>
+                        <td>Small; each is worth keeping forever</td>
+                    </tr>
+                    <tr>
+                        <td>Synthetic and adversarial</td>
+                        <td>Coverage of rare or hostile inputs</td>
+                        <td>Never a substitute for real distribution</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Stratify deliberately. A set that is 90% easy cases reports a number that
+                    barely moves.</div>
+
+                <p>Two rules keep the set trustworthy. <strong>Freeze it and version it</strong>, because a set that
+                    drifts alongside the system measures nothing. <strong>Hold out a slice you never tune against</strong>,
+                    or you are fitting prompts to the eval rather than to the problem.</p>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <h3>Offline, online, and what to gate a release on</h3>
+            <div class="answer">
+                <div class="one-liner">Offline evals tell you whether to ship. Online metrics tell you whether
+                    shipping worked, and they disagree more often than people expect.</div>
+
+                <table class="spec">
+                    <tr>
+                        <th></th>
+                        <th>Offline</th>
+                        <th>Online</th>
+                    </tr>
+                    <tr>
+                        <td>Runs against</td>
+                        <td>A frozen labelled set</td>
+                        <td>Live traffic</td>
+                    </tr>
+                    <tr>
+                        <td>Answers</td>
+                        <td>"Is this change better on cases we understand?"</td>
+                        <td>"Is it better on the cases we have?"</td>
+                    </tr>
+                    <tr>
+                        <td>Latency of signal</td>
+                        <td>Minutes</td>
+                        <td>Days</td>
+                    </tr>
+                    <tr>
+                        <td>Blind spot</td>
+                        <td>Anything not in the set</td>
+                        <td>No ground truth; only proxies</td>
+                    </tr>
+                </table>
+                <div class="table-caption">Neither replaces the other. Gate merges on offline; judge success on
+                    online.</div>
+
+                <p><strong>What gates a merge:</strong> deterministic unit evals at 100%, and component evals
+                    (grader precision, retrieval recall@k) at or above their thresholds against the frozen set. These
+                    run in minutes and block.</p>
+
+                <p><strong>What does not gate a merge:</strong> golden end-to-end runs against real fixtures. Real
+                    solvers differ at the last decimal and queue timing varies, so these page on a trend rather than
+                    failing a build. An intermittent red build teaches people to ignore red builds, which costs more
+                    than the bug it was meant to catch.</p>
+
+                <p><strong>Rolling out a prompt or model change</strong> follows the same shape as any risky deploy.
+                    Shadow the new version first, running it alongside production on real traffic without acting on its
+                    output, and compare verdict distributions. Then a percentage rollout keyed on tenant so one
+                    customer sees one consistent system rather than a coin flip per request. Watch unassisted
+                    completion rate and cost per successful outcome, not just the headline accuracy number.</p>
+
+                <div class="chokepoint">
+                    <div class="cp-title">Optimising a metric into a worse system</div>
+                    <p><strong>Symptom:</strong> escalation rate drops and everyone celebrates, then human-override
+                        rate climbs a month later.</p>
+                    <p><strong>Cause:</strong> the change made the system more willing to answer rather than more
+                        likely to be right. Escalation rate read alone rewards confidence.</p>
+                    <p><strong>Mitigation:</strong> never read escalation rate without grader precision beside it. A
+                        rising escalation rate where every escalation is a correct "I don't know" is a healthy system,
+                        and the pair distinguishes the two cases.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="qa-container">
             <h3>Observability: the trace is the eval you did not write</h3>
             <div class="answer">
                 <div class="one-liner">One run is one trace, with the workflow, each activity, and each model call as
@@ -237,7 +354,13 @@ def test_golden_run(golden, session_glow, function_project, is_docker_enabled):
                 <li>Assert with tolerances against real fixtures. A mock cannot confirm behaviour against a live
                     schema.</li>
                 <li>Pin judge model IDs and check them against a frozen human-labelled holdout.</li>
-                <li>Log grader tuples in production; they become next quarter's eval set.</li>
+                <li>Log grader tuples in production; they become next quarter's eval set. Design that in before you
+                    need it.</li>
+                <li>Freeze and version the eval set, stratify it deliberately, and hold out a slice you never tune
+                    against.</li>
+                <li>Gate merges on offline evals; judge success on online metrics. Shadow first, then roll out by
+                    tenant.</li>
+                <li>Never read escalation rate without grader precision beside it.</li>
                 <li>Keep prompt content out of the tracing backend; store a reference.</li>
             </ul>
         </div>
